@@ -44,9 +44,3 @@ If you'd like to contribute:
 2. Make your changes and add tests where appropriate.
 3. Open a pull request describing the change and motivation.
 
-## License
-
-This project does not include a license file. Add one (for example `MIT`) if you plan to publish or accept contributions.
-
----
-If you want more detailed developer instructions (environment variables, endpoints, deployment steps), open an issue or ask and I can add them to this README.
