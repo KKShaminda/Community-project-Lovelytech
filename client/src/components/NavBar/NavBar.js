@@ -1,5 +1,5 @@
 import './NavBar.css';
-import logo from '../../assets/Lovelytech-black.png';
+import logo from '../../assets/images/Lovelytech-black.png';
 
 export default function Navbar() {
   return (

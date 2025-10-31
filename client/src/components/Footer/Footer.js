@@ -1,6 +1,9 @@
 import React from 'react';
 import './Footer.css';
-import logo from '../assets/Lovelytech-white.png';
+import logo from '../../assets/images/Lovelytech-white.png';
+import locationIcon from '../../assets/icons/location.svg';
+import emailIcon from '../../assets/icons/email.svg';
+import phoneIcon from '../../assets/icons/phone.svg';
 
 export default function Footer() {
   return (
@@ -25,9 +28,9 @@ export default function Footer() {
         <div className="lt-footer__col lt-footer__contact" align="left">
           <h3><b>Contact</b></h3>
           <ul className="lt-contact__list">
-            <li><span className="icon">📍</span> Thalgahawila Juction, Millewa, Horana</li>
-            <li><span className="icon">✉️</span> lovelytech.lk@gmail.com</li>
-            <li><span className="icon">📞</span> +94 77 029 0008</li>
+            <li><img src={locationIcon} alt="location" className="icon" /> Thalgahawila Juction, Millewa, Horana</li>
+            <li><img src={emailIcon} alt="email" className="icon" /> lovelytech.lk@gmail.com</li>
+            <li><img src={phoneIcon} alt="phone" className="icon" /> +94 77 029 0008</li>
           </ul>
         </div>
       </div>

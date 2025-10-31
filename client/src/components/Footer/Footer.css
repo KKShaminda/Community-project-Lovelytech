@@ -60,10 +60,7 @@
 }
 
 .lt-contact__list .icon {
-  width: 22px;
-  height: auto;
-  display: inline-block;
-  margin-right: 10px;
+  margin-right: 8px;
 }
 
 /* Indent contact list items a bit and align icons */
