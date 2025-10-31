@@ -1,0 +1,103 @@
+.lt-footer {
+  background: #000;
+  color: #fff;
+  padding: 48px 16px 20px;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.lt-footer__inner {
+  max-width: 90%;
+  margin: 0 auto;
+  display: flex;
+  gap: 40px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-bottom: 24px;
+}
+
+.lt-footer__brand {
+
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* center logo and title horizontally relative to each other */
+  gap: 12px;
+  text-align: center;
+}
+
+.lt-footer__logo {
+  width: 120px;
+  height: auto;
+}
+
+.lt-footer__title {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 400;
+  color: #fff;
+}
+
+.lt-footer__info h3,
+.lt-footer__contact h3 {
+  margin: 0 0 12px 0;
+  font-size: 20px;
+}
+
+.lt-footer__info ul,
+.lt-footer__contact ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.lt-footer__info li,
+.lt-footer__contact li {
+  margin: 8px 0;
+}
+
+.lt-footer__info a {
+  color: #ddd;
+  text-decoration: none;
+}
+
+.lt-contact__list .icon {
+  margin-right: 8px;
+}
+
+/* Indent contact list items a bit and align icons */
+.lt-contact__list {
+  padding-left: 14px; /* move the contact details a little inward */
+  margin: 0;
+}
+
+.lt-contact__list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+}
+
+.lt-contact__list .icon {
+  width: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lt-footer__bottom {
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding-top: 18px;
+  text-align: center;
+  color: #ddd;
+  font-size: 14px;
+}
+
+/* Responsive */
+@media (max-width: 800px) {
+  .lt-footer__inner {
+    flex-direction: column;
+    gap: 24px;
+    align-items: center;
+    text-align: center;
+  }
+  .lt-footer__brand { align-items: center; }
+}
