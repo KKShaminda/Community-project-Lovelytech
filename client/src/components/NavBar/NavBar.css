@@ -1,0 +1,91 @@
+.lt-navbar {
+  background: #fff;
+  border-bottom: 3px solid #EC1C24; /* red bottom line */
+  box-shadow: 0 1px 0 rgba(0,0,0,0.02);
+}
+
+.lt-navbar__inner {
+  max-width: 90%;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  gap: 16px;
+}
+
+.lt-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.lt-brand__logo {
+  width: 48px;
+  height: 70px;
+  display: block;
+}
+
+.lt-brand__name {
+  font-weight: 600;
+  font-size: 1.5rem;
+  color: #111;
+  font-weight: bold;
+}
+
+.lt-nav {
+  display: flex;
+  gap: 20px;
+  flex: 1 1 auto;
+  justify-content: center;
+}
+
+.lt-nav__link {
+  color: #222;
+  text-decoration: none;
+  font-weight: 500;
+  padding: 6px 8px;
+}
+
+.lt-nav__link:hover {
+  color: #EC1C24;
+}
+
+.lt-actions {
+  display: flex;
+  align-items: center;
+}
+
+.lt-btn {
+  padding: 8px 14px;
+  border-radius: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+}
+
+.lt-btn--outline {
+  border: 2px solid #EC1C24;
+  color: #EC1C24;
+  background: #fff;
+  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+/* Hover/focus state: red background, white text */
+.lt-btn--outline:hover,
+.lt-btn--outline:focus {
+  background-color: #EC1C24;
+  color: #ffffff;
+  border-color: #EC1C24;
+  outline: none;
+}
+
+.lt-btn--outline:active {
+  transform: translateY(1px);
+}
+/* Responsive adjustments */
+@media (max-width: 700px) {
+  .lt-nav { display: none; }
+  .lt-brand__name { display: none; }
+}
