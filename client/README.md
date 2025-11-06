@@ -41,9 +41,6 @@ Create a `.env` file in `client/` (or set the variable in your shell) to overrid
 - If the client cannot reach the API, confirm the server is running (see `server/index.js`).
 - For production deployment, ensure the client is built (`npm run build`) and served by a static server or via the backend.
 
-## Learn more
 
-This README is a slimmed-down guide; for deeper Create React App docs see:
-https://facebook.github.io/create-react-app/docs/getting-started
 
-If you'd like, I can add environment examples, common troubleshooting steps, or CI/CD deployment notes.
+
