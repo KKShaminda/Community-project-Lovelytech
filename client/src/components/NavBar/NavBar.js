@@ -1,9 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './NavBar.css';
 import logo from '../../assets/images/Lovelytech-black.png';
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const navRef = useRef(null);
+
+  // close on Escape or clicking outside
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === 'Escape') setOpen(false);
+    }
+    function onDown(e) {
+      if (!navRef.current) return;
+      // If clicking the hamburger button, ignore — the button's own onClick handles toggle.
+      const clickedHamburger = e.target && e.target.closest && e.target.closest('.lt-hamburger');
+      if (open && !navRef.current.contains(e.target) && !clickedHamburger) setOpen(false);
+    }
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onDown);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', onDown);
+    };
+  }, [open]);
 
   return (
     <header className="lt-navbar">
@@ -24,7 +44,7 @@ export default function Navbar() {
           </span>
         </button>
 
-        <nav className={`lt-nav ${open ? 'lt-nav--open' : ''}`} aria-label="Main navigation">
+        <nav ref={navRef} className={`lt-nav ${open ? 'lt-nav--open' : ''}`} aria-label="Main navigation">
           <a className="lt-nav__link" href="/" onClick={() => setOpen(false)}>Home</a>
           <a className="lt-nav__link" href="/about" onClick={() => setOpen(false)}>About Us</a>
           <a className="lt-nav__link" href="/products" onClick={() => setOpen(false)}>Products</a>

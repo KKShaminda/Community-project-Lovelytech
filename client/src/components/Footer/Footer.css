@@ -5,6 +5,10 @@
   font-family: Arial, Helvetica, sans-serif;
 }
 
+:root {
+  --accent: #EC1C24;
+}
+
 .lt-footer__inner {
   max-width: 90%;
   margin: 0 auto;
@@ -27,6 +31,7 @@
 .lt-footer__logo {
   width: 120px;
   height: auto;
+  max-width: 100%;
 }
 
 .lt-footer__title {
@@ -57,14 +62,19 @@
 .lt-footer__info a {
   color: #ddd;
   text-decoration: none;
-  transition: color 160ms ease, transform 160ms ease;
+  transition: color 180ms ease, transform 180ms ease;
   display: inline-block; /* allow transform */
 }
 
 .lt-footer__info a:hover,
 .lt-footer__info a:focus {
-  color: #EC1C24;
+  color: var(--accent);
   transform: scale(1.1);
+}
+
+.lt-footer__info a:focus-visible {
+  outline: 3px solid rgba(236,28,36,0.15);
+  outline-offset: 4px;
 }
 
 .lt-contact__list .icon {
@@ -108,4 +118,13 @@
     text-align: center;
   }
   .lt-footer__brand { align-items: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lt-footer__info a,
+  .lt-footer__info a:focus,
+  .lt-footer__info a:hover {
+    transition: none;
+    transform: none;
+  }
 }
