@@ -72,13 +72,10 @@
   outline-offset: 4px;
 }
 
-.lt-contact__list .icon {
-  margin-right: 8px;
-}
 
 /* Indent contact list items a bit and align icons */
-.lt-contact__list {
-  padding-left: 14px; /* move the contact details a little inward */
+.lt-contact__list { 
+  padding-left: 14px; 
   margin: 0;
 }
 
