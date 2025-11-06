@@ -5,7 +5,8 @@
     {
       "src": "Lovelytech-white.png",
       "type": "image/png",
-      "sizes": "100x100"}
+      "sizes": "100x100"
+    }
   ],
   "start_url": ".",
   "display": "standalone",
