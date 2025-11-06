@@ -158,7 +158,6 @@
 }
 
 /* make mobile actions hidden on desktop (reinforce) */
-.lt-actions--mobile { display: none; }
 
 /* focus-visible for accessibility */
 .lt-btn--outline:focus-visible,
