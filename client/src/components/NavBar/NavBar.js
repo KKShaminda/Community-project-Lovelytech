@@ -35,7 +35,7 @@ export default function Navbar() {
 
         <button
           className={`lt-hamburger ${open ? 'is-open' : ''}`}
-          aria-label="Toggle menu"
+          aria-label={open ? "Close menu" : "Open menu"}
           aria-expanded={open}
           onClick={() => setOpen((s) => !s)}
         >

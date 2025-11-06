@@ -9,12 +9,12 @@ export default function Footer() {
   return (
     <footer className="lt-footer">
       <div className="lt-footer__inner">
-        <div className="lt-footer__col lt-footer__brand" align="center">
+        <div className="lt-footer__col lt-footer__brand">
           <img src={logo} alt="Lovely Tech" className="lt-footer__logo" />
           <h2 className="lt-footer__title">Lovely Tech</h2>
         </div>
 
-        <div className="lt-footer__col lt-footer__info" align="left">
+        <div className="lt-footer__col lt-footer__info">
           <h3><b>Info</b></h3>
           <ul>
             <li><a href="/about">About Us</a></li>
@@ -25,10 +25,10 @@ export default function Footer() {
           </ul>
         </div>
 
-        <div className="lt-footer__col lt-footer__contact" align="left">
+      <div className="lt-footer__col lt-footer__contact">
           <h3><b>Contact</b></h3>
           <ul className="lt-contact__list">
-            <li><img src={locationIcon} alt="location" className="icon" /> Thalgahawila Juction, Millewa, Horana</li>
+            <li><img src={locationIcon} alt="location" className="icon" /> Thalgahawila Junction, Millewa, Horana</li>
             <li><img src={emailIcon} alt="email" className="icon" /> lovelytech.lk@gmail.com</li>
             <li><img src={phoneIcon} alt="phone" className="icon" /> +94 77 029 0008</li>
           </ul>
