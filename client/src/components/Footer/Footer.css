@@ -57,6 +57,14 @@
 .lt-footer__info a {
   color: #ddd;
   text-decoration: none;
+  transition: color 160ms ease, transform 160ms ease;
+  display: inline-block; /* allow transform */
+}
+
+.lt-footer__info a:hover,
+.lt-footer__info a:focus {
+  color: #EC1C24;
+  transform: scale(1.1);
 }
 
 .lt-contact__list .icon {
