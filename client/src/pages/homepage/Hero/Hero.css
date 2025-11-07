@@ -1,0 +1,204 @@
+/* Homepage hero styles */
+.lt-hero {
+  width: 100%;
+  /* keep hero approximately viewport-height but avoid growing past it by default */
+  min-height: calc(100vh - 80px); /* assume navbar ~80px tall */
+  background-position: center top;
+  background-size: cover;
+  background-repeat: no-repeat;
+  display: flex;
+  /* anchor content toward the top so increasing viewport height doesn't recenter it */
+  align-items: flex-start;
+  justify-content: center;
+  position: relative;
+}
+
+.lt-hero__overlay {
+  /* overlay sized to viewport so it always covers the screen area */
+  position: relative;
+  width: 100%;
+  min-height: 75vh; /* fill the screen vertically */
+  background: linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45));
+  display: flex;
+  align-items: flex-start; /* keep overlay content aligned to top */
+  justify-content: center;
+  padding: 0; /* content padding handled by .lt-hero__content */
+  box-sizing: border-box;
+}
+
+.lt-hero__content {
+  color: #fff;
+  text-align: center;
+  max-width: 1180px;
+  width: 100%;
+  /* fixed pixel padding so it does not grow on large screens */
+  padding: 48px 32px 64px; /* top, sides, bottom */
+  box-sizing: border-box;
+}
+
+.lt-hero__title {
+  /* keep headline responsive on small screens but prevent it from growing too large on wide screens */
+  font-size: clamp(1.8rem, 3.6vw, 2.8rem);
+  line-height: 1.05;
+  margin: 0 0 1.25rem 0;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-shadow: 0 6px 18px rgba(0,0,0,0.6);
+}
+
+/* split layout: left brand, right copy */
+.lt-hero__split {
+  display: flex;
+  gap: 9rem; /* increased gap between brand and copy for improved spacing */
+  justify-content: center; /* center the two columns under the headline */
+  margin-top: 1.5rem;
+  align-items: center;
+}
+
+.lt-hero__brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* center logo + tagline inside the left column */
+  gap: 0.5rem;
+  flex: 0 0 300px; /* slightly smaller left area so layout breathes */
+  padding-left: 1rem;
+}
+
+.lt-hero__logo {
+  width: 180px; /* slightly smaller per request */
+  height: auto;
+  /* keep the drop shadow while avoiding color-tint filters */
+  -webkit-filter: drop-shadow(0 10px 30px rgba(0,0,0,0.6));
+  filter: drop-shadow(0 10px 30px rgba(0,0,0,0.6));
+}
+
+.lt-hero__tagline {
+  margin: 0;
+  color: #fff;
+  opacity: 0.98;
+  font-size: 1.45rem;
+  font-weight: 700;
+  margin-top: 0.75rem;
+}
+
+.lt-hero__copy {
+  flex: 1 1 520px;
+  text-align: left;
+  padding-right: 2.5rem;
+}
+
+.lt-hero__paragraph {
+  margin: 0 0 1.25rem 0;
+  color: rgba(255,255,255,0.95);
+  line-height: 1.6;
+  max-width: 100%;
+}
+
+.lt-hero__actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  justify-content: center; /* center the CTA button */
+  width: 100%;
+}
+
+.lt-btn.lt-cta-btn {
+  --accent: #EC1C24;
+  background: transparent;
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  padding: 0.7rem 1.25rem;
+  font-weight: 600;
+  border-radius: 28px;
+  cursor: pointer;
+  transition: background .18s ease, color .18s ease, transform .12s ease;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+}
+
+.lt-btn.lt-cta-btn:hover,
+.lt-btn.lt-cta-btn:focus {
+  background: var(--accent);
+  color: #fff;
+  transform: translateY(-3px);
+}
+
+/* pager removed: dots not used anymore */
+
+/* Responsive tweaks */
+@media (max-width: 900px) {
+  /* On small screens center everything and allow the hero to grow with content */
+  .lt-hero {
+    min-height: auto; /* let content determine height so footer is pushed down */
+    align-items: center; /* center vertically within the hero area */
+    padding-top: 12px;
+  }
+
+  .lt-hero__overlay {
+    align-items: center;
+    justify-content: center;
+  }
+
+  .lt-hero__content {
+    padding: 48px 20px 48px; /* explicit fixed padding for small screens */
+    text-align: center;
+  }
+
+  .lt-hero__title {
+    font-size: clamp(1.4rem, 6.2vw, 2.2rem);
+    margin-bottom: 1rem;
+  }
+
+  .lt-hero__split {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    justify-content: center;
+    gap: 1.25rem;
+  }
+
+  .lt-hero__brand {
+    align-items: center;
+    flex: none;
+    padding-left: 0;
+  }
+
+  .lt-hero__logo {
+    width: 110px;
+    margin-bottom: 0.5rem;
+  }
+
+  .lt-hero__copy {
+    text-align: center;
+    padding-right: 0;
+  }
+
+  .lt-hero__pager {
+    margin-top: 1.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lt-hero__logo {
+    transition: none !important;
+  }
+}
+
+/* Large-screen adjustments: reduce hero height and cap maximum to remove excessive empty space */
+@media (min-width: 1400px) {
+  .lt-hero {
+    /* slightly shorter hero on very wide screens so content doesn't float in huge empty space */
+    min-height: calc(85vh - 80px);
+    max-height: 920px; /* cap total height on very large displays */
+    background-position: center top;
+  }
+
+  /* tighten pager spacing on large screens */
+  .lt-hero__pager {
+    margin-top: 1.5rem;
+  }
+
+  /* allow a slightly larger gap but keep content sizes stable */
+  .lt-hero__split {
+    gap: clamp(3rem, 5vw, 8rem);
+  }
+}
