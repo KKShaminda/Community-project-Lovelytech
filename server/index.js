@@ -1,37 +1,35 @@
-
 import express from "express";
-import mongoose from "mongoose";
-import cors from "cors";
 import dotenv from "dotenv";
-import path from "path";
+import "colors";
+import connectDB from "./config/db.js";
+import cors from "cors";
 
-dotenv.config();
-
-// If MONGO_URI not loaded, try loading parent .env (project root)
-if (!process.env.MONGO_URI) {
-  const parentEnv = path.resolve(process.cwd(), "../.env");
-  dotenv.config({ path: parentEnv, override: false });
-}
+import userRoutes from "./routes/userRoute.js";
 
 const app = express();
-app.use(cors());
+
+// Load environment variables
+dotenv.config();
+
+// Connect to database
+connectDB();
+
+// Middleware
 app.use(express.json());
+app.use(cors({ origin: true, credentials: true }));
 
-const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI;
+// Routes
+app.use("/api/users", userRoutes);
 
-if (!MONGO_URI) {
-  console.error("MONGO_URI is not defined. Make sure [.env](.env) is present or set the environment variable.");
-  process.exit(1);
-}
-
-// MongoDB connection
-mongoose.connect(MONGO_URI)
-  .then(() => console.log("MongoDB Connected"))
-  .catch(err => console.log(err));
-
+// Test route  
 app.get("/", (req, res) => {
-  res.send("Server is running...");
+  res.send({ message: "Welcome to the LovelyTech API" });
 });
 
-app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+// Start server
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+  console.log(`Server running in ${process.env.NODE_ENV} mode`.bgCyan.white);
+  console.log(`Server is running on port ${PORT}`.bgCyan.white);
+});
