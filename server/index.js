@@ -4,6 +4,8 @@ import "colors";
 import connectDB from "./config/db.js";
 import cors from "cors";
 
+import userRoutes from "./routes/userRoute.js";
+
 const app = express();
 
 // Load environment variables
@@ -17,6 +19,7 @@ app.use(express.json());
 app.use(cors({ origin: true, credentials: true }));
 
 // Routes
+app.use("/api/users", userRoutes);
 
 // Test route  
 app.get("/", (req, res) => {
