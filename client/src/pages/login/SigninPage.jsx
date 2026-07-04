@@ -1,14 +1,44 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { signIn } from "../../services/authServices";
+
+const getDashboardPath = (role) => {
+  const normalizedRole = (role || "").toLowerCase();
+
+  if (normalizedRole === "admin") {
+    return "/admin/dashboard";
+  }
+
+  if (normalizedRole === "receptionist") {
+    return "/receptionist/dashboard";
+  }
+
+  return "/user/dashboard";
+};
 
 export function SigninPage() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: wire up to auth API
-    console.log({ email, password, rememberMe });
+    setLoading(true);
+    setMessage("");
+
+    try {
+      const data = await signIn(email, password, rememberMe);
+      const role = data?.user?.role || data?.role || "User";
+      setMessage("Login successful");
+      navigate(getDashboardPath(role));
+    } catch (error) {
+      setMessage(error.message || "Unable to sign in right now");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -22,7 +52,7 @@ export function SigninPage() {
         <div className="absolute inset-0  bg-opacity-30 flex flex-col items-center justify-center p-8">
           
           {/* Glass Morphism Card */}
-          <div className="backdrop-blur-sm rounded-4xl p-12 max-w-[550px] min-h-[600px] border border-white border-opacity-20 shadow-2xl flex flex-col justify-center">
+          <div className="backdrop-blur-sm rounded-4xl p-12 max-w-136 min-h-144 border border-white border-opacity-20 shadow-2xl flex flex-col justify-center">
             
             {/* Logo Section */}
             <div className="rounded-3xl p-1 mb-10 mx-auto w-fit">
@@ -104,11 +134,18 @@ export function SigninPage() {
               Remember Me
             </label>
 
+            {message ? (
+              <p className={`text-sm ${message.includes("successful") ? "text-green-600" : "text-red-500"}`}>
+                {message}
+              </p>
+            ) : null}
+
             <button
               type="submit"
-              className="w-full rounded-lg bg-[#E4342F] py-3.5 text-[16px] font-bold text-white shadow-sm transition hover:bg-[#c92923] focus:outline-none focus:ring-2 focus:ring-[#E4342F]/40 focus:ring-offset-2"
+              disabled={loading}
+              className="w-full rounded-lg bg-[#E4342F] py-3.5 text-[16px] font-bold text-white shadow-sm transition hover:bg-[#c92923] focus:outline-none focus:ring-2 focus:ring-[#E4342F]/40 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              Sign in
+              {loading ? "Signing in..." : "Sign in"}
             </button>
 
             <p className="text-center text-sm text-gray-500">
