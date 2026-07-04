@@ -1,12 +1,27 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import './App.css'
+import { SigninPage } from './pages/login/SigninPage'
+import { UserDashboard } from './pages/dashboard/UserDashboard'
+import { AdminDashboard } from './pages/dashboard/AdminDashboard'
+import { ReceptionistDashboard } from './pages/dashboard/ReceptionistDashboard'
 
 function App() {
   return (
     <>
       <Router>
         <Routes>
+
+          {/* Home Page */}
           <Route path="/" element={<p>Home Page</p>} />
+
+          {/* Authentication Routes */}
+          <Route path="/login" element={<SigninPage />} />
+
+          {/* Role-based Dashboard Routes */}
+          <Route path="/user/dashboard" element={<UserDashboard />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/receptionist/dashboard" element={<ReceptionistDashboard />} />
+        
         </Routes>
       </Router>
     </>
