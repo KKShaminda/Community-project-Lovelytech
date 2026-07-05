@@ -14,7 +14,7 @@ export function Footer() {
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="grid gap-10 lg:grid-cols-[1fr_1fr_1fr] lg:items-start">
           <div className="flex flex-col items-center text-center">
-            <img src="/Logo.png" alt="Lovely Tech" className="h-28 w-28 object-contain" />
+            <img src="/Logo white.png" alt="Lovely Tech" className="h-28 w-28 object-contain" />
             <h2 className="mt-4 text-3xl font-light tracking-tight sm:text-4xl">Lovely Tech</h2>
           </div>
 

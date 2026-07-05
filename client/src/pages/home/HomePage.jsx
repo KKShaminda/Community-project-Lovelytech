@@ -1,12 +1,9 @@
-import { Footer } from '../../components/Footer'
-import { Navbar } from '../../components/Navbar'
+import Layout from "../../components/layout/Layout"
 
 export function HomePage() {
   return (
     <div className="min-h-screen bg-[#ffffff] text-black flex flex-col">
-      <Navbar />
-      <main className="flex-1" />
-      <Footer />
+      <Layout></Layout>
     </div>
   )
 }
