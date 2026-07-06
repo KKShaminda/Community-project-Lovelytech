@@ -6,6 +6,7 @@ import { SignupPage } from './pages/login/SignupPage'
 import { UserDashboard } from './pages/dashboard/UserDashboard'
 import { AdminDashboard } from './pages/dashboard/AdminDashboard'
 import { ReceptionistDashboard } from './pages/dashboard/ReceptionistDashboard'
+import { Products } from './pages/products/Products'
 
 function App() {
   return (
@@ -13,6 +14,9 @@ function App() {
       <Router>
         <Routes>
 
+          {/* Public Pages */}
+          <Route path="/" element={<p>Home Page</p>} />
+          <Route path="/products" element={<Products />} />
           {/* Home Page */}
           <Route path="/" element={<HomePage />} />
 
