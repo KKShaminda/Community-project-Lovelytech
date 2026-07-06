@@ -17,6 +17,8 @@ function App() {
           {/* Public Pages */}
           <Route path="/" element={<p>Home Page</p>} />
           <Route path="/products" element={<Products />} />
+          {/* Home Page */}
+          <Route path="/" element={<HomePage />} />
 
           {/* Authentication Routes */}
           <Route path="/login" element={<SigninPage />} />
