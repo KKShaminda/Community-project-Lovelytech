@@ -6,6 +6,7 @@ import { SearchSortBar } from '../../components/products/SearchSortBar'
 import { FilterSidebar } from '../../components/products/FilterSidebar'
 import { ProductGrid } from '../../components/products/ProductGrid'
 import { Pagination } from '../../components/products/Pagination'
+import Layout from '../../components/layout/Layout'
 
 const ITEMS_PER_PAGE = 6
 
@@ -95,6 +96,7 @@ export function Products() {
   }
 
   return (
+    <Layout>
     <main className="min-h-screen bg-white px-4 py-8 sm:px-6 lg:px-10">
       <div className="mx-auto max-w-[1400px]">
         {/* Page heading + search */}
@@ -142,5 +144,6 @@ export function Products() {
         </div>
       </div>
     </main>
+    </Layout>
   )
 }
