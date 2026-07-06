@@ -5,6 +5,7 @@ import { SignupPage } from './pages/login/SignupPage'
 import { UserDashboard } from './pages/dashboard/UserDashboard'
 import { AdminDashboard } from './pages/dashboard/AdminDashboard'
 import { ReceptionistDashboard } from './pages/dashboard/ReceptionistDashboard'
+import { Products } from './pages/products/Products'
 
 function App() {
   return (
@@ -12,8 +13,9 @@ function App() {
       <Router>
         <Routes>
 
-          {/* Home Page */}
+          {/* Public Pages */}
           <Route path="/" element={<p>Home Page</p>} />
+          <Route path="/products" element={<Products />} />
 
           {/* Authentication Routes */}
           <Route path="/login" element={<SigninPage />} />
