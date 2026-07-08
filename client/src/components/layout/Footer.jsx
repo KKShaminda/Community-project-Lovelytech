@@ -10,7 +10,7 @@ const infoLinks = [
 
 export function Footer() {
   return (
-    <footer className="border-t border-white/10 bg-black text-white">
+    <footer className=" bg-black text-white">
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="grid gap-10 lg:grid-cols-[1fr_1fr_1fr] lg:items-start">
           <div className="flex flex-col items-center text-center">
