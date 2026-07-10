@@ -34,7 +34,7 @@ export function RepairPage() {
         {/* Hero Section */}
         <section className="relative isolate min-h-[520px] overflow-hidden bg-[#3E0F0F]">
           <img
-            src="https://cdn.magicpatterns.com/patterns/figma-images/U4N7ly1FRcMpmHoHpvgODx/663-2109.png"
+            src="src/assets/repair_page_01.png"
             alt="Technician repairing electronic hardware"
             className="absolute inset-0 h-full w-full object-cover object-center opacity-45"
           />
@@ -43,10 +43,7 @@ export function RepairPage() {
 
           <div className="relative mx-auto flex min-h-[520px] max-w-[1280px] items-center px-5 py-16 sm:px-8">
             <div className="max-w-3xl">
-              <p className="mb-5 text-sm font-bold uppercase tracking-[0.2em] text-red-200">
-                Lovely Tech Service Centre
-              </p>
-
+              
               <h1 className="text-4xl font-bold leading-tight text-white sm:text-6xl lg:text-7xl">
                 Computer &amp; Mobile{' '}
                 <span className="text-[#EC1C24]">Repair Services</span>
@@ -72,9 +69,7 @@ export function RepairPage() {
         {/* Services */}
         <section className="mx-auto max-w-[1080px] px-5 py-16 sm:px-8 lg:py-20">
           <div className="mb-10 text-center">
-            <p className="text-sm font-bold uppercase tracking-[0.17em] text-[#EC1C24]">
-              Simple, Transparent Care
-            </p>
+            
 
             <h2 className="mt-3 text-3xl font-bold text-[#CF1414] sm:text-4xl">
               Our Repair Services
