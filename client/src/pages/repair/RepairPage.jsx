@@ -43,7 +43,7 @@ export function RepairPage() {
 
           <div className="relative mx-auto flex min-h-[520px] max-w-[1280px] items-center px-5 py-16 sm:px-8">
             <div className="max-w-3xl">
-              
+
               <h1 className="text-4xl font-bold leading-tight text-white sm:text-6xl lg:text-7xl">
                 Computer &amp; Mobile{' '}
                 <span className="text-[#EC1C24]">Repair Services</span>
@@ -69,7 +69,9 @@ export function RepairPage() {
         {/* Services */}
         <section className="mx-auto max-w-[1080px] px-5 py-16 sm:px-8 lg:py-20">
           <div className="mb-10 text-center">
-            
+            <p className="text-sm font-bold uppercase tracking-[0.17em] text-[#EC1C24]">
+              Simple, Transparent Care
+            </p>
 
             <h2 className="mt-3 text-3xl font-bold text-[#CF1414] sm:text-4xl">
               Our Repair Services
