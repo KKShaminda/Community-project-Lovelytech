@@ -19,7 +19,7 @@ export function Navbar() {
             className="h-12 w-12 object-contain sm:h-14 sm:w-14"
           />
           <div className="hidden flex-col leading-none sm:flex">
-            <span className="text-lg font-extrabold uppercase tracking-[0.28em] text-[#000000]">
+            <span className="font-display text-xl font-bold tracking-tight sm:text-2xl">
               Lovely Tech
             </span>
           </div>
