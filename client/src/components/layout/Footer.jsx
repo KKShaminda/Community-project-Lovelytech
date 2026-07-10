@@ -15,7 +15,7 @@ export function Footer() {
         <div className="grid gap-10 lg:grid-cols-[1fr_1fr_1fr] lg:items-start">
           <div className="flex flex-col items-center text-center">
             <img src="/Logo white.png" alt="Lovely Tech" className="h-28 w-28 object-contain" />
-            <h2 className="mt-4 text-3xl font-light tracking-tight sm:text-4xl">Lovely Tech</h2>
+            <h2 className="font-display text-xl tracking-tight sm:text-2xl">Lovely Tech</h2>
           </div>
 
           <div className="lg:pl-16">
