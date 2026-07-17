@@ -3,6 +3,7 @@ import './App.css'
 import { HomePage } from './pages/home/HomePage'
 import { AboutUs } from './pages/home/AboutUs'
 import { ServicesPage } from './pages/home/ServicesPage'
+import { ContactUsPage } from './pages/home/ContactUsPage'
 import { SigninPage } from './pages/login/SigninPage'
 import { UserDashboard } from './pages/dashboard/UserDashboard'
 import { AdminDashboard } from './pages/dashboard/AdminDashboard'
@@ -22,6 +23,9 @@ function App() {
 
           {/* Services Page */}
           <Route path="/services" element={<ServicesPage />} />
+
+          {/* Contact Us Page */}
+          <Route path="/contact-us" element={<ContactUsPage />} />
 
           {/* Authentication Routes */}
           <Route path="/login" element={<SigninPage />} />
