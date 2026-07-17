@@ -2,10 +2,10 @@ import { Link } from 'react-router-dom'
 
 export function Navbar() {
   const navItems = [
-    { label: 'Home', href: '#home' },
+    { label: 'Home', href: '/' },
     { label: 'About Us', href: '/about-us' },
     { label: 'Products', href: '#products' },
-    { label: 'Services', href: '#services' },
+    { label: 'Services', href: '/services' },
     { label: 'Contact Us', href: '#contact-us' },
   ]
 
