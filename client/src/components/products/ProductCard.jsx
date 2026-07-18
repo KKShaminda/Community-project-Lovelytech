@@ -14,44 +14,44 @@ export function ProductCard({ product, isWishlisted, onToggleWishlist }) {
   }
 
   return (
-    <article className="rounded-xl border-t-4 border-red-600 bg-white p-4 shadow-sm transition hover:shadow-md">
-      <div className="relative mb-4 aspect-square overflow-hidden rounded-lg bg-gray-50">
+    <article className="rounded-xl border-t-4 border-red-600 bg-white p-2.5 shadow-sm transition hover:shadow-md">
+      <div className="relative mb-2.5 aspect-[4/3.2] overflow-hidden rounded-lg bg-gray-50">
         <img
           src={product.image}
           alt={product.name}
           className="h-full w-full object-cover"
           loading="lazy"
         />
-          <button
-            type="button"
-            onClick={() => onToggleWishlist(product.id)}
-            aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-            className={`absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full border transition-colors ${
-              isWishlisted ? 'bg-[#E4342F] border-white' : 'bg-white border-[#E4342F]'
-            }`}
-          >
-            <Heart size={16} className={isWishlisted ? 'text-white' : 'text-[#E4342F]'} />
-          </button>
+        <button
+          type="button"
+          onClick={() => onToggleWishlist(product.id)}
+          aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+          className={`absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border transition-colors ${
+            isWishlisted ? 'border-white bg-[#E4342F]' : 'border-[#E4342F] bg-white'
+          }`}
+        >
+          <Heart size={14} className={isWishlisted ? 'text-white' : 'text-[#E4342F]'} />
+        </button>
       </div>
 
-      <h3 className="mb-1 line-clamp-2 min-h-[2.75rem] text-sm font-semibold text-gray-900">
+      <h3 className="mb-1 line-clamp-2 min-h-[2.4rem] text-xs font-semibold text-gray-900">
         {product.name}
       </h3>
 
       <div className="mb-2 flex items-center gap-2">
         <StarRating rating={product.rating} />
-        <span className="text-xs text-gray-500">{product.sold} Sold</span>
+        <span className="text-[11px] text-gray-500">{product.sold} Sold</span>
       </div>
 
-      <p className="mb-3 text-xl font-bold text-[#E4342F]">{formatPrice(product.price)}</p>
+      <p className="mb-2 text-lg font-bold text-[#E4342F]">{formatPrice(product.price)}</p>
 
       <button
         type="button"
         onClick={handleAddToCart}
         disabled={outOfStock}
-        className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#E4342F] py-2.5 text-sm font-semibold text-white transition hover:bg-[#c92923] disabled:cursor-not-allowed disabled:opacity-60"
+        className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#E4342F] py-2 text-sm font-semibold text-white transition hover:bg-[#c92923] disabled:cursor-not-allowed disabled:opacity-60"
       >
-        <ShoppingCart size={16} />
+        <ShoppingCart size={14} />
         {outOfStock ? 'Out of Stock' : justAdded ? 'Added!' : 'Add to Cart'}
       </button>
     </article>
