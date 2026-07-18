@@ -31,6 +31,7 @@ export function SearchSortBar({ searchTerm, onSearchChange, sortBy, onSortChange
             </option>
           ))}
         </select>
+        
       </div>
     </div>
   )
