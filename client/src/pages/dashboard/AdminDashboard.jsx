@@ -3,14 +3,14 @@ import { Link } from "react-router-dom";
 const stats = [
   {
     label: "TOTAL SALES",
-    value: "$48,290.00",
+    value: "LKR 48,290.00",
     badge: "+12.5%",
     badgeClass: "bg-red-100 text-red-500",
     icon: "◫",
   },
   {
     label: "REVENUE",
-    value: "$124,500.00",
+    value: "LKR 124,500.00",
     badge: "+8.2%",
     badgeClass: "bg-red-100 text-red-500",
     icon: "↗",
@@ -31,13 +31,6 @@ const stats = [
   },
 ];
 
-const products = [
-  { name: "Precision Workstation X1", percent: 92, color: "bg-red-500" },
-  { name: "Neural Audio Engine", percent: 78, color: "bg-red-500" },
-  { name: "Nano-Optic Display", percent: 65, color: "bg-red-500" },
-  { name: "Flux Capacitor G2", percent: 45, color: "bg-yellow-500" },
-];
-
 const orders = [
   {
     id: "#LT-8842",
@@ -46,7 +39,7 @@ const orders = [
     date: "Oct 12, 2024",
     status: "Delivered",
     statusClass: "bg-rose-100 text-red-500",
-    total: "$3,499.00",
+    total: "LKR 3,499.00",
   },
   {
     id: "#LT-8843",
@@ -55,7 +48,7 @@ const orders = [
     date: "Oct 12, 2024",
     status: "Processing",
     statusClass: "bg-red-100 text-red-500",
-    total: "$599.00",
+    total: "LKR 599.00",
   },
   {
     id: "#LT-8844",
@@ -64,7 +57,7 @@ const orders = [
     date: "Oct 11, 2024",
     status: "Shipped",
     statusClass: "bg-amber-100 text-amber-500",
-    total: "$1,299.00",
+    total: "LKR 1,299.00",
   },
   {
     id: "#LT-8845",
@@ -73,18 +66,22 @@ const orders = [
     date: "Oct 11, 2024",
     status: "Pending",
     statusClass: "bg-rose-50 text-rose-300",
-    total: "$150.00",
+    total: "LKR 150.00",
   },
 ];
 
 function Logo() {
   return (
     <div className="flex items-center gap-3">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-red-500 text-[10px] font-black leading-none text-red-500">
-        <span className="-rotate-12">LOVE</span>
-      </div>
-      <div>
-        <p className="text-2xl font-bold text-neutral-900">Lovely Tech</p>
+      <img
+        src="/Logo.png"
+        alt="Lovely Tech"
+        className="h-12 w-12 object-contain sm:h-14 sm:w-14"
+      />
+      <div className="hidden flex-col leading-none sm:flex">
+        <span className="text-xl font-bold tracking-tight text-neutral-900 sm:text-2xl">
+          Lovely Tech
+        </span>
       </div>
     </div>
   );
@@ -109,11 +106,12 @@ export function AdminDashboard() {
   return (
     <div className="min-h-screen bg-[#1f1f1f] p-4 text-neutral-900 lg:p-5">
       <div className="mx-auto max-w-[1280px] overflow-hidden bg-white shadow-[0_18px_45px_rgba(0,0,0,0.25)]">
-        <header className="flex items-center justify-between border-b-4 border-red-500 px-5 py-4 lg:px-8">
+        <header className="border-b border-[#ff2020] bg-white/95 backdrop-blur-xl">
+          <div className="flex h-20 items-center justify-between px-4 sm:px-6 lg:px-8">
           <Logo />
 
           <div className="flex items-center gap-6 text-sm text-neutral-900">
-            <nav className="hidden items-center gap-12 lg:flex">
+            <nav className="hidden items-center gap-8 lg:flex">
               <a href="#dashboard" className="font-medium hover:text-red-500">
                 Dashboard
               </a>
@@ -128,11 +126,15 @@ export function AdminDashboard() {
               </a>
             </nav>
 
-            <div className="flex items-center gap-3 text-sm">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-neutral-900/80">◎</span>
-              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-neutral-900/80">◉</span>
-              <span className="font-medium">Account</span>
+            <div className="flex items-center gap-3 sm:gap-4">
+              <Link
+                to="/login"
+                className="rounded-full border border-[#ff2020] px-5 py-2.5 text-sm font-semibold text-[#ff2020] transition-colors duration-200 hover:bg-[#ff2020] hover:text-black"
+              >
+                Sign In
+              </Link>
             </div>
+          </div>
           </div>
         </header>
 
@@ -177,7 +179,7 @@ export function AdminDashboard() {
               ))}
             </section>
 
-            <section className="mt-8 grid gap-5 xl:grid-cols-[2fr_1fr]">
+            <section className="mt-8 grid gap-5">
               <article className="rounded-2xl bg-[#efefef] p-5">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-medium text-neutral-900">Monthly Sales Revenue</h2>
@@ -198,27 +200,6 @@ export function AdminDashboard() {
                 </div>
               </article>
 
-              <article className="rounded-2xl bg-[#efefef] p-5">
-                <h2 className="text-sm font-medium text-neutral-900">Product Performance</h2>
-
-                <div className="mt-6 space-y-6">
-                  {products.map((product) => (
-                    <div key={product.name}>
-                      <div className="mb-2 flex items-center justify-between gap-4 text-sm">
-                        <span className="text-neutral-800">{product.name}</span>
-                        <span className="font-medium text-red-500">{product.percent}%</span>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-neutral-700/80">
-                        <div className={`h-1.5 rounded-full ${product.color}`} style={{ width: `${product.percent}%` }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <a href="#revenue" className="mt-10 inline-block text-sm font-medium uppercase tracking-wide text-red-500">
-                  View Detailed Report
-                </a>
-              </article>
             </section>
 
             <section id="revenue" className="mt-8 rounded-2xl bg-[#efefef]">
