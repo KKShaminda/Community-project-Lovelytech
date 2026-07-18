@@ -1,33 +1,53 @@
+import fs from 'fs';
+import path from 'path';
 import multer from 'multer';
-import cloudinary from '../config/cloudinary.js';
+import { fileURLToPath } from 'url';
 
-// Use memory storage — file is kept as a Buffer, never saved to disk
-const storage = multer.memoryStorage();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const uploadRoot = path.resolve(__dirname, '../uploads');
+
+if (!fs.existsSync(uploadRoot)) {
+  fs.mkdirSync(uploadRoot, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const folder = req.body.folder || 'products';
+    const folderPath = path.join(uploadRoot, folder);
+    fs.mkdirSync(folderPath, { recursive: true });
+    cb(null, folderPath);
+  },
+  filename: (req, file, cb) => {
+    const safeName = file.originalname.replace(/\s+/g, '-');
+    cb(null, `${Date.now()}-${safeName}`);
+  },
+});
+
 export const upload = multer({ storage });
 
-/**
- * Uploads a file buffer (from Multer) directly to Cloudinary.
- * @param {Buffer} fileBuffer - The file buffer from req.file.buffer
- * @param {string} folder - The Cloudinary folder to upload into (e.g. "profiles")
- * @returns {Promise<{ url: string, public_id: string }>}
- */
-export const uploadImage = (fileBuffer, folder = 'uploads') => {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      {
-        folder,
-        use_filename: true,
-        unique_filename: true,
-        overwrite: true,
-      },
-      (error, result) => {
-        if (error) return reject(error);
-        console.log('Cloudinary upload result:', result);
-        resolve({ url: result.secure_url, public_id: result.public_id });
-      }
-    );
+export const createImageRecord = (file, folder = 'products', req = null) => {
+  const relativePath = `/uploads/${folder}/${file.filename}`;
+  const baseUrl = req ? `${req.protocol}://${req.get('host')}` : 'http://localhost:5000';
 
-    // Pipe the buffer into the Cloudinary upload stream
-    stream.end(fileBuffer);
-  });
+  return {
+    url: `${baseUrl}${relativePath}`,
+    filename: file.filename,
+    path: relativePath,
+  };
+};
+
+export const uploadImage = (file, req = null, folder = 'products') => {
+  return createImageRecord(file, folder, req);
+};
+
+export const deleteImageFile = (imagePath) => {
+  if (!imagePath) return;
+
+  const relativePath = imagePath.replace(/^\/uploads\//, '');
+  const absolutePath = path.join(uploadRoot, relativePath);
+
+  if (fs.existsSync(absolutePath)) {
+    fs.unlinkSync(absolutePath);
+  }
 };
