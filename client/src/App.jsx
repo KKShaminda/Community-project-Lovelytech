@@ -8,6 +8,9 @@ import { AdminDashboard } from './pages/dashboard/AdminDashboard'
 import { ReceptionistDashboard } from './pages/dashboard/ReceptionistDashboard'
 import { Products } from './pages/products/Products'
 import { RepairPage } from './pages/repair/RepairPage'
+import { BookRepairPage } from './pages/repair/BookRepairPage'
+import { RepairHistoryPage } from './pages/repair/RepairHistoryPage'
+import { RepairTrackingPage } from './pages/repair/RepairTrackingPage'
 
 function App() {
   return (
@@ -18,7 +21,12 @@ function App() {
           {/* Public Pages */}
           <Route path="/" element={<p>Home Page</p>} />
           <Route path="/products" element={<Products />} />
+
+          {/* Repair Services Pages */}
           <Route path="/repair" element={<RepairPage />} />
+           <Route path="/repair/book" element={<BookRepairPage />} />
+           <Route path="/repair/history" element={<RepairHistoryPage />} />
+          <Route path="/repair/track" element={<RepairTrackingPage />} />
 
           {/* Authentication Routes */}
           <Route path="/login" element={<SigninPage />} />
