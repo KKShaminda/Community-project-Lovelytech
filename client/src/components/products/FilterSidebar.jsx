@@ -1,16 +1,18 @@
 import { StarRating } from './StarRating'
-import { categories, ratingOptions } from '../../data/productsData'
 
 export function FilterSidebar({
   selectedCategories,
   onToggleCategory,
   priceRange,
+  maxPrice = 600000,
   onPriceRangeChange,
   selectedRatings,
   onToggleRating,
   availability,
   onToggleAvailability,
   onClearAll,
+  categories = [],
+  ratingOptions = [],
 }) {
   return (
     <aside className="w-full rounded-2xl border border-gray-200 bg-[#ec1c24] p-6 lg:w-72">
@@ -25,7 +27,6 @@ export function FilterSidebar({
         </button>
       </div>
 
-      {/* Category */}
       <div className="mb-6 border-b border-gray-100 pb-6">
         <h3 className="mb-3 font-semibold text-white">Category</h3>
         <ul className="space-y-3">
@@ -36,7 +37,7 @@ export function FilterSidebar({
                   type="checkbox"
                   checked={selectedCategories.includes(category.label)}
                   onChange={() => onToggleCategory(category.label)}
-                  className="h-4 w-4 rounded  text-[#E4342F] focus:ring-[#E4342F]"
+                  className="h-4 w-4 rounded text-[#E4342F] focus:ring-[#E4342F]"
                 />
                 <span className="flex-1">{category.label}</span>
                 <span className="text-xs text-gray-300">({category.count})</span>
@@ -46,13 +47,12 @@ export function FilterSidebar({
         </ul>
       </div>
 
-      {/* Price Range */}
       <div className="mb-6 border-b border-gray-100 pb-6">
         <h3 className="mb-3 font-semibold text-white">Price Range</h3>
         <input
           type="range"
           min="0"
-          max="600000"
+          max={maxPrice}
           step="1000"
           value={priceRange}
           onChange={(event) => onPriceRangeChange(Number(event.target.value))}
@@ -64,7 +64,6 @@ export function FilterSidebar({
         </div>
       </div>
 
-      {/* Ratings */}
       <div className="mb-6 border-b border-gray-100 pb-6">
         <h3 className="mb-3 font-semibold text-white">Ratings</h3>
         <ul className="space-y-3">
@@ -85,7 +84,6 @@ export function FilterSidebar({
         </ul>
       </div>
 
-      {/* Availability */}
       <div>
         <h3 className="mb-3 font-semibold text-white">Availability</h3>
         <div className="space-y-3 text-sm text-white">
