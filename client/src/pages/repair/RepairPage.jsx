@@ -7,7 +7,6 @@ import {
     FaTools,
     FaHistory,
 } from "react-icons/fa";
-
 import { TbDeviceMobileCog, } from "react-icons/tb";
 import { Link } from 'react-router-dom'
 import Layout from '../../components/layout/Layout'
@@ -129,17 +128,20 @@ export function RepairPage() {
 
                         <div className="mt-9 flex flex-col justify-center gap-4 sm:flex-row">
                             <Link
-                                to="/repair/book"
+                                to="/repair/track"
                                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#EC1C24] px-6 py-3.5 font-bold text-white transition hover:bg-[#cf1414]"
                             >
                                 Track Your Repair
                                 <ArrowRightIcon size={18} />
                             </Link>
 
-                            <button className="inline-flex items-center justify-center gap-2 rounded-lg bg-black px-6 py-3.5 font-bold text-white hover:bg-zinc-800">
+                            <Link
+                                to="/repair/history"
+                                className="inline-flex items-center justify-center gap-2 rounded-lg bg-black px-6 py-3.5 font-bold text-white hover:bg-zinc-800"
+                            >
                                 <FaHistory size={18} />
                                 Repair History
-                            </button>
+                            </Link>
                         </div>
                     </div>
                 </section>
