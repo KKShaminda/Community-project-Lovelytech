@@ -7,6 +7,7 @@ import { UserDashboard } from './pages/dashboard/UserDashboard'
 import { AdminDashboard } from './pages/dashboard/AdminDashboard'
 import { ReceptionistDashboard } from './pages/dashboard/ReceptionistDashboard'
 import { Products } from './pages/products/Products'
+import { RepairPage } from './pages/repair/RepairPage'
 
 function App() {
   return (
@@ -17,8 +18,7 @@ function App() {
           {/* Public Pages */}
 
           <Route path="/products" element={<Products />} />
-          {/* Home Page */}
-          <Route path="/" element={<HomePage />} />
+          <Route path="/repair" element={<RepairPage />} />
 
           {/* Authentication Routes */}
           <Route path="/login" element={<SigninPage />} />
@@ -28,7 +28,8 @@ function App() {
           <Route path="/user/dashboard" element={<UserDashboard />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/receptionist/dashboard" element={<ReceptionistDashboard />} />
-        
+
+          
         </Routes>
       </Router>
     </>

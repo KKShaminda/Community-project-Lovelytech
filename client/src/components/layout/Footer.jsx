@@ -10,12 +10,12 @@ const infoLinks = [
 
 export function Footer() {
   return (
-    <footer className="border-t border-white/10 bg-black text-white">
+    <footer className=" bg-black text-white">
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="grid gap-10 lg:grid-cols-[1fr_1fr_1fr] lg:items-start">
           <div className="flex flex-col items-center text-center">
             <img src="/Logo white.png" alt="Lovely Tech" className="h-28 w-28 object-contain" />
-            <h2 className="mt-4 text-3xl font-light tracking-tight sm:text-4xl">Lovely Tech</h2>
+            <h2 className="font-display text-xl tracking-tight sm:text-2xl">Lovely Tech</h2>
           </div>
 
           <div className="lg:pl-16">
