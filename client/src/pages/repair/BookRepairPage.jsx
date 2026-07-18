@@ -101,7 +101,7 @@ export function BookRepairPage() {
                 <section className="bg-[#3E0F0F] py-14">
 
                     <div className="
-mx-auto grid max-w-[1320px]
+mx-auto grid max-w-full
 gap-6 px-6
 sm:grid-cols-2
 lg:grid-cols-5
@@ -125,7 +125,7 @@ hover:-translate-y-1
 
 ${device === item.id
                                             ?
-                                            "ring-4 ring-[#EC1C24]"
+                                            "ring-4 ring-[#EC1C24] "
                                             :
                                             ""
                                         }
@@ -133,12 +133,12 @@ ${device === item.id
                                 >
 
 
-                                    <div className="border-t-4 border-[#EC1C24]">
+                                    <div className="border-[#EC1C24]">
 
                                         <img
                                             src={item.image}
                                             alt={item.name}
-                                            className="h-44 w-full object-cover"
+                                            className="h-44 w-full object-contain"
                                         />
 
                                     </div>
