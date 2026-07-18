@@ -15,7 +15,7 @@ function App() {
         <Routes>
 
           {/* Public Pages */}
-          <Route path="/" element={<p>Home Page</p>} />
+
           <Route path="/products" element={<Products />} />
           {/* Home Page */}
           <Route path="/" element={<HomePage />} />
