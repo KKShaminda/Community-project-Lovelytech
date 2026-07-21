@@ -5,6 +5,10 @@ import { SigninPage } from './pages/login/SigninPage'
 import { SignupPage } from './pages/login/SignupPage'
 import { UserDashboard } from './pages/dashboard/UserDashboard'
 import { AdminDashboard } from './pages/dashboard/AdminDashboard'
+import { InventoryManagementPage } from './pages/admin/InventoryManagementPage'
+import { RepairOrdersPage } from './pages/admin/RepairOrdersPage'
+import { SalesLogPage } from './pages/admin/SalesLogPage'
+import { CustomersPage } from './pages/admin/CustomersPage'
 import { ReceptionistDashboard } from './pages/dashboard/ReceptionistDashboard'
 import { Products } from './pages/products/Products'
 import { RepairPage } from './pages/repair/RepairPage'
@@ -36,6 +40,10 @@ function App() {
           {/* Role-based Dashboard Routes */}
           <Route path="/user/dashboard" element={<UserDashboard />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/inventory" element={<InventoryManagementPage />} />
+          <Route path="/admin/repair-orders" element={<RepairOrdersPage />} />
+          <Route path="/admin/sales-log" element={<SalesLogPage />} />
+          <Route path="/admin/customers" element={<CustomersPage />} />
           <Route path="/receptionist/dashboard" element={<ReceptionistDashboard />} />
 
           

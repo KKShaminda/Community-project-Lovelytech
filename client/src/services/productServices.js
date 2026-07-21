@@ -36,6 +36,23 @@ const request = async (url, options = {}) => {
   return data
 }
 
+const requestFormData = async (url, formData, method) => {
+  const response = await fetch(url, {
+    method,
+    body: formData,
+    credentials: 'include',
+  })
+
+  const data = await parseResponse(response)
+
+  if (!response.ok) {
+    const message = data?.message || data?.error || response.statusText || 'Request failed'
+    throw new Error(message)
+  }
+
+  return data
+}
+
 export const getProducts = async (params = {}) => {
   const query = new URLSearchParams()
 
@@ -62,4 +79,42 @@ export const getProductFacets = async (params = {}) => {
 
 export const getProductById = async (productId) => {
   return request(`${API_URL}/${productId}`, { method: 'GET' })
+}
+
+export const createProduct = async (payload) => {
+  const formData = new FormData()
+
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return
+
+    if (key === 'images' && Array.isArray(value)) {
+      value.forEach((file) => formData.append('images', file))
+      return
+    }
+
+    formData.append(key, value)
+  })
+
+  return requestFormData(API_URL, formData, 'POST')
+}
+
+export const updateProduct = async (productId, payload) => {
+  const formData = new FormData()
+
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return
+
+    if (key === 'images' && Array.isArray(value)) {
+      value.forEach((file) => formData.append('images', file))
+      return
+    }
+
+    formData.append(key, value)
+  })
+
+  return requestFormData(`${API_URL}/${productId}`, formData, 'PUT')
+}
+
+export const deleteProduct = async (productId) => {
+  return request(`${API_URL}/${productId}`, { method: 'DELETE' })
 }
