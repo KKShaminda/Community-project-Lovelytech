@@ -30,7 +30,12 @@ const productSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-    price: {
+    buyPrice: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    sellPrice: {
       type: Number,
       required: true,
       min: 0,
@@ -76,6 +81,11 @@ const productSchema = new mongoose.Schema(
 // Virtual: availability derived from stock (used by the "In Stock / Out of Stock" filter)
 productSchema.virtual("inStock").get(function () {
   return this.stock > 0;
+});
+
+// Backward-compatible UI price value: always expose sellPrice as "price".
+productSchema.virtual("price").get(function () {
+  return this.sellPrice;
 });
 
 productSchema.set("toJSON", { virtuals: true });

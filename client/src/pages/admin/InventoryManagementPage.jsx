@@ -28,9 +28,11 @@ const normalizeProduct = (product) => ({
   sku: product.sku || product.code || product._id?.slice(-8)?.toUpperCase() || 'N/A',
   category: product.category || 'Uncategorized',
   stock: Number(product.stock) || 0,
-  price: Number(product.price) || 0,
+  buyPrice: Number(product.buyPrice) || 0,
+  sellPrice: Number(product.sellPrice ?? product.price) || 0,
   brand: product.brand || '',
   description: product.description || '',
+  image: product.images?.[0]?.url || '',
   isActive: product.isActive ?? true,
   status: Number(product.stock) > 0 ? 'In Stock' : 'Low Stock',
 })
@@ -48,9 +50,11 @@ const emptyForm = {
   category: CATEGORIES[0],
   brand: '',
   description: '',
-  price: '',
+  buyPrice: '',
+  sellPrice: '',
   stock: '',
   isActive: true,
+  images: [],
 }
 
 function StatCard({ label, value }) {
@@ -64,9 +68,13 @@ function StatCard({ label, value }) {
 
 function InventoryRow({ item }) {
   return (
-    <div className="grid grid-cols-[1.6fr_1fr_1fr_0.8fr_0.9fr_0.5fr] items-center border-b border-neutral-200 px-4 py-4 text-sm last:border-b-0 lg:px-6">
+    <div className="grid grid-cols-[1.6fr_1fr_1fr_0.95fr_0.95fr_0.9fr_0.5fr] items-center border-b border-neutral-200 px-4 py-4 text-sm last:border-b-0 lg:px-6">
       <div className="flex items-center gap-3">
-        <div className="h-8 w-8 rounded-md bg-neutral-900/90" />
+        {item.image ? (
+          <img src={item.image} alt={item.name} className="h-8 w-8 rounded-md object-cover" />
+        ) : (
+          <div className="h-8 w-8 rounded-md bg-neutral-900/90" />
+        )}
         <div>
           <p className="font-semibold text-neutral-900">{item.name}</p>
           <p className="text-[11px] text-neutral-600">SKU: {item.sku}</p>
@@ -79,7 +87,8 @@ function InventoryRow({ item }) {
           <span className={`block h-full rounded-full ${item.barClass}`} style={{ width: item.barWidth }} />
         </span>
       </span>
-      <span className="font-medium text-neutral-900">{item.price}</span>
+      <span className="font-medium text-neutral-900">{item.buyPrice}</span>
+      <span className="font-medium text-neutral-900">{item.sellPrice}</span>
       <span>
         <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${item.statusClass}`}>{item.status}</span>
       </span>
@@ -135,9 +144,11 @@ export function InventoryManagementPage() {
       category: item.category,
       brand: item.brand || '',
       description: item.description || '',
-      price: String(item.price || ''),
+      buyPrice: String(item.buyPrice || ''),
+      sellPrice: String(item.sellPrice || ''),
       stock: String(item.stock || ''),
       isActive: item.isActive ?? true,
+      images: [],
     })
     setModalOpen(true)
   }
@@ -157,7 +168,8 @@ export function InventoryManagementPage() {
     try {
       const payload = {
         ...form,
-        price: Number(form.price),
+        buyPrice: Number(form.buyPrice),
+        sellPrice: Number(form.sellPrice),
         stock: Number(form.stock),
         isActive: Boolean(form.isActive),
       }
@@ -193,7 +205,7 @@ export function InventoryManagementPage() {
   const inventoryStats = useMemo(() => {
     const totalProducts = products.length
     const lowStockCount = products.filter((product) => product.stock > 0 && product.stock <= 10).length
-    const inventoryValue = products.reduce((sum, product) => sum + product.price * product.stock, 0)
+    const inventoryValue = products.reduce((sum, product) => sum + product.buyPrice * product.stock, 0)
 
     return [
       { label: 'TOTAL PRODUCTS', value: String(totalProducts) },
@@ -213,7 +225,9 @@ export function InventoryManagementPage() {
         stockClass: product.stock > 10 ? 'text-emerald-700' : 'text-red-600',
         barWidth: stockFillFor(product.stock),
         barClass: product.stock > 10 ? 'bg-emerald-500' : 'bg-red-500',
-        price: formatLKR(product.price),
+        buyPrice: formatLKR(product.buyPrice),
+        sellPrice: formatLKR(product.sellPrice),
+        image: product.image,
         status: product.status,
         statusClass: product.stock > 10 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-red-500',
       })),
@@ -274,11 +288,12 @@ export function InventoryManagementPage() {
         ) : null}
 
         <div className="mt-4 overflow-hidden rounded-xl border border-neutral-300 bg-white">
-          <div className="grid grid-cols-[1.6fr_1fr_1fr_0.8fr_0.9fr_0.5fr] bg-[#d8d8d8] px-4 py-3 text-[11px] font-bold uppercase tracking-wide text-red-500 lg:px-6">
+          <div className="grid grid-cols-[1.6fr_1fr_1fr_0.95fr_0.95fr_0.9fr_0.5fr] bg-[#d8d8d8] px-4 py-3 text-[11px] font-bold uppercase tracking-wide text-red-500 lg:px-6">
             <span>Product Name</span>
             <span>Category</span>
             <span>Stock Level</span>
-            <span>Unit Price</span>
+            <span>Buy Price</span>
+            <span>Sell Price</span>
             <span>Status</span>
             <span>Actions</span>
           </div>
@@ -377,19 +392,32 @@ export function InventoryManagementPage() {
               </label>
 
               <label>
-                <span className="text-sm font-medium text-neutral-700">Price (LKR)</span>
+                <span className="text-sm font-medium text-neutral-700">Buy Price (LKR)</span>
                 <input
                   required
                   type="number"
                   min="0"
                   step="0.01"
-                  value={form.price}
-                  onChange={(event) => setForm((current) => ({ ...current, price: event.target.value }))}
+                  value={form.buyPrice}
+                  onChange={(event) => setForm((current) => ({ ...current, buyPrice: event.target.value }))}
                   className="mt-1 w-full rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-[#ef2027]"
                 />
               </label>
 
               <label>
+                <span className="text-sm font-medium text-neutral-700">Sell Price (LKR)</span>
+                <input
+                  required
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.sellPrice}
+                  onChange={(event) => setForm((current) => ({ ...current, sellPrice: event.target.value }))}
+                  className="mt-1 w-full rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-[#ef2027]"
+                />
+              </label>
+
+              <label className="md:col-span-2">
                 <span className="text-sm font-medium text-neutral-700">Stock</span>
                 <input
                   required
@@ -399,6 +427,20 @@ export function InventoryManagementPage() {
                   value={form.stock}
                   onChange={(event) => setForm((current) => ({ ...current, stock: event.target.value }))}
                   className="mt-1 w-full rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-[#ef2027]"
+                />
+              </label>
+
+              <label className="md:col-span-2">
+                <span className="text-sm font-medium text-neutral-700">Product Photos (max 5)</span>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={(event) => {
+                    const files = Array.from(event.target.files || [])
+                    setForm((current) => ({ ...current, images: files }))
+                  }}
+                  className="mt-1 w-full rounded-xl border border-neutral-300 px-4 py-3 outline-none file:mr-4 file:rounded-lg file:border-0 file:bg-[#ef2027] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
                 />
               </label>
 

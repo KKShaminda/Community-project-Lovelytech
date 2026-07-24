@@ -14,6 +14,8 @@ const DEFAULT_PRICE_MAX = 600000
 const normalizeProduct = (product) => ({
   ...product,
   id: product._id || product.id,
+  sellPrice: Number(product.sellPrice ?? product.price) || 0,
+  price: Number(product.sellPrice ?? product.price) || 0,
   image: product.images?.[0]?.url || product.image || '/placeholder-product.png',
   availability: product.stock > 0 ? 'In Stock' : 'Out of Stock',
 })

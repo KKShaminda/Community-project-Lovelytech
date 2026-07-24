@@ -27,9 +27,9 @@ const buildFilter = (query) => {
   }
 
   if (minPrice || maxPrice) {
-    filter.price = {};
-    if (minPrice) filter.price.$gte = Number(minPrice);
-    if (maxPrice) filter.price.$lte = Number(maxPrice);
+    filter.sellPrice = {};
+    if (minPrice) filter.sellPrice.$gte = Number(minPrice);
+    if (maxPrice) filter.sellPrice.$lte = Number(maxPrice);
   }
 
   if (minRating) {
@@ -51,8 +51,8 @@ const buildFilter = (query) => {
 
 const SORT_OPTIONS = {
   None: { createdAt: -1 },
-  "Price: Low to High": { price: 1 },
-  "Price: High to Low": { price: -1 },
+  "Price: Low to High": { sellPrice: 1 },
+  "Price: High to Low": { sellPrice: -1 },
   "Best Selling": { sold: -1 },
   "Top Rated": { rating: -1 },
   Newest: { createdAt: -1 },
@@ -118,8 +118,8 @@ export const getProductFacets = async (req, res) => {
       {
         $group: {
           _id: null,
-          min: { $min: "$price" },
-          max: { $max: "$price" },
+          min: { $min: "$sellPrice" },
+          max: { $max: "$sellPrice" },
         },
       },
     ]);
@@ -152,7 +152,17 @@ export const createProduct = async (req, res) => {
     const files = req.files || [];
     const images = files.map((file) => uploadImage(file, req, "products"));
 
-    const product = await Product.create({ ...req.body, images });
+    const payload = { ...req.body, images };
+
+    if (payload.price !== undefined && payload.sellPrice === undefined) {
+      payload.sellPrice = payload.price;
+    }
+
+    if (payload.buyPrice !== undefined) payload.buyPrice = Number(payload.buyPrice);
+    if (payload.sellPrice !== undefined) payload.sellPrice = Number(payload.sellPrice);
+    delete payload.price;
+
+    const product = await Product.create(payload);
     res.status(201).json(product);
   } catch (err) {
     res.status(400).json({ message: "Failed to create product", error: err.message });
@@ -169,6 +179,14 @@ export const updateProduct = async (req, res) => {
     if (!product) return res.status(404).json({ message: "Product not found" });
 
     const { removeImages, ...fields } = req.body;
+
+    if (fields.price !== undefined && fields.sellPrice === undefined) {
+      fields.sellPrice = fields.price;
+    }
+
+    if (fields.buyPrice !== undefined) fields.buyPrice = Number(fields.buyPrice);
+    if (fields.sellPrice !== undefined) fields.sellPrice = Number(fields.sellPrice);
+    delete fields.price;
 
     if (removeImages) {
       const idsToRemove = Array.isArray(removeImages) ? removeImages : [removeImages];
