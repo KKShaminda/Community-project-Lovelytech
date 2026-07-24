@@ -10,11 +10,27 @@ import { getProductFacets, getProducts } from '../../services/productServices'
 
 const ITEMS_PER_PAGE = 9
 const DEFAULT_PRICE_MAX = 600000
+const FALLBACK_PRODUCT_IMAGE = '/placeholder-product.svg'
+
+const getImageUrl = (image) => {
+  if (typeof image === 'string') return image
+  return image?.url || image?.secure_url || ''
+}
+
+const getProductImage = (product) => {
+  const firstImage = Array.isArray(product.images) ? product.images[0] : product.images
+  const uploadedImageUrl = getImageUrl(firstImage)
+  const legacyImageUrl = getImageUrl(product.image)
+
+  if (uploadedImageUrl) return uploadedImageUrl
+
+  return product.imageUrl || product.image_url || legacyImageUrl || FALLBACK_PRODUCT_IMAGE
+}
 
 const normalizeProduct = (product) => ({
   ...product,
   id: product._id || product.id,
-  image: product.images?.[0]?.url || product.image || '/placeholder-product.png',
+  image: getProductImage(product),
   availability: product.stock > 0 ? 'In Stock' : 'Out of Stock',
 })
 

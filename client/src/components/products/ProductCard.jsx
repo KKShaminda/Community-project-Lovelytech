@@ -3,6 +3,8 @@ import { Heart, ShoppingCart } from 'lucide-react'
 import { StarRating } from './StarRating'
 import { formatPrice } from '../../data/productsData'
 
+const FALLBACK_PRODUCT_IMAGE = '/placeholder-product.svg'
+
 export function ProductCard({ product, isWishlisted, onToggleWishlist }) {
   const [justAdded, setJustAdded] = useState(false)
   const outOfStock = product.availability === 'Out of Stock'
@@ -17,10 +19,14 @@ export function ProductCard({ product, isWishlisted, onToggleWishlist }) {
     <article className="rounded-xl border-t-4 border-red-600 bg-white p-2.5 shadow-sm transition hover:shadow-md">
       <div className="relative mb-2.5 aspect-[4/3.2] overflow-hidden rounded-lg bg-gray-50">
         <img
-          src={product.image}
+          src={product.image || FALLBACK_PRODUCT_IMAGE}
           alt={product.name}
           className="h-full w-full object-cover"
           loading="lazy"
+          onError={(event) => {
+            if (event.currentTarget.src.endsWith(FALLBACK_PRODUCT_IMAGE)) return
+            event.currentTarget.src = FALLBACK_PRODUCT_IMAGE
+          }}
         />
         <button
           type="button"
