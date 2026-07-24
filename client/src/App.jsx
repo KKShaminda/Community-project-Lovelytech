@@ -1,6 +1,9 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import './App.css'
 import { HomePage } from './pages/home/HomePage'
+import { AboutUs } from './pages/home/AboutUs'
+import { ServicesPage } from './pages/home/ServicesPage'
+import { ContactUsPage } from './pages/home/ContactUsPage'
 import { SigninPage } from './pages/login/SigninPage'
 import { SignupPage } from './pages/login/SignupPage'
 import { UserDashboard } from './pages/dashboard/UserDashboard'
@@ -21,6 +24,14 @@ function App() {
           {/* Public Pages */}
           <Route path="/" element={<HomePage />} />
 
+          {/* About Us Page */}
+          <Route path="/about-us" element={<AboutUs />} />
+
+          {/* Services Page */}
+          <Route path="/services" element={<ServicesPage />} />
+
+          {/* Contact Us Page */}
+          <Route path="/contact-us" element={<ContactUsPage />} />
           <Route path="/products" element={<Products />} />
 
           {/* Repair Services Pages */}
