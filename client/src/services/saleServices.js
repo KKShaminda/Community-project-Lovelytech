@@ -3,7 +3,7 @@ const ensureLeadingSlash = (value = '') => (value.startsWith('/') ? value : `/${
 
 const rawBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000').trim()
 const normalizedBaseUrl = normalizeUrlPart(rawBaseUrl.replace(/\/api$/i, ''))
-const apiPrefix = ensureLeadingSlash((import.meta.env.VITE_API_PREFIX || '/api/users').trim())
+const apiPrefix = ensureLeadingSlash((import.meta.env.VITE_API_PREFIX || '/api/sales').trim())
 const API_URL = `${normalizedBaseUrl}${apiPrefix}`
 
 const getAuthHeaders = () => {
@@ -45,8 +45,18 @@ const request = async (url, options = {}) => {
   return data
 }
 
-export const getAllUsers = async () => request(API_URL, { method: 'GET' })
+export const getSales = async () => request(API_URL, { method: 'GET' })
 
-export const suspendUser = async (userId) => request(`${API_URL}/${userId}/suspend`, { method: 'PATCH' })
+export const createSale = async (payload) =>
+  request(API_URL, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
 
-export const unsuspendUser = async (userId) => request(`${API_URL}/${userId}/unsuspend`, { method: 'PATCH' })
+export const updateSale = async (saleId, payload) =>
+  request(`${API_URL}/${saleId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })
+
+export const deleteSale = async (saleId) => request(`${API_URL}/${saleId}`, { method: 'DELETE' })

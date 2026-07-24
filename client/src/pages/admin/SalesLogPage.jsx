@@ -1,32 +1,94 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { AdminShell } from '../../components/admin/AdminShell'
-import { SALES_LOGS, SALES_STATUS_META, formatLKR } from '../../data/adminPagesData'
+import { formatLKR } from '../../data/adminPagesData'
+import { createSale, deleteSale, getSales, updateSale } from '../../services/saleServices'
+import { getProducts } from '../../services/productServices'
 
-const defaultForm = {
-  customer: '',
-  payment: 'Transfer',
-  total: '',
-  status: 'complete',
+const SALES_STATUS_META = {
+  complete: { label: 'Complete', className: 'bg-green-100 text-green-700' },
+  processing: { label: 'Processing', className: 'bg-blue-100 text-blue-700' },
+  refunded: { label: 'Refunded', className: 'bg-red-100 text-red-600' },
 }
 
+const defaultItem = () => ({ productId: '', quantity: 1 })
+
+const normalizeItems = (items) => {
+  const merged = new Map()
+
+  items.forEach((item) => {
+    if (!item.productId || Number(item.quantity) <= 0) return
+
+    const existing = merged.get(item.productId)
+    merged.set(item.productId, {
+      productId: item.productId,
+      quantity: (existing?.quantity || 0) + Number(item.quantity),
+    })
+  })
+
+  return Array.from(merged.values())
+}
+
+const defaultForm = {
+  customerName: '',
+  status: 'complete',
+  items: [defaultItem()],
+}
+
+const normalizeSale = (sale) => ({
+  id: sale._id || sale.id,
+  customerName: sale.customerName,
+  date: (sale.createdAt || sale.date || '').slice(0, 10),
+  total: Number(sale.total) || 0,
+  status: sale.status || 'complete',
+  paymentMethod: sale.paymentMethod || 'Cash',
+  items: sale.items || [],
+  stockAdjusted: Boolean(sale.stockAdjusted),
+})
+
 export function SalesLogPage() {
-  const [items, setItems] = useState(SALES_LOGS)
+  const [sales, setSales] = useState([])
+  const [products, setProducts] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState(defaultForm)
 
-  const stats = useMemo(() => {
-    const dailySales = items.reduce((sum, item) => sum + item.total, 0)
-    const monthlyRevenue = dailySales * 18
-    const openRepairs = 10
+  const productOptions = useMemo(
+    () => products.map((product) => ({
+      id: product._id || product.id,
+      name: product.name,
+      sellPrice: Number(product.sellPrice ?? product.price) || 0,
+      stock: Number(product.stock) || 0,
+    })),
+    [products],
+  )
 
-    return [
-      { label: 'DAILY SALES', value: formatLKR(dailySales) },
-      { label: 'MONTHLY REVENUE', value: formatLKR(monthlyRevenue) },
-      { label: 'OPEN REPAIRS', value: String(openRepairs) },
-    ]
-  }, [items])
+  const loadData = async () => {
+    setLoading(true)
+    setError('')
+
+    try {
+      const [salesResponse, productsResponse] = await Promise.all([
+        getSales(),
+        getProducts({ limit: 500, page: 1 }),
+      ])
+
+      setSales((salesResponse?.sales || []).map(normalizeSale))
+      setProducts(productsResponse?.products || [])
+    } catch (err) {
+      setError(err.message || 'Unable to load sales data.')
+      setSales([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadData()
+  }, [])
 
   const openCreate = () => {
     setEditingId(null)
@@ -34,36 +96,104 @@ export function SalesLogPage() {
     setModalOpen(true)
   }
 
-  const openEdit = (item) => {
-    setEditingId(item.id)
+  const openEdit = (sale) => {
+    setEditingId(sale.id)
     setForm({
-      customer: item.customer,
-      payment: item.payment,
-      total: String(item.total),
-      status: item.status,
+      customerName: sale.customerName,
+      status: sale.status,
+      items: sale.items?.length
+        ? sale.items.map((item) => ({
+          productId: item.product || item.productId,
+          quantity: Number(item.quantity) || 1,
+        }))
+        : [defaultItem()],
     })
     setModalOpen(true)
   }
 
-  const saveItem = (event) => {
+  const saleSubtotal = useMemo(() => {
+    return form.items.reduce((sum, item) => {
+      const product = productOptions.find((entry) => entry.id === item.productId)
+      return sum + (Number(product?.sellPrice) || 0) * (Number(item.quantity) || 0)
+    }, 0)
+  }, [form.items, productOptions])
+
+  const updateItem = (index, key, value) => {
+    setForm((current) => {
+      const nextItems = [...current.items]
+      nextItems[index] = { ...nextItems[index], [key]: value }
+      return { ...current, items: nextItems }
+    })
+  }
+
+  const addItem = () => setForm((current) => ({ ...current, items: [...current.items, defaultItem()] }))
+
+  const removeItem = (index) => {
+    setForm((current) => ({
+      ...current,
+      items: current.items.length === 1 ? [defaultItem()] : current.items.filter((_, itemIndex) => itemIndex !== index),
+    }))
+  }
+
+  const saveSale = async (event) => {
     event.preventDefault()
-    const next = {
-      id: editingId || `#LT-${Math.floor(Date.now() / 1000)}`,
-      customer: form.customer,
-      date: new Date().toISOString().slice(0, 10),
-      total: Number(form.total),
-      payment: form.payment,
-      status: form.status,
+    setSaving(true)
+    setError('')
+
+    try {
+      const normalizedItems = normalizeItems(form.items)
+
+      const payload = {
+        customerName: form.customerName,
+        status: form.status,
+        total: saleSubtotal,
+        items: normalizedItems,
+      }
+
+      if (payload.items.length === 0) {
+        throw new Error('Add at least one valid product to the sale.')
+      }
+
+      if (editingId) {
+        await updateSale(editingId, payload)
+      } else {
+        await createSale(payload)
+      }
+
+      setModalOpen(false)
+      setEditingId(null)
+      setForm(defaultForm)
+      await loadData()
+    } catch (err) {
+      setError(err.message || 'Unable to save sale.')
+    } finally {
+      setSaving(false)
     }
-
-    setItems((current) => (editingId ? current.map((item) => (item.id === editingId ? next : item)) : [next, ...current]))
-    setModalOpen(false)
   }
 
-  const handleDelete = (id) => {
-    if (!window.confirm('Delete this sales record?')) return
-    setItems((current) => current.filter((item) => item.id !== id))
+  const handleDelete = async (saleId) => {
+    if (!window.confirm('Delete this sales record? Inventory will be restored if stock was adjusted.')) return
+
+    try {
+      await deleteSale(saleId)
+      await loadData()
+    } catch (err) {
+      setError(err.message || 'Unable to delete sale.')
+    }
   }
+
+  const stats = useMemo(() => {
+    const completedSales = sales.filter((sale) => sale.status === 'complete')
+    const dailySales = completedSales.reduce((sum, sale) => sum + sale.total, 0)
+    const monthlyRevenue = dailySales * 18
+    const totalItemsSold = completedSales.reduce((sum, sale) => sum + sale.items.reduce((count, item) => count + Number(item.quantity || 0), 0), 0)
+
+    return [
+      { label: 'DAILY SALES', value: formatLKR(dailySales) },
+      { label: 'MONTHLY REVENUE', value: formatLKR(monthlyRevenue) },
+      { label: 'ITEMS SOLD', value: String(totalItemsSold) },
+    ]
+  }, [sales])
 
   return (
     <AdminShell
@@ -77,7 +207,7 @@ export function SalesLogPage() {
       <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
         <div>
           <p className="text-2xl font-bold text-neutral-900">Sales Log</p>
-          <p className="mt-1 text-sm text-neutral-700">Track payments, totals, and sales statuses in LKR.</p>
+          <p className="mt-1 text-sm text-neutral-700">Cash sales only. Stock is reduced when a sale is marked Complete.</p>
         </div>
       </div>
 
@@ -90,38 +220,50 @@ export function SalesLogPage() {
         ))}
       </section>
 
+      {error ? (
+        <div className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+      ) : null}
+
       <section className="mt-8 rounded-2xl bg-[#efefef]">
-        <div className="grid grid-cols-[1fr_1.2fr_0.9fr_0.8fr_1fr_0.9fr] bg-[#d8d8d8] px-6 py-3 text-[11px] font-bold uppercase tracking-wide text-red-500">
+        <div className="grid grid-cols-[0.9fr_1.2fr_0.9fr_0.9fr_1fr_1fr_0.9fr] bg-[#d8d8d8] px-6 py-3 text-[11px] font-bold uppercase tracking-wide text-red-500">
           <span>Order ID</span>
           <span>Customer</span>
           <span>Date</span>
           <span>Total</span>
           <span>Payment</span>
           <span>Status</span>
+          <span>Actions</span>
         </div>
-        {items.map((item) => {
-          const status = SALES_STATUS_META[item.status]
 
-          return (
-            <div key={item.id} className="grid grid-cols-[1fr_1.2fr_0.9fr_0.8fr_1fr_0.9fr] items-center border-b border-neutral-200 px-6 py-4 text-sm last:border-b-0">
-              <span className="font-semibold text-[#ef2027]">{item.id}</span>
-              <span className="text-neutral-800">{item.customer}</span>
-              <span className="text-neutral-700">{item.date}</span>
-              <span className="font-medium text-neutral-900">{formatLKR(item.total)}</span>
-              <span className="text-neutral-800">{item.payment}</span>
-              <div className="flex items-center gap-3">
+        {loading ? (
+          <div className="px-6 py-8 text-center text-sm text-neutral-600">Loading sales...</div>
+        ) : sales.length > 0 ? (
+          sales.map((sale) => {
+            const status = SALES_STATUS_META[sale.status] || SALES_STATUS_META.complete
+
+            return (
+              <div key={sale.id} className="grid grid-cols-[0.9fr_1.2fr_0.9fr_0.9fr_1fr_1fr_0.9fr] items-center border-b border-neutral-200 px-6 py-4 text-sm last:border-b-0">
+                <span className="font-semibold text-[#ef2027]">{sale.id}</span>
+                <span className="text-neutral-800">{sale.customerName}</span>
+                <span className="text-neutral-700">{sale.date}</span>
+                <span className="font-medium text-neutral-900">{formatLKR(sale.total)}</span>
+                <span className="text-neutral-800">{sale.paymentMethod}</span>
                 <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${status.className}`}>{status.label}</span>
-                <button type="button" onClick={() => openEdit(item)} className="font-semibold text-[#ef2027]">Edit</button>
-                <button type="button" onClick={() => handleDelete(item.id)} className="font-semibold text-neutral-500 hover:text-red-600">Delete</button>
+                <div className="flex items-center gap-3">
+                  <button type="button" onClick={() => openEdit(sale)} className="font-semibold text-[#ef2027]">Edit</button>
+                  <button type="button" onClick={() => handleDelete(sale.id)} className="font-semibold text-neutral-500 hover:text-red-600">Delete</button>
+                </div>
               </div>
-            </div>
-          )
-        })}
+            )
+          })
+        ) : (
+          <div className="px-6 py-8 text-center text-sm text-neutral-600">No sales recorded yet.</div>
+        )}
       </section>
 
       {modalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
-          <form onSubmit={saveItem} className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl">
+          <form onSubmit={saveSale} className="w-full max-w-4xl rounded-2xl bg-white p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ef2027]">Sales Entry</p>
@@ -132,35 +274,15 @@ export function SalesLogPage() {
 
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               <label className="md:col-span-2">
-                <span className="text-sm font-medium text-neutral-700">Customer</span>
+                <span className="text-sm font-medium text-neutral-700">Customer Name</span>
                 <input
                   required
-                  value={form.customer}
-                  onChange={(event) => setForm((current) => ({ ...current, customer: event.target.value }))}
+                  value={form.customerName}
+                  onChange={(event) => setForm((current) => ({ ...current, customerName: event.target.value }))}
                   className="mt-1 w-full rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-[#ef2027]"
                 />
               </label>
-              <label>
-                <span className="text-sm font-medium text-neutral-700">Payment</span>
-                <input
-                  required
-                  value={form.payment}
-                  onChange={(event) => setForm((current) => ({ ...current, payment: event.target.value }))}
-                  className="mt-1 w-full rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-[#ef2027]"
-                />
-              </label>
-              <label>
-                <span className="text-sm font-medium text-neutral-700">Total (LKR)</span>
-                <input
-                  required
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.total}
-                  onChange={(event) => setForm((current) => ({ ...current, total: event.target.value }))}
-                  className="mt-1 w-full rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-[#ef2027]"
-                />
-              </label>
+
               <label className="md:col-span-2">
                 <span className="text-sm font-medium text-neutral-700">Status</span>
                 <select
@@ -168,14 +290,73 @@ export function SalesLogPage() {
                   onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}
                   className="mt-1 w-full rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-[#ef2027]"
                 >
-                  {Object.entries(SALES_STATUS_META).map(([value, meta]) => <option key={value} value={value}>{meta.label}</option>)}
+                  {Object.entries(SALES_STATUS_META).map(([value, meta]) => (
+                    <option key={value} value={value}>{meta.label}</option>
+                  ))}
                 </select>
               </label>
+
+              <div className="md:col-span-2">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-medium text-neutral-700">Sale Items</p>
+                  <button type="button" onClick={addItem} className="rounded-lg bg-[#ef2027] px-3 py-2 text-xs font-semibold text-white">Add Item</button>
+                </div>
+
+                <div className="mt-3 space-y-3">
+                  {form.items.map((item, index) => (
+                    <div key={`${index}-${item.productId}`} className="grid gap-3 rounded-xl border border-neutral-200 p-3 md:grid-cols-[2fr_1fr_auto]">
+                      <select
+                        required
+                        value={item.productId}
+                        onChange={(event) => updateItem(index, 'productId', event.target.value)}
+                        className="w-full rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-[#ef2027]"
+                      >
+                        <option value="">Select product</option>
+                        {productOptions.map((product) => (
+                          <option key={product.id} value={product.id} disabled={product.stock <= 0}>
+                            {product.name} {product.stock <= 0 ? '(Out of stock)' : `- ${product.stock} available`}
+                          </option>
+                        ))}
+                      </select>
+
+                      <input
+                        required
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={item.quantity}
+                        onChange={(event) => updateItem(index, 'quantity', event.target.value)}
+                        className="w-full rounded-xl border border-neutral-300 px-4 py-3 outline-none focus:border-[#ef2027]"
+                      />
+
+                      <button type="button" onClick={() => removeItem(index)} className="rounded-xl border border-neutral-300 px-4 py-3 text-sm font-semibold text-neutral-700">
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <label className="md:col-span-2">
+                <span className="text-sm font-medium text-neutral-700">Cash Payment</span>
+                <input
+                  value="Cash"
+                  disabled
+                  className="mt-1 w-full rounded-xl border border-neutral-200 bg-neutral-100 px-4 py-3 text-neutral-600 outline-none"
+                />
+              </label>
+            </div>
+
+            <div className="mt-6 flex items-center justify-between gap-3 rounded-xl bg-neutral-50 px-4 py-3 text-sm text-neutral-700">
+              <span>Subtotal</span>
+              <span className="font-semibold text-neutral-900">{formatLKR(saleSubtotal)}</span>
             </div>
 
             <div className="mt-6 flex justify-end gap-3">
               <button type="button" onClick={() => setModalOpen(false)} className="rounded-xl border border-neutral-300 px-5 py-3 text-sm font-semibold text-neutral-700">Cancel</button>
-              <button type="submit" className="rounded-xl bg-[#ef2027] px-5 py-3 text-sm font-semibold text-white">Save Sale</button>
+              <button type="submit" disabled={saving} className="rounded-xl bg-[#ef2027] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">
+                {saving ? 'Saving...' : 'Save Sale'}
+              </button>
             </div>
           </form>
         </div>
