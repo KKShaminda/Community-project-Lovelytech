@@ -5,6 +5,7 @@ import connectDB from "./config/db.js";
 import cors from "cors";
 
 import userRoutes from "./routes/userRoute.js";
+import productRoutes from "./routes/productRoutes.js";
 
 const app = express();
 
@@ -17,9 +18,11 @@ connectDB();
 // Middleware
 app.use(express.json());
 app.use(cors({ origin: true, credentials: true }));
+app.use('/uploads', express.static('uploads'));
 
 // Routes
 app.use("/api/users", userRoutes);
+app.use("/api/products", productRoutes);
 
 // Test route  
 app.get("/", (req, res) => {

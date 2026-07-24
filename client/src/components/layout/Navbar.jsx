@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { MenuIcon, XIcon } from 'lucide-react'
 
 export function Navbar() {
   const navItems = [
@@ -19,7 +21,7 @@ export function Navbar() {
             className="h-12 w-12 object-contain sm:h-14 sm:w-14"
           />
           <div className="hidden flex-col leading-none sm:flex">
-            <span className="text-lg font-extrabold uppercase tracking-[0.28em] text-[#000000]">
+            <span className="font-display text-xl font-bold tracking-tight sm:text-2xl">
               Lovely Tech
             </span>
           </div>
@@ -42,7 +44,7 @@ export function Navbar() {
             to="/login"
             className="rounded-full border border-[#ff2020] px-5 py-2.5 text-sm font-semibold text-[#ff2020] transition-colors duration-200 hover:bg-[#ff2020] hover:text-black"
           >
-            Signin
+            Sign In
           </Link>
         </div>
       </div>
