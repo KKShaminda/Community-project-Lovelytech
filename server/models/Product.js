@@ -39,7 +39,8 @@ const productSchema = new mongoose.Schema(
       type: [
         {
           url: { type: String, required: true },
-          public_id: { type: String, required: true },
+          filename: { type: String, required: true },
+          path: { type: String, required: true },
         },
       ],
       default: [],

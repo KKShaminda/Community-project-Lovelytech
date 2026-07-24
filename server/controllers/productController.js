@@ -1,6 +1,5 @@
 import Product from "../models/Product.js";
-import cloudinary from "../config/cloudinary.js";
-import { uploadImage } from "../middlewares/imageUploader.js";
+import { uploadImage, deleteImageFile } from "../middlewares/imageUploader.js";
 
 const CATEGORIES = [
   "Mobile Phones",
@@ -151,9 +150,7 @@ export const getProductById = async (req, res) => {
 export const createProduct = async (req, res) => {
   try {
     const files = req.files || [];
-    const images = await Promise.all(
-      files.map((file) => uploadImage(file.buffer, "lovely-tech/products"))
-    );
+    const images = files.map((file) => uploadImage(file, req, "products"));
 
     const product = await Product.create({ ...req.body, images });
     res.status(201).json(product);
@@ -164,8 +161,8 @@ export const createProduct = async (req, res) => {
 
 // PUT /api/products/:id
 // Text fields update normally. New files (if any) are appended to the existing
-// images. Send removeImages: [public_id, ...] in the body to delete specific
-// images from both Cloudinary and the product.
+// images. Send removeImages: [filename, ...] in the body to delete specific
+// images from the file system and the product.
 export const updateProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -175,18 +172,19 @@ export const updateProduct = async (req, res) => {
 
     if (removeImages) {
       const idsToRemove = Array.isArray(removeImages) ? removeImages : [removeImages];
-      await Promise.all(
-        idsToRemove.map((publicId) => cloudinary.uploader.destroy(publicId))
-      );
-      product.images = product.images.filter(
-        (img) => !idsToRemove.includes(img.public_id)
-      );
+      product.images = product.images.filter((img) => {
+        const shouldRemove =
+          idsToRemove.includes(img.filename) ||
+          idsToRemove.includes(img.path) ||
+          idsToRemove.includes(img.url);
+
+        if (shouldRemove) deleteImageFile(img.path);
+        return !shouldRemove;
+      });
     }
 
     if (req.files && req.files.length > 0) {
-      const newImages = await Promise.all(
-        req.files.map((file) => uploadImage(file.buffer, "lovely-tech/products"))
-      );
+      const newImages = req.files.map((file) => uploadImage(file, req, "products"));
       product.images.push(...newImages);
     }
 
@@ -200,15 +198,13 @@ export const updateProduct = async (req, res) => {
 };
 
 // DELETE /api/products/:id
-// Removes the product's images from Cloudinary before deleting the document.
+// Removes the product's image files from disk before deleting the document.
 export const deleteProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: "Product not found" });
 
-    await Promise.all(
-      product.images.map((img) => cloudinary.uploader.destroy(img.public_id))
-    );
+    product.images.forEach((img) => deleteImageFile(img.path));
 
     await product.deleteOne();
     res.json({ message: "Product deleted" });

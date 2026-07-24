@@ -18,6 +18,7 @@ connectDB();
 // Middleware
 app.use(express.json());
 app.use(cors({ origin: true, credentials: true }));
+app.use('/uploads', express.static('uploads'));
 
 // Routes
 app.use("/api/users", userRoutes);
