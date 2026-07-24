@@ -4,16 +4,16 @@ import { MenuIcon, XIcon } from 'lucide-react'
 
 export function Navbar() {
   const navItems = [
-    { label: 'Home', href: '#home' },
-    { label: 'About Us', href: '#about-us' },
+    { label: 'Home', href: '/' },
+    { label: 'About Us', href: '/about-us' },
     { label: 'Products', href: '#products' },
-    { label: 'Services', href: '#services' },
-    { label: 'Contact Us', href: '#contact-us' },
+    { label: 'Services', href: '/services' },
+    { label: 'Contact Us', href: '/contact-us' },
   ]
 
   return (
     <header className="sticky top-0 z-50 border-b border-[#ff2020] bg-white/95 backdrop-blur-xl">
-      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-20 max-w-full items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link to="/" className="flex items-center gap-3">
           <img
             src="/Logo.png"
