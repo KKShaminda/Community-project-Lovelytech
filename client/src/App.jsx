@@ -11,22 +11,31 @@ import { RepairPage } from './pages/repair/RepairPage'
 import { BookRepairPage } from './pages/repair/BookRepairPage'
 import { RepairHistoryPage } from './pages/repair/RepairHistoryPage'
 import { RepairTrackingPage } from './pages/repair/RepairTrackingPage'
+import { OrderPage } from './pages/order/OrderPage'
+
+
 
 function App() {
   return (
     <>
       <Router>
         <Routes>
-
           {/* Public Pages */}
           <Route path="/" element={<p>Home Page</p>} />
           <Route path="/products" element={<Products />} />
+          <Route path="/orders" element={<OrderPage />} />
 
           {/* Repair Services Pages */}
           <Route path="/repair" element={<RepairPage />} />
            <Route path="/repair/book" element={<BookRepairPage />} />
            <Route path="/repair/history" element={<RepairHistoryPage />} />
           <Route path="/repair/track" element={<RepairTrackingPage />} />
+
+          
+         
+        
+        
+      
 
           {/* Authentication Routes */}
           <Route path="/login" element={<SigninPage />} />
