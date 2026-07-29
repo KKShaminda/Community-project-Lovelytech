@@ -9,6 +9,8 @@ import Layout from "../../components/layout/Layout";
 import { DEVICE_CATEGORIES } from "../../data/repairData";
 
 
+import { createRepairRequest } from "../../services/repairServices";
+
 const inputClass =
     "mt-1.5 w-full rounded-[14px] border border-[#ff8b92] bg-white px-4 py-3 text-[16px] text-neutral-900 outline-none transition placeholder:text-neutral-400 focus:border-[#ef1d2c] focus:ring-2 focus:ring-red-100";
 
@@ -28,9 +30,12 @@ export function BookRepairPage() {
     const [address, setAddress] = useState("");
 
     const [submitted, setSubmitted] = useState(false);
+    const [assignedTrackingId, setAssignedTrackingId] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [apiError, setApiError] = useState("");
 
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
 
         e.preventDefault();
 
@@ -42,7 +47,33 @@ export function BookRepairPage() {
             phone &&
             email
         ) {
-            setSubmitted(true);
+            try {
+                setLoading(true);
+                setApiError("");
+                const response = await createRepairRequest({
+                    deviceCategory: device,
+                    brand,
+                    model,
+                    imei,
+                    issue,
+                    name,
+                    phone,
+                    email,
+                    address,
+                });
+
+                if (response?.trackingId || response?.data?.trackingId) {
+                    setAssignedTrackingId(response.trackingId || response.data.trackingId);
+                    setSubmitted(true);
+                } else {
+                    setSubmitted(true);
+                }
+            } catch (err) {
+                console.error("Failed to submit repair request:", err);
+                setApiError(err.message || "Failed to submit repair request");
+            } finally {
+                setLoading(false);
+            }
         }
 
     };
@@ -227,7 +258,7 @@ shadow-lg
                                     Your tracking ID is
 
                                     <strong className="ml-1">
-                                        PR124596
+                                        {assignedTrackingId || "PR124596"}
                                     </strong>
 
                                 </p>

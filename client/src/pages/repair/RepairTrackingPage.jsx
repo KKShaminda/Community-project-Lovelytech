@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     CalendarDays,
     Check,
@@ -16,6 +16,7 @@ import {
     TRACKING_STEPS,
     REPAIR_UPDATES,
 } from "../../data/repairData";
+import { getRepairByTrackingId } from "../../services/repairServices";
 
 
 export function RepairTrackingPage() {
@@ -26,33 +27,65 @@ export function RepairTrackingPage() {
         REPAIR_HISTORY[0]
     );
 
+    const [trackingSteps, setTrackingSteps] = useState(TRACKING_STEPS);
+    const [repairUpdates, setRepairUpdates] = useState(REPAIR_UPDATES);
     const [error, setError] = useState(false);
+    const [loading, setLoading] = useState(false);
 
+    const fetchRepair = async (searchQuery) => {
+        if (!searchQuery.trim()) return;
+        setLoading(true);
+        try {
+            const res = await getRepairByTrackingId(searchQuery.trim());
+            const data = res?.data || res;
+            if (data) {
+                setRepair({
+                    id: data._id || data.id,
+                    trackingId: data.trackingId,
+                    deviceName: data.device || data.deviceName || "Device Repair",
+                    brandModel: `${data.brand || ""} ${data.model || ""}`.trim() || data.device,
+                    submitted: data.submitted || "Recently",
+                    estimatedCompletion: data.estimatedCompletion || "Pending",
+                    issue: data.issue,
+                });
+                if (data.trackingSteps && data.trackingSteps.length > 0) {
+                    setTrackingSteps(data.trackingSteps);
+                }
+                if (data.updates && data.updates.length > 0) {
+                    setRepairUpdates(data.updates);
+                }
+                setError(false);
+            } else {
+                setError(true);
+            }
+        } catch (err) {
+            console.error("Error searching repair:", err);
+            // Fallback check in local REPAIR_HISTORY if backend item not found
+            const result = REPAIR_HISTORY.find(
+                (item) =>
+                    item.trackingId.toLowerCase() ===
+                    searchQuery.trim().toLowerCase()
+            );
+            if (result) {
+                setRepair(result);
+                setTrackingSteps(TRACKING_STEPS);
+                setRepairUpdates(REPAIR_UPDATES);
+                setError(false);
+            } else {
+                setError(true);
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchRepair("PR124596");
+    }, []);
 
     const handleTrack = (e) => {
-
         e.preventDefault();
-
-
-        const result = REPAIR_HISTORY.find(
-            (item) =>
-                item.trackingId.toLowerCase() ===
-                query.trim().toLowerCase()
-        );
-
-
-        if(result){
-
-            setRepair(result);
-            setError(false);
-
-        }
-        else{
-
-            setError(true);
-
-        }
-
+        fetchRepair(query);
     };
 
 
@@ -324,17 +357,17 @@ export function RepairTrackingPage() {
 
 
                     {
-                        TRACKING_STEPS.map(
+                        trackingSteps.map(
                             (step,index)=>(
                                 
                             <div
-                            key={step.label}
+                            key={step.label || index}
                             className="relative flex gap-5 pb-8"
                             >
 
 
                             {
-                                index !== TRACKING_STEPS.length-1 &&
+                                index !== trackingSteps.length-1 &&
 
                                 <span className="
                                 absolute
@@ -430,10 +463,10 @@ export function RepairTrackingPage() {
 
 
                 {
-                    REPAIR_UPDATES.map(update=>(
+                    repairUpdates.map((update, index)=>(
 
                     <div
-                    key={update.id}
+                    key={update.id || index}
                     className="
                     rounded-2xl
                     border-t-4

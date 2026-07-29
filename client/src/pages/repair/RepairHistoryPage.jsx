@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   CalendarDays,
@@ -10,7 +10,8 @@ import {
 } from "lucide-react";
 
 import Layout from "../../components/layout/Layout";
-import { repairs, statusMeta, currency } from "../../data/repairData";
+import { repairs as mockRepairs, statusMeta, currency } from "../../data/repairData";
+import { getRepairs } from "../../services/repairServices";
 
 const badgeStyles = {
   slate: "bg-gray-100 text-gray-700",
@@ -21,14 +22,18 @@ const badgeStyles = {
   red: "bg-red-100 text-red-700",
 };
 
-const formatDate = (date) =>
-  new Date(date).toLocaleDateString("en-US", {
+const formatDate = (date) => {
+  if (!date) return "N/A";
+  const parsed = new Date(date);
+  if (isNaN(parsed.getTime())) return String(date);
+  return parsed.toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
     year: "numeric",
   });
+};
 
-const getInitials = (device) =>
+const getInitials = (device = "Repair") =>
   device
     .split(" ")
     .slice(0, 2)
@@ -37,6 +42,41 @@ const getInitials = (device) =>
     .toUpperCase();
 
 export function RepairHistoryPage() {
+  const [repairList, setRepairList] = useState(mockRepairs);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        setLoading(true);
+        const res = await getRepairs();
+        const data = res?.data || res;
+        if (Array.isArray(data) && data.length > 0) {
+          const mapped = data.map((item) => ({
+            id: item.trackingId || item._id,
+            trackingId: item.trackingId || item._id,
+            device: item.device || `${item.brand || ""} ${item.model || ""}`.trim() || "Device",
+            brand: item.brand || "N/A",
+            issue: item.issue,
+            status: item.status || "received",
+            createdAt: item.createdAt || item.submitted || new Date().toISOString(),
+            updatedAt: item.updatedAt || new Date().toISOString(),
+            estimate: item.amount || item.estimate || 0,
+            technician: item.technician || "Unassigned",
+            eta: item.estimatedCompletion || item.eta || "Pending",
+          }));
+          setRepairList(mapped);
+        }
+      } catch (err) {
+        console.error("Error loading repair history:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHistory();
+  }, []);
+
   return (
     <Layout>
       <main className="mx-auto max-w-[1320px] px-6 py-12 sm:px-10 lg:px-14">
@@ -55,7 +95,7 @@ export function RepairHistoryPage() {
             </div>
 
             <span className="rounded-xl bg-[#EC1C24] px-4 py-2 text-sm font-semibold text-white">
-              {repairs.length} Repairs
+              {repairList.length} Repairs
             </span>
           </div>
 
@@ -73,8 +113,8 @@ export function RepairHistoryPage() {
         {/* Cards */}
 
         <div className="mt-10 space-y-7">
-          {repairs.map((repair) => {
-            const meta = statusMeta[repair.status];
+          {repairList.map((repair) => {
+            const meta = statusMeta[repair.status] || { label: repair.status || "Received", tone: "blue" };
 
             return (
               <Link

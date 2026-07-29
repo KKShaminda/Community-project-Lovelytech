@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 
 import { AdminShell } from '../../components/admin/AdminShell'
 import { REPAIR_ORDERS, REPAIR_STATUS_META, formatLKR } from '../../data/adminPagesData'
+import { getRepairs, createRepairRequest, updateRepair, deleteRepair } from '../../services/repairServices'
 
 const defaultForm = {
   customer: '',
@@ -13,7 +14,7 @@ const defaultForm = {
 }
 
 function RepairCard({ item }) {
-  const status = REPAIR_STATUS_META[item.status]
+  const status = REPAIR_STATUS_META[item.status] || { label: item.status || 'Pending', className: 'bg-neutral-100 text-neutral-700' }
 
   return (
     <article className="rounded-2xl border border-[#e7e7e7] bg-[#efefef] p-5 shadow-sm">
@@ -38,6 +39,32 @@ export function RepairOrdersPage() {
   const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState(defaultForm)
 
+  const fetchItems = async () => {
+    try {
+      const res = await getRepairs()
+      const data = res?.data || res
+      if (Array.isArray(data) && data.length > 0) {
+        const mapped = data.map((item) => ({
+          id: item.trackingId || item._id,
+          customer: item.customer || "Unknown",
+          device: item.device || `${item.brand || ""} ${item.model || ""}`.trim() || "Device",
+          issue: item.issue || "",
+          technician: item.technician || "Unassigned",
+          status: item.status || "pending",
+          amount: Number(item.amount || item.estimate || 0),
+          createdAt: item.createdAt || new Date().toISOString().slice(0, 10),
+        }))
+        setItems(mapped)
+      }
+    } catch (err) {
+      console.error("Error fetching repair orders:", err)
+    }
+  }
+
+  useEffect(() => {
+    fetchItems()
+  }, [])
+
   const openCreate = () => {
     setEditingId(null)
     setForm(defaultForm)
@@ -57,22 +84,57 @@ export function RepairOrdersPage() {
     setModalOpen(true)
   }
 
-  const saveItem = (event) => {
+  const saveItem = async (event) => {
     event.preventDefault()
-    const next = {
-      id: editingId || `#LT-${Math.floor(Date.now() / 1000)}`,
-      ...form,
-      amount: Number(form.amount),
-      createdAt: new Date().toISOString().slice(0, 10),
+    try {
+      if (editingId) {
+        await updateRepair(editingId, {
+          customer: form.customer,
+          device: form.device,
+          issue: form.issue,
+          technician: form.technician,
+          status: form.status,
+          amount: Number(form.amount),
+          estimate: Number(form.amount),
+        })
+      } else {
+        await createRepairRequest({
+          customer: form.customer,
+          device: form.device,
+          issue: form.issue,
+          technician: form.technician,
+          status: form.status,
+          amount: Number(form.amount),
+          estimate: Number(form.amount),
+          email: `${form.customer.toLowerCase().replace(/\s+/g, '')}@example.com`,
+          phone: "0770000000",
+        })
+      }
+      fetchItems()
+      setModalOpen(false)
+    } catch (err) {
+      console.error("Error saving repair order:", err)
+      // Fallback local update
+      const next = {
+        id: editingId || `#LT-${Math.floor(Date.now() / 1000)}`,
+        ...form,
+        amount: Number(form.amount),
+        createdAt: new Date().toISOString().slice(0, 10),
+      }
+      setItems((current) => (editingId ? current.map((item) => (item.id === editingId ? next : item)) : [next, ...current]))
+      setModalOpen(false)
     }
-
-    setItems((current) => (editingId ? current.map((item) => (item.id === editingId ? next : item)) : [next, ...current]))
-    setModalOpen(false)
   }
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (!window.confirm('Delete this repair order?')) return
-    setItems((current) => current.filter((item) => item.id !== id))
+    try {
+      await deleteRepair(id)
+      setItems((current) => current.filter((item) => item.id !== id))
+    } catch (err) {
+      console.error("Error deleting repair order:", err)
+      setItems((current) => current.filter((item) => item.id !== id))
+    }
   }
 
   const stats = useMemo(() => [
