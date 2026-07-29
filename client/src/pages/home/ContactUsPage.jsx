@@ -1,12 +1,11 @@
 import {
-  Facebook,
   Globe,
-  Instagram,
   Mail,
   MapPin,
   MessageCircle,
   Phone,
 } from 'lucide-react'
+import { FaFacebook, FaInstagram } from 'react-icons/fa'
 import Layout from '../../components/layout/Layout'
 
 const contactItems = [
@@ -30,7 +29,7 @@ const contactItems = [
     href: 'mailto:lovelytech.lk@gmail.com',
   },
   {
-    icon: Facebook,
+    icon: FaFacebook,
     label: 'Lovely Tech',
     href: '#',
   },
@@ -40,7 +39,7 @@ const contactItems = [
     href: '#',
   },
   {
-    icon: Instagram,
+    icon: FaInstagram,
     label: '@lovely_tech',
     href: '#',
   },
