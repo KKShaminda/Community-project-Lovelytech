@@ -350,14 +350,57 @@ function OrderCard({ order, selected, onSelect, onViewDetails, onDelete }) {
 // ---------------------------------------------------------------------------
 // Orders page
 // ---------------------------------------------------------------------------
+import { getOrders, deleteOrder } from '../../services/orderServices';
+
 const FILTERS = ['All', ...STATUS_FLOW];
 
 export function OrderPage() {
   const [orders, setOrders] = useState(ORDERS);
   const [filter, setFilter] = useState('All');
   const [query, setQuery] = useState('');
-  const [selectedId, setSelectedId] = useState(ORDERS[1].id);
+  const [selectedId, setSelectedId] = useState(ORDERS[1]?.id || 'ORD-16485923');
   const [detailsId, setDetailsId] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const res = await getOrders();
+      const data = res?.data || res;
+      if (Array.isArray(data) && data.length > 0) {
+        const mapped = data.map((item) => ({
+          id: item.orderId || item._id,
+          placedAt: item.placedAt || "Recently",
+          status: item.status || "Placed",
+          tags: item.tags || [],
+          shipping: Number(item.shipping || 0),
+          products: item.products || [],
+        }));
+        setOrders(mapped);
+        if (mapped.length > 0) {
+          setSelectedId(mapped[0].id);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading orders from backend:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const handleDeleteOrder = async (orderIdToDelete) => {
+    try {
+      await deleteOrder(orderIdToDelete);
+      setOrders((prev) => prev.filter((o) => o.id !== orderIdToDelete));
+    } catch (err) {
+      console.error("Error deleting order:", err);
+      setOrders((prev) => prev.filter((o) => o.id !== orderIdToDelete));
+    }
+  };
 
   const visibleOrders = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -369,12 +412,12 @@ export function OrderPage() {
       const matchesQuery =
         q.length === 0 ||
         order.id.toLowerCase().includes(q) ||
-        order.tags.some((tag) =>
+        (order.tags && order.tags.some((tag) =>
           tag.toLowerCase().includes(q)
-        ) ||
-        order.products.some((p) =>
+        )) ||
+        (order.products && order.products.some((p) =>
           p.name.toLowerCase().includes(q)
-        );
+        ));
 
       return matchesFilter && matchesQuery;
     });
@@ -484,13 +527,7 @@ export function OrderPage() {
                     }}
 
                     onDelete={()=>{
-
-                      setOrders((prev)=>
-                        prev.filter(
-                          (o)=>o.id!==order.id
-                        )
-                      );
-
+                      handleDeleteOrder(order.id);
                     }}
 
                   />
