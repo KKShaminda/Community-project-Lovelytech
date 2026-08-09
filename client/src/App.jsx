@@ -15,6 +15,7 @@ import { BookRepairPage } from './pages/repair/BookRepairPage'
 import { RepairHistoryPage } from './pages/repair/RepairHistoryPage'
 import { RepairTrackingPage } from './pages/repair/RepairTrackingPage'
 import Payment from './pages/Payment/Payment'
+import Profile from './pages/user/Profile'
 
 function App() {
   return (
@@ -48,6 +49,7 @@ function App() {
 
           {/* Role-based Dashboard Routes */}
           <Route path="/user/dashboard" element={<UserDashboard />} />
+          <Route path="/user/profile" element={<Profile />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/receptionist/dashboard" element={<ReceptionistDashboard />} />
 
