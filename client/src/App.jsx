@@ -14,6 +14,7 @@ import { RepairPage } from './pages/repair/RepairPage'
 import { BookRepairPage } from './pages/repair/BookRepairPage'
 import { RepairHistoryPage } from './pages/repair/RepairHistoryPage'
 import { RepairTrackingPage } from './pages/repair/RepairTrackingPage'
+import Payment from './pages/Payment/Payment'
 
 function App() {
   return (
@@ -39,6 +40,7 @@ function App() {
            <Route path="/repair/book" element={<BookRepairPage />} />
            <Route path="/repair/history" element={<RepairHistoryPage />} />
           <Route path="/repair/track" element={<RepairTrackingPage />} />
+          <Route path="/payment" element={<Payment />} />
 
           {/* Authentication Routes */}
           <Route path="/login" element={<SigninPage />} />
