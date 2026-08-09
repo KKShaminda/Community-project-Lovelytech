@@ -16,6 +16,7 @@ import { RepairHistoryPage } from './pages/repair/RepairHistoryPage'
 import { RepairTrackingPage } from './pages/repair/RepairTrackingPage'
 import Payment from './pages/Payment/Payment'
 import Profile from './pages/user/Profile'
+import PlaceOrder from './pages/PlaceOrder/PlaceOrder'
 
 function App() {
   return (
@@ -42,6 +43,7 @@ function App() {
            <Route path="/repair/history" element={<RepairHistoryPage />} />
           <Route path="/repair/track" element={<RepairTrackingPage />} />
           <Route path="/payment" element={<Payment />} />
+          <Route path="/place-order" element={<PlaceOrder />} />
 
           {/* Authentication Routes */}
           <Route path="/login" element={<SigninPage />} />
