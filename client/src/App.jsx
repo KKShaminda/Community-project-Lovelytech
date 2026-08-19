@@ -15,6 +15,7 @@ import { RepairPage } from './pages/repair/RepairPage'
 import { BookRepairPage } from './pages/repair/BookRepairPage'
 import { RepairHistoryPage } from './pages/repair/RepairHistoryPage'
 import { RepairTrackingPage } from './pages/repair/RepairTrackingPage'
+import { ProtectedRoute } from './components/common/ProtectedRoute'
 
 function App() {
   return (
@@ -29,24 +30,76 @@ function App() {
 
           {/* Repair Services Pages */}
           <Route path="/repair" element={<RepairPage />} />
-           <Route path="/repair/book" element={<BookRepairPage />} />
-           <Route path="/repair/history" element={<RepairHistoryPage />} />
+          <Route path="/repair/book" element={<BookRepairPage />} />
+          <Route path="/repair/history" element={<RepairHistoryPage />} />
           <Route path="/repair/track" element={<RepairTrackingPage />} />
 
           {/* Authentication Routes */}
           <Route path="/login" element={<SigninPage />} />
           <Route path="/signup" element={<SignupPage />} />
 
-          {/* Role-based Dashboard Routes */}
-          <Route path="/user/dashboard" element={<UserDashboard />} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          <Route path="/admin/inventory" element={<InventoryManagementPage />} />
-          <Route path="/admin/repair-orders" element={<RepairOrdersPage />} />
-          <Route path="/admin/sales-log" element={<SalesLogPage />} />
-          <Route path="/admin/customers" element={<CustomersPage />} />
-          <Route path="/receptionist/dashboard" element={<ReceptionistDashboard />} />
+          {/* User Dashboard */}
+          <Route
+            path="/user/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={['User', 'admin', 'Receptionist']}>
+                <UserDashboard />
+              </ProtectedRoute>
+            }
+          />
 
-          
+          {/* Receptionist Dashboard */}
+          <Route
+            path="/receptionist/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={['Receptionist', 'admin']}>
+                <ReceptionistDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Admin Management Routes */}
+          <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/inventory"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <InventoryManagementPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/repair-orders"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'Receptionist']}>
+                <RepairOrdersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/sales-log"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'Receptionist']}>
+                <SalesLogPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/customers"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <CustomersPage />
+              </ProtectedRoute>
+            }
+          />
+
         </Routes>
       </Router>
     </>

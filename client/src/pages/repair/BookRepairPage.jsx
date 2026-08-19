@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import Layout from "../../components/layout/Layout";
 import { DEVICE_CATEGORIES } from "../../data/repairData";
+import { createRepair } from "../../services/repairServices";
 
 
 const inputClass =
@@ -28,23 +29,52 @@ export function BookRepairPage() {
     const [address, setAddress] = useState("");
 
     const [submitted, setSubmitted] = useState(false);
+    const [trackingId, setTrackingId] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
 
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
 
         e.preventDefault();
+        setError("");
 
-        if (
-            brand &&
-            model &&
-            issue &&
-            name &&
-            phone &&
-            email
-        ) {
-            setSubmitted(true);
+        if (!brand || !model || !issue || !name || !phone || !email) {
+            setError("Please fill in all required fields.");
+            return;
         }
 
+        setLoading(true);
+
+        try {
+            const data = await createRepair({
+                deviceType: device,
+                brand,
+                model,
+                imei,
+                issue,
+                customerName: name,
+                customerPhone: phone,
+                customerEmail: email,
+                customerAddress: address,
+            });
+
+            setTrackingId(data.trackingId || "");
+            setSubmitted(true);
+        } catch (err) {
+            setError(err.message || "Failed to submit repair request. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+
+    };
+
+    const handleReset = () => {
+        setSubmitted(false);
+        setTrackingId("");
+        setError("");
+        setBrand(""); setModel(""); setImei(""); setIssue("");
+        setName(""); setPhone(""); setEmail(""); setAddress("");
     };
 
 
@@ -223,32 +253,33 @@ shadow-lg
 
 
                                 <p className="mt-3 text-gray-500">
-
                                     Your tracking ID is
-
-                                    <strong className="ml-1">
-                                        PR124596
-                                    </strong>
-
                                 </p>
 
+                                <div className="mt-2 inline-block rounded-xl bg-red-50 border border-[#EC1C24] px-6 py-3">
+                                    <p className="text-2xl font-bold tracking-widest text-[#EC1C24]">
+                                        {trackingId}
+                                    </p>
+                                </div>
 
+                                <p className="mt-4 text-sm text-gray-400">
+                                    Save this ID to track your repair status anytime.
+                                </p>
 
-                                <button
-
-                                    onClick={() => setSubmitted(false)}
-
-                                    className="
-mt-6 rounded-xl
-bg-black px-6 py-3
-font-bold text-white
-"
-
-                                >
-
-                                    Submit Another Request
-
-                                </button>
+                                <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+                                    <button
+                                        onClick={handleReset}
+                                        className="rounded-xl bg-black px-6 py-3 font-bold text-white hover:bg-gray-800"
+                                    >
+                                        Submit Another Request
+                                    </button>
+                                    <a
+                                        href="/repair/track"
+                                        className="rounded-xl border-2 border-[#EC1C24] px-6 py-3 font-bold text-[#EC1C24] hover:bg-red-50"
+                                    >
+                                        Track This Repair
+                                    </a>
+                                </div>
 
 
 
@@ -274,6 +305,13 @@ sm:p-10
 
 
                             >
+
+                                {error && (
+                                    <div className="mb-6 flex items-center gap-3 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                                        <CircleAlertIcon size={18} />
+                                        {error}
+                                    </div>
+                                )}
 
 
                                 <div className="grid gap-12 md:grid-cols-2">
@@ -444,6 +482,7 @@ text-sm text-gray-600
                                 <button
 
                                     type="submit"
+                                    disabled={loading}
 
                                     className="
 mx-auto mt-8 block
@@ -454,11 +493,12 @@ px-6 py-4
 font-bold
 text-white
 hover:bg-gray-800
+disabled:cursor-not-allowed disabled:opacity-60
 "
 
                                 >
 
-                                    Submit Repair Request
+                                    {loading ? "Submitting..." : "Submit Repair Request"}
 
                                 </button>
 

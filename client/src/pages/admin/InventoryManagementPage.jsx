@@ -99,6 +99,7 @@ function InventoryRow({ item }) {
 
 export function InventoryManagementPage() {
   const [products, setProducts] = useState([])
+  const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
@@ -214,9 +215,20 @@ export function InventoryManagementPage() {
     ]
   }, [products])
 
-  const inventoryItems = useMemo(
-    () =>
-      products.map((product) => ({
+  const inventoryItems = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase()
+
+    return products
+      .filter((product) => {
+        if (!query) return true
+        return (
+          product.name.toLowerCase().includes(query) ||
+          product.sku.toLowerCase().includes(query) ||
+          product.category.toLowerCase().includes(query) ||
+          (product.brand || '').toLowerCase().includes(query)
+        )
+      })
+      .map((product) => ({
         id: product.id,
         name: product.name,
         sku: product.sku,
@@ -230,9 +242,8 @@ export function InventoryManagementPage() {
         image: product.image,
         status: product.status,
         statusClass: product.stock > 10 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-red-500',
-      })),
-    [products],
-  )
+      }))
+  }, [products, searchQuery])
 
   return (
     <AdminShell activeSection="inventory">
@@ -264,9 +275,21 @@ export function InventoryManagementPage() {
             <span className="mr-3 text-neutral-500">⌕</span>
             <input
               type="text"
-              placeholder="Search product name, SKU, or category..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search product name, SKU, category or brand..."
               className="w-full bg-transparent text-sm outline-none placeholder:text-neutral-500"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="ml-2 text-neutral-400 hover:text-neutral-700"
+                aria-label="Clear search"
+              >
+                ✕
+              </button>
+            )}
           </label>
 
           <div className="flex items-center gap-3 self-start lg:self-auto">
@@ -311,7 +334,11 @@ export function InventoryManagementPage() {
               </div>
             ))
           ) : (
-            <div className="px-4 py-8 text-center text-sm text-neutral-600 lg:px-6">No active products found in the catalog.</div>
+            <div className="px-4 py-8 text-center text-sm text-neutral-600 lg:px-6">
+              {searchQuery.trim()
+                ? <>No products match <strong>"{searchQuery}"</strong>. <button type="button" onClick={() => setSearchQuery('')} className="text-[#ef2027] underline">Clear search</button></>
+                : 'No products found in the catalog.'}
+            </div>
           )}
 
           <div className="flex flex-col gap-4 border-t border-neutral-200 bg-[#efefef] px-4 py-3 text-sm text-neutral-800 lg:flex-row lg:items-center lg:justify-between lg:px-6">

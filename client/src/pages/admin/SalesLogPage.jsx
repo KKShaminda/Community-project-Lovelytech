@@ -183,14 +183,32 @@ export function SalesLogPage() {
   }
 
   const stats = useMemo(() => {
+    const now = new Date()
+    const thisYear = now.getFullYear()
+    const thisMonth = now.getMonth()
+
     const completedSales = sales.filter((sale) => sale.status === 'complete')
-    const dailySales = completedSales.reduce((sum, sale) => sum + sale.total, 0)
-    const monthlyRevenue = dailySales * 18
-    const totalItemsSold = completedSales.reduce((sum, sale) => sum + sale.items.reduce((count, item) => count + Number(item.quantity || 0), 0), 0)
+
+    // Total revenue across all completed sales
+    const totalRevenue = completedSales.reduce((sum, sale) => sum + sale.total, 0)
+
+    // Revenue for the current calendar month only
+    const monthlyRevenue = completedSales
+      .filter((sale) => {
+        if (!sale.date) return false
+        const d = new Date(sale.date)
+        return d.getFullYear() === thisYear && d.getMonth() === thisMonth
+      })
+      .reduce((sum, sale) => sum + sale.total, 0)
+
+    const totalItemsSold = completedSales.reduce(
+      (sum, sale) => sum + sale.items.reduce((count, item) => count + Number(item.quantity || 0), 0),
+      0,
+    )
 
     return [
-      { label: 'DAILY SALES', value: formatLKR(dailySales) },
-      { label: 'MONTHLY REVENUE', value: formatLKR(monthlyRevenue) },
+      { label: 'TOTAL REVENUE', value: formatLKR(totalRevenue) },
+      { label: 'THIS MONTH', value: formatLKR(monthlyRevenue) },
       { label: 'ITEMS SOLD', value: String(totalItemsSold) },
     ]
   }, [sales])
