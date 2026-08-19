@@ -141,6 +141,17 @@ export function ReceptionistDashboard() {
     ]);
   };
 
+  const handleStartDirectSale = () => {
+    setSelectedTicket({
+      id: "direct-sale",
+      trackingId: "DIRECT",
+      customerName: "Walk-in Customer",
+      customerPhone: "N/A",
+      estimatedCost: 0
+    });
+    setInvoiceItems([]);
+  };
+
   const handleAddProductToInvoice = (product) => {
     const exists = invoiceItems.find((item) => item.id === product.id || item.id === product._id);
     if (exists) {
@@ -261,11 +272,13 @@ export function ReceptionistDashboard() {
         items: saleItems,
       });
 
-      // 2. Mark repair ticket as completed (picked up)
-      await updateRepair(selectedTicket._id || selectedTicket.id, {
-        status: "completed",
-        estimatedCost: invoiceItems.find(i => i.isPart)?.price || selectedTicket.estimatedCost,
-      });
+      // 2. Mark repair ticket as completed (picked up) - only if it is a real repair ticket
+      if (selectedTicket.id !== "direct-sale") {
+        await updateRepair(selectedTicket._id || selectedTicket.id, {
+          status: "completed",
+          estimatedCost: invoiceItems.find(i => i.isPart)?.price || selectedTicket.estimatedCost,
+        });
+      }
 
       // 3. Trigger native print popup
       window.print();
@@ -633,7 +646,17 @@ export function ReceptionistDashboard() {
                 <div className="space-y-8">
                   {/* Billing & Invoice Interactive Checkout Panel */}
                   <div className="bg-white rounded-3xl border border-neutral-200 p-6 shadow-sm space-y-4">
-                    <h2 className="text-sm font-extrabold uppercase tracking-widest text-[#ef2027]">Billing & Invoice</h2>
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-sm font-extrabold uppercase tracking-widest text-[#ef2027]">Billing & Invoice</h2>
+                      {!selectedTicket && (
+                        <button
+                          onClick={handleStartDirectSale}
+                          className="text-xs font-bold text-slate-500 hover:text-[#ef2027] border border-slate-200 rounded-lg px-2.5 py-1 hover:border-[#ef2027] transition-colors"
+                        >
+                          + Direct POS Sale
+                        </button>
+                      )}
+                    </div>
                     
                         {/* Search and Add accessories dropdown */}
                         <div className="relative">
