@@ -25,26 +25,34 @@ const normalizeItems = async (items = []) => {
     const productId = item.productId || item.product;
     const quantity = Number(item.quantity);
 
-    if (!productId || !mongoose.isValidObjectId(productId)) {
-      throw new Error("Each sale item must include a valid product");
-    }
-
     if (!Number.isInteger(quantity) || quantity <= 0) {
       throw new Error("Each sale item quantity must be at least 1");
     }
 
-    const product = await Product.findById(productId);
-    if (!product) {
-      throw new Error(`Product not found for sale item: ${productId}`);
-    }
+    if (!productId || !mongoose.isValidObjectId(productId)) {
+      // It is a service item or manual billing part cost input
+      normalized.push({
+        product: null,
+        quantity,
+        buyPrice: 0,
+        sellPrice: Number(item.price) || 0,
+        productName: item.name || "Service Item",
+      });
+    } else {
+      // Physical product
+      const product = await Product.findById(productId);
+      if (!product) {
+        throw new Error(`Product not found for sale item: ${productId}`);
+      }
 
-    normalized.push({
-      product: product._id,
-      quantity,
-      buyPrice: Number(product.buyPrice) || 0,
-      sellPrice: Number(product.sellPrice) || 0,
-      productName: product.name,
-    });
+      normalized.push({
+        product: product._id,
+        quantity,
+        buyPrice: Number(product.buyPrice) || 0,
+        sellPrice: Number(item.price || product.sellPrice) || 0,
+        productName: product.name,
+      });
+    }
   }
 
   return normalized;
@@ -55,17 +63,18 @@ const sumSaleTotal = (items) =>
 
 const applyStockDelta = async (items, direction, session) => {
   for (const item of items) {
+    if (!item.product) continue; // Skip stock level adjustments for service items with no catalog product
     const delta = direction * Number(item.quantity);
     const result = await Product.updateOne(
       {
         _id: item.product,
         ...(direction > 0 ? { stock: { $gte: item.quantity } } : {}),
       },
-      { $inc: { stock: delta, sold: direction > 0 ? Number(item.quantity) : -Number(item.quantity) } },
+      { $inc: { stock: -delta, sold: direction > 0 ? Number(item.quantity) : -Number(item.quantity) } },
       { session }
     );
 
-    if (result.matchedCount === 0) {
+    if (direction > 0 && result.modifiedCount === 0) {
       throw new Error(`Insufficient stock for ${item.productName}`);
     }
   }
@@ -87,7 +96,7 @@ export const createSale = async (req, res) => {
   try {
     const customerName = String(req.body.customerName || req.body.customer || "").trim();
     const status = String(req.body.status || "complete");
-    const paymentMethod = "Cash";
+    const paymentMethod = req.body.paymentMethod || "Cash";
     const items = await normalizeItems(parseMaybeJson(req.body.items) || []);
     const subtotal = sumSaleTotal(items);
     const total = Number(req.body.total ?? subtotal);

@@ -257,12 +257,12 @@ export function ReceptionistDashboard() {
       const totalAmount = invoiceItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
       // 1. Submit completed Sale record to update POS logs & inventory stock levels
-      const saleItems = invoiceItems
-        .filter((item) => item.id !== "part-cost" && item.id !== "labor-fee") // exclude service & labor
-        .map((item) => ({
-          productId: item.id,
-          quantity: item.quantity,
-        }));
+      const saleItems = invoiceItems.map((item) => ({
+        productId: item.id,
+        quantity: item.quantity,
+        price: item.price,
+        name: item.name,
+      }));
 
       await createSale({
         customerName: selectedTicket.customerName,

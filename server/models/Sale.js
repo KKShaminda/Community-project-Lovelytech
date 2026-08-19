@@ -5,7 +5,7 @@ const saleItemSchema = new mongoose.Schema(
     product: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Product",
-      required: true,
+      required: false,
     },
     quantity: {
       type: Number,
@@ -45,7 +45,7 @@ const saleSchema = new mongoose.Schema(
     paymentMethod: {
       type: String,
       default: "Cash",
-      enum: ["Cash"],
+      enum: ["Cash", "Bank Transfer"],
     },
     status: {
       type: String,
