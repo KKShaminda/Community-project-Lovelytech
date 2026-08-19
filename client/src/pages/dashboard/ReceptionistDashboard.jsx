@@ -247,7 +247,7 @@ export function ReceptionistDashboard() {
 
       // 1. Submit completed Sale record to update POS logs & inventory stock levels
       const saleItems = invoiceItems
-        .filter((item) => item.id !== "part-cost" && item.id !== "labor-fee") // exclude main service & labor from inventory products
+        .filter((item) => item.id !== "part-cost" && item.id !== "labor-fee") // exclude service & labor
         .map((item) => ({
           productId: item.id,
           quantity: item.quantity,
@@ -255,21 +255,25 @@ export function ReceptionistDashboard() {
 
       await createSale({
         customerName: selectedTicket.customerName,
-        paymentMethod: "Cash", // Cash default checkout
+        paymentMethod: paymentMethod === "CASH" ? "Cash" : "Bank Transfer", // Map state dynamically
         status: "complete",
         total: totalAmount,
         items: saleItems,
       });
 
-      // 2. Mark repair ticket as completed
+      // 2. Mark repair ticket as completed (picked up)
       await updateRepair(selectedTicket._id || selectedTicket.id, {
         status: "completed",
         estimatedCost: invoiceItems.find(i => i.isPart)?.price || selectedTicket.estimatedCost,
       });
 
-      // 3. Trigger print popup
+      // 3. Trigger native print popup
       window.print();
 
+      // 4. Reset billing checkout panel states
+      setSelectedTicket(null);
+      setInvoiceItems([]);
+      
       alert(`Sale registered and checkout completed for ${selectedTicket.trackingId}`);
       loadData();
     } catch (err) {
