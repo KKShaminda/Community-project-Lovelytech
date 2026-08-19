@@ -84,6 +84,16 @@ export function ReceptionistDashboard() {
   const [newTrackingId, setNewTrackingId] = useState("");
   const [formError, setFormError] = useState("");
 
+  // Edit Ticket Modal States
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingTicket, setEditingTicket] = useState(null);
+  const [editForm, setEditForm] = useState({
+    status: "",
+    technician: "",
+    estimatedCost: "",
+    notes: "",
+  });
+
   // Loading state during checkouts
   const [checkoutLoading, setCheckoutLoading] = useState(false);
 
@@ -196,6 +206,33 @@ export function ReceptionistDashboard() {
       loadData();
     } catch (err) {
       setFormError(err.message || "Intake registration failed.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleEditTicket = (ticket) => {
+    setEditingTicket(ticket);
+    setEditForm({
+      status: ticket.status || "pending",
+      technician: ticket.technician || "",
+      estimatedCost: ticket.estimatedCost || 0,
+      notes: ticket.notes || "",
+    });
+    setEditModalOpen(true);
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setFormError("");
+    try {
+      await updateRepair(editingTicket._id || editingTicket.id, editForm);
+      setEditModalOpen(false);
+      setEditingTicket(null);
+      loadData();
+    } catch (err) {
+      setFormError(err.message || "Failed to update repair order.");
     } finally {
       setSubmitting(false);
     }
@@ -544,7 +581,13 @@ export function ReceptionistDashboard() {
                                 </td>
                                 <td className="px-6 py-4">
                                   <button
-                                    onClick={() => handleSelectTicket(item)}
+                                    onClick={() => {
+                                      if (item.status === "ready") {
+                                        handleSelectTicket(item);
+                                      } else {
+                                        handleEditTicket(item);
+                                      }
+                                    }}
                                     className="text-xs font-bold text-[#ef2027] hover:underline"
                                   >
                                     {item.status === "ready" ? "Invoice" : "Details"}
@@ -565,19 +608,18 @@ export function ReceptionistDashboard() {
                   <div className="bg-white rounded-3xl border border-neutral-200 p-6 shadow-sm space-y-4">
                     <h2 className="text-sm font-extrabold uppercase tracking-widest text-[#ef2027]">Billing & Invoice</h2>
                     
-                    {selectedTicket ? (
-                      <div className="space-y-4">
                         {/* Search and Add accessories dropdown */}
                         <div className="relative">
                           <label className="block text-xs font-bold text-neutral-500 mb-1">Add Accessory/Product to Invoice</label>
                           <input
                             type="text"
-                            placeholder="Type casing, charger, tools..."
+                            disabled={!selectedTicket}
+                            placeholder={selectedTicket ? "Type casing, charger, tools..." : "Select a ready ticket first"}
                             value={searchProductQuery}
                             onChange={(e) => setSearchProductQuery(e.target.value)}
-                            className="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm outline-none focus:border-[#ef2027] bg-neutral-50/50"
+                            className="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm outline-none focus:border-[#ef2027] bg-neutral-50/50 disabled:cursor-not-allowed disabled:opacity-55"
                           />
-                          {filteredProducts.length > 0 && (
+                          {selectedTicket && filteredProducts.length > 0 && (
                             <div className="absolute left-0 right-0 mt-1 z-30 bg-white border border-neutral-200 rounded-xl shadow-lg max-h-48 overflow-y-auto divide-y divide-neutral-100">
                               {filteredProducts.map((p) => (
                                 <button
@@ -596,59 +638,69 @@ export function ReceptionistDashboard() {
                         <div className="bg-neutral-800 rounded-2xl p-5 text-white space-y-4">
                           <div className="flex items-center justify-between border-b border-neutral-750 pb-2">
                             <span className="text-xs text-neutral-450 font-bold uppercase">Selected Ticket</span>
-                            <span className="font-extrabold text-[#ef2027]">#{selectedTicket.trackingId ? selectedTicket.trackingId.slice(-4) : "—"}</span>
+                            <span className="font-extrabold text-[#ef2027]">
+                              {selectedTicket ? `#${selectedTicket.trackingId ? selectedTicket.trackingId.slice(-4) : "—"}` : "# —"}
+                            </span>
                           </div>
                           
                           <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
-                            {/* Dynamically mapped Items */}
-                            {invoiceItems.map((item) => (
-                              <div key={item.id} className="flex justify-between items-center text-xs">
-                                <div className="space-y-0.5">
-                                  <p className="font-semibold truncate max-w-[140px]">{item.name}</p>
-                                  {(item.isPart || item.isLabor) ? (
-                                    <input
-                                      type="number"
-                                      value={item.price}
-                                      onChange={(e) => handlePriceChange(item.id, e.target.value)}
-                                      className="w-16 bg-neutral-700 text-white text-[10px] rounded px-1.5 py-0.5 outline-none border border-neutral-600 focus:border-[#ef2027]"
-                                    />
-                                  ) : (
-                                    <p className="text-[10px] text-neutral-400">{formatLKR(item.price)} each</p>
-                                  )}
+                            {selectedTicket ? (
+                              invoiceItems.map((item) => (
+                                <div key={item.id} className="flex justify-between items-center text-xs">
+                                  <div className="space-y-0.5">
+                                    <p className="font-semibold truncate max-w-[140px]">{item.name}</p>
+                                    {(item.isPart || item.isLabor) ? (
+                                      <input
+                                        type="number"
+                                        value={item.price}
+                                        onChange={(e) => handlePriceChange(item.id, e.target.value)}
+                                        className="w-16 bg-neutral-700 text-white text-[10px] rounded px-1.5 py-0.5 outline-none border border-neutral-600 focus:border-[#ef2027]"
+                                      />
+                                    ) : (
+                                      <p className="text-[10px] text-neutral-400">{formatLKR(item.price)} each</p>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {!item.isPart && !item.isLabor && (
+                                      <input
+                                        type="number"
+                                        min="1"
+                                        value={item.quantity}
+                                        onChange={(e) => handleQuantityChange(item.id, e.target.value)}
+                                        className="w-10 bg-neutral-700 text-white text-center rounded px-1 py-0.5 outline-none"
+                                      />
+                                    )}
+                                    <span className="font-bold">{formatLKR(item.price * item.quantity)}</span>
+                                    <button
+                                      onClick={() => handleRemoveInvoiceItem(item.id)}
+                                      className="text-neutral-400 hover:text-red-500 transition ml-1"
+                                    >
+                                      <Trash2 size={12} />
+                                    </button>
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  {!item.isPart && !item.isLabor && (
-                                    <input
-                                      type="number"
-                                      min="1"
-                                      value={item.quantity}
-                                      onChange={(e) => handleQuantityChange(item.id, e.target.value)}
-                                      className="w-10 bg-neutral-700 text-white text-center rounded px-1 py-0.5 outline-none"
-                                    />
-                                  )}
-                                  <span className="font-bold">{formatLKR(item.price * item.quantity)}</span>
-                                  <button
-                                    onClick={() => handleRemoveInvoiceItem(item.id)}
-                                    className="text-neutral-400 hover:text-red-500 transition ml-1"
-                                  >
-                                    <Trash2 size={12} />
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
+                              ))
+                            ) : (
+                              <p className="text-xs text-neutral-450 italic text-center py-4">
+                                Select a "Ready" ticket in the queue to load checkout items.
+                              </p>
+                            )}
                           </div>
 
                           <div className="flex justify-between items-center border-t border-neutral-750 pt-3">
                             <span className="text-xs text-neutral-300 font-bold uppercase">Total Amount</span>
-                            <span className="text-xl font-extrabold text-[#ef2027]">{formatLKR(invoiceSubtotal)}</span>
+                            <span className="text-xl font-extrabold text-[#ef2027]">
+                              {selectedTicket ? formatLKR(invoiceSubtotal) : formatLKR(0)}
+                            </span>
                           </div>
 
                           {/* Payment Options */}
                           <div className="grid grid-cols-2 gap-4 pt-2">
                             <button
+                              disabled={!selectedTicket}
                               onClick={() => setPaymentMethod("CASH")}
-                              className={`flex items-center justify-center gap-2 rounded-xl py-3 text-xs font-bold transition border ${
-                                paymentMethod === "CASH"
+                              className={`flex items-center justify-center gap-2 rounded-xl py-3 text-xs font-bold transition border disabled:opacity-50 disabled:cursor-not-allowed ${
+                                selectedTicket && paymentMethod === "CASH"
                                   ? "bg-white text-neutral-900 border-white"
                                   : "bg-neutral-700 text-neutral-300 border-neutral-600 hover:bg-neutral-600"
                               }`}
@@ -657,9 +709,10 @@ export function ReceptionistDashboard() {
                               CASH
                             </button>
                             <button
+                              disabled={!selectedTicket}
                               onClick={() => setPaymentMethod("TRANSFER")}
-                              className={`flex items-center justify-center gap-2 rounded-xl py-3 text-xs font-bold transition border ${
-                                paymentMethod === "TRANSFER"
+                              className={`flex items-center justify-center gap-2 rounded-xl py-3 text-xs font-bold transition border disabled:opacity-50 disabled:cursor-not-allowed ${
+                                selectedTicket && paymentMethod === "TRANSFER"
                                   ? "bg-white text-neutral-900 border-white"
                                   : "bg-neutral-700 text-neutral-300 border-neutral-600 hover:bg-neutral-600"
                               }`}
@@ -672,16 +725,12 @@ export function ReceptionistDashboard() {
 
                         <button
                           onClick={handlePrintAndClose}
-                          disabled={checkoutLoading}
-                          className="w-full bg-[#ef2027] text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-[#d61219] transition shadow-md disabled:opacity-50"
+                          disabled={!selectedTicket || checkoutLoading}
+                          className="w-full bg-[#ef2027] text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-[#d61219] transition shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {checkoutLoading ? <Loader2 className="animate-spin" size={18} /> : <Printer size={18} />}
                           Print Receipt & Close
                         </button>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-neutral-400 text-center py-6">Select a repair ticket to calculate invoice details.</p>
-                    )}
                   </div>
 
                   {/* Waiting List Widget */}
@@ -917,6 +966,118 @@ export function ReceptionistDashboard() {
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Edit Repair Order / Status Change Modal */}
+      {editModalOpen && editingTicket && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto print:hidden">
+          <div className="relative w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
+            <button
+              onClick={() => {
+                setEditModalOpen(false);
+                setEditingTicket(null);
+              }}
+              className="absolute right-6 top-6 rounded-full p-1.5 hover:bg-slate-100 text-slate-400 hover:text-slate-700"
+            >
+              <X size={20} />
+            </button>
+
+            <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+              <Wrench size={24} className="text-[#ef2027]" />
+              Edit Repair Order Details
+            </h2>
+            <p className="text-sm text-slate-500 mt-1">
+              Update the active diagnostic status, technician assignment, or pricing parameters.
+            </p>
+
+            {formError && (
+              <div className="mt-4 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <AlertTriangle size={18} />
+                {formError}
+              </div>
+            )}
+
+            <form onSubmit={handleEditSubmit} className="mt-6 space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label>
+                  <span className="block text-xs font-semibold text-slate-600 mb-1">Diagnostic Status</span>
+                  <select
+                    value={editForm.status}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, status: e.target.value }))}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#ef2027] bg-white"
+                  >
+                    <option value="pending">Pending Diagnostics</option>
+                    <option value="in-progress">In Progress / Repairing</option>
+                    <option value="ready">Ready for Pickup (Invoicing)</option>
+                    <option value="completed">Completed / Dispatched</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span className="block text-xs font-semibold text-slate-600 mb-1">Assigned Technician</span>
+                  <input
+                    type="text"
+                    placeholder="Ex: Nimal Perera, Unassigned"
+                    value={editForm.technician}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, technician: e.target.value }))}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#ef2027]"
+                  />
+                </label>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label>
+                  <span className="block text-xs font-semibold text-slate-600 mb-1">Repair Cost (LKR)</span>
+                  <input
+                    type="number"
+                    value={editForm.estimatedCost}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, estimatedCost: Number(e.target.value) }))}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#ef2027]"
+                  />
+                </label>
+                <div>
+                  <span className="block text-xs font-semibold text-slate-400 mb-1">Ticket Tracking Reference</span>
+                  <p className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5 text-sm font-mono font-bold text-slate-600">
+                    {editingTicket.trackingId}
+                  </p>
+                </div>
+              </div>
+
+              <label className="block">
+                <span className="block text-xs font-semibold text-slate-600 mb-1">Diagnostic & Technician Notes</span>
+                <textarea
+                  rows={4}
+                  placeholder="Details regarding part availability, specific defects found, or customer communication logs."
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, notes: e.target.value }))}
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#ef2027] resize-none"
+                />
+              </label>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditModalOpen(false);
+                    setEditingTicket(null);
+                  }}
+                  className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="flex items-center gap-2 rounded-xl bg-[#ef2027] px-6 py-3 text-sm font-bold text-white hover:bg-[#d61219] disabled:opacity-50"
+                >
+                  {submitting && <Loader2 size={16} className="animate-spin" />}
+                  Save Changes
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
