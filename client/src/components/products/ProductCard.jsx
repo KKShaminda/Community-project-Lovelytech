@@ -19,7 +19,7 @@ export function ProductCard({ product, isWishlisted, onToggleWishlist }) {
     <article className="rounded-xl border-t-4 border-red-600 bg-white p-2.5 shadow-sm transition hover:shadow-md">
       <div className="relative mb-2.5 aspect-[4/3.2] overflow-hidden rounded-lg bg-gray-50">
         <img
-          src={product.image || FALLBACK_PRODUCT_IMAGE}
+          src={product.image}
           alt={product.name}
           className="h-full w-full object-cover"
           loading="lazy"

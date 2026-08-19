@@ -8,19 +8,25 @@ import { SigninPage } from './pages/login/SigninPage'
 import { SignupPage } from './pages/login/SignupPage'
 import { UserDashboard } from './pages/dashboard/UserDashboard'
 import { AdminDashboard } from './pages/dashboard/AdminDashboard'
+import { InventoryManagementPage } from './pages/admin/InventoryManagementPage'
+import { RepairOrdersPage } from './pages/admin/RepairOrdersPage'
+import { SalesLogPage } from './pages/admin/SalesLogPage'
+import { CustomersPage } from './pages/admin/CustomersPage'
 import { ReceptionistDashboard } from './pages/dashboard/ReceptionistDashboard'
 import { Products } from './pages/products/Products'
 import { RepairPage } from './pages/repair/RepairPage'
 import { BookRepairPage } from './pages/repair/BookRepairPage'
 import { RepairHistoryPage } from './pages/repair/RepairHistoryPage'
 import { RepairTrackingPage } from './pages/repair/RepairTrackingPage'
+import { OrderPage } from './pages/order/OrderPage'
+
+
 
 function App() {
   return (
     <>
       <Router>
         <Routes>
-
           {/* Public Pages */}
           <Route path="/" element={<HomePage />} />
 
@@ -33,12 +39,19 @@ function App() {
           {/* Contact Us Page */}
           <Route path="/contact-us" element={<ContactUsPage />} />
           <Route path="/products" element={<Products />} />
+          <Route path="/orders" element={<OrderPage />} />
 
           {/* Repair Services Pages */}
           <Route path="/repair" element={<RepairPage />} />
            <Route path="/repair/book" element={<BookRepairPage />} />
            <Route path="/repair/history" element={<RepairHistoryPage />} />
           <Route path="/repair/track" element={<RepairTrackingPage />} />
+
+          
+         
+        
+        
+      
 
           {/* Authentication Routes */}
           <Route path="/login" element={<SigninPage />} />
@@ -47,6 +60,10 @@ function App() {
           {/* Role-based Dashboard Routes */}
           <Route path="/user/dashboard" element={<UserDashboard />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/inventory" element={<InventoryManagementPage />} />
+          <Route path="/admin/repair-orders" element={<RepairOrdersPage />} />
+          <Route path="/admin/sales-log" element={<SalesLogPage />} />
+          <Route path="/admin/customers" element={<CustomersPage />} />
           <Route path="/receptionist/dashboard" element={<ReceptionistDashboard />} />
 
           
