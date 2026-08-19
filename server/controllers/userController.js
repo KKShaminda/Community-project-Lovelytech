@@ -38,7 +38,7 @@ export const register = async (req, res) => {
       phone,
       password,
       //confirmPassword,
-      role: role || "Buyer", // Default to Buyer if not specified
+      role: role || "User", // Default to User if not specified
     });
 
     // Generate token
@@ -286,6 +286,63 @@ export const updatePhone = async (req, res) => {
   }
 };
 
+// Update user profile (fullname, phone, profilePicture)
+export const updateProfile = async (req, res) => {
+  try {
+    const { fullname, phone, profilePicture } = req.body;
+    const updates = {};
+
+    if (fullname !== undefined) updates.fullname = fullname.trim();
+    if (profilePicture !== undefined) updates.profilePicture = profilePicture;
+
+    if (phone !== undefined) {
+      if (!/^[0-9]{10}$/.test(phone)) {
+        return res.status(400).json({
+          success: false,
+          message: "Phone number must be 10 digits",
+        });
+      }
+
+      const existingPhone = await User.findOne({
+        phone,
+        _id: { $ne: req.user._id },
+      });
+      if (existingPhone) {
+        return res.status(400).json({
+          success: false,
+          message: "Phone number already in use",
+        });
+      }
+      updates.phone = phone;
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      updates,
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      user,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error updating profile",
+      error: error.message,
+    });
+  }
+};
+
 //get all users (admin)
 export const getAllUsers = async (req, res) => {
   try {
@@ -325,102 +382,6 @@ export const getUsersByRole = async (req, res) => {
     });
   }
 };
-
-// Upload profile picture
-{/*export const uploadProfilePicture = async (req, res) => {
-  try {
-    // Check if file exists
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: "No file uploaded",
-      });
-    }
-
-    // Upload image to Cloudinary using your existing uploadImage function
-    const publicId = await uploadImage(req.file.buffer, 'profile-pictures');
-    
-    // Generate Cloudinary URL (as per team leader's instruction)
-    const imageUrl = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/${publicId}`;
-
-    // Update user's profile picture URL in database
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      { profilePicture: imageUrl },
-      { new: true, runValidators: true }
-    ).select("-password");
-
-    res.status(200).json({
-      success: true,
-      message: "Profile picture uploaded successfully",
-      user,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error uploading profile picture",
-      error: error.message,
-    });
-  }
-}; */}
-
-{/*
-// Delete/Remove profile picture
-export const removeProfilePicture = async (req, res) => {
-  try {
-    const user = await User.findById(req.user._id);
-    
-    if (!user.profilePicture) {
-      return res.status(400).json({
-        success: false,
-        message: "No profile picture to remove",
-      });
-    }
-
-    // Remove profile picture URL from database
-    user.profilePicture = null;
-    await user.save();
-
-    res.status(200).json({
-      success: true,
-      message: "Profile picture removed successfully",
-      user: user.toJSON(),
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error removing profile picture",
-      error: error.message,
-    });
-  }
-}; */}
-
-{/*
-// Get profile picture
-export const getProfilePicture = async (req, res) => {
-  try {
-    const user = await User.findById(req.user._id).select("profilePicture fullname");
-    
-    if (!user.profilePicture) {
-      return res.status(404).json({
-        success: false,
-        message: "No profile picture found",
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      profilePicture: user.profilePicture,
-      fullname: user.fullname,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error fetching profile picture",
-      error: error.message,
-    });
-  }
-}; */}
 
 // Add address
 export const addAddress = async (req, res) => {

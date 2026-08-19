@@ -1,0 +1,115 @@
+export const productsData = [
+  {
+    id: 1,
+    name: 'Premium Wireless Bluetooth Headphones',
+    price: 2400,
+    rating: 4.8,
+    sold: 142,
+    category: 'Mobile Phones',
+    image: 'https://via.placeholder.com/320x220?text=Headphones',
+    availability: 'In Stock',
+  },
+  {
+    id: 2,
+    name: 'Smart Fitness Watch - Health Tracker',
+    price: 3200,
+    rating: 4.7,
+    sold: 89,
+    category: 'Laptops',
+    image: 'https://via.placeholder.com/320x220?text=Smart+Watch',
+    availability: 'In Stock',
+  },
+  {
+    id: 3,
+    name: 'LED Desk Lamp with USB Charging Port',
+    price: 1800,
+    rating: 4.5,
+    sold: 256,
+    category: 'Desktops',
+    image: 'https://via.placeholder.com/320x220?text=Desk+Lamp',
+    availability: 'Out of Stock',
+  },
+  {
+    id: 4,
+    name: 'Water Proof Bluetooth Speaker - 360° Sounds',
+    price: 4300,
+    rating: 4.9,
+    sold: 312,
+    category: 'Speakers & Audios',
+    image: 'https://via.placeholder.com/320x220?text=Bluetooth+Speaker',
+    availability: 'In Stock',
+  },
+  {
+    id: 5,
+    name: 'Ergonomic Wireless Mouse - Rechargeable',
+    price: 2800,
+    rating: 4.6,
+    sold: 178,
+    category: 'Mobile Phones',
+    image: 'https://via.placeholder.com/320x220?text=Wireless+Mouse',
+    availability: 'In Stock',
+  },
+  {
+    id: 6,
+    name: 'RGB Mechanical Gaming Keyboard',
+    price: 6650,
+    rating: 4.7,
+    sold: 445,
+    category: 'Laptops',
+    image: 'https://via.placeholder.com/320x220?text=Gaming+Keyboard',
+    availability: 'In Stock',
+  },
+  {
+    id: 7,
+    name: '20,000mAh Portable Power Bank - Fast Charge',
+    price: 12400,
+    rating: 4.8,
+    sold: 203,
+    category: 'iPads & Tablets',
+    image: 'https://via.placeholder.com/320x220?text=Power+Bank',
+    availability: 'Out of Stock',
+  },
+  {
+    id: 8,
+    name: '7-in-1 USB-C Hub Multi-Port Adapter',
+    price: 3400,
+    rating: 4.5,
+    sold: 102,
+    category: 'Speakers & Audios',
+    image: 'https://via.placeholder.com/320x220?text=USB-C+Hub',
+    availability: 'In Stock',
+  },
+  {
+    id: 9,
+    name: 'Google Pixel 7 Pro (128 GB) - Used Mobile',
+    price: 78400,
+    rating: 4.9,
+    sold: 8,
+    category: 'Mobile Phones',
+    image: 'https://via.placeholder.com/320x220?text=Pixel+7+Pro',
+    availability: 'In Stock',
+  },
+]
+
+export const categories = [
+  { label: 'Mobile Phones', count: 45 },
+  { label: 'Laptops', count: 38 },
+  { label: 'Desktops', count: 32 },
+  { label: 'iPads & Tablets', count: 21 },
+  { label: 'Speakers & Audios', count: 14 },
+]
+
+export const ratingOptions = [
+  { value: 5, count: 18 },
+  { value: 4, count: 42 },
+  { value: 3, count: 23 },
+]
+
+export const sortOptions = [
+  { label: 'None', value: 'none' },
+  { label: 'Price: Low to High', value: 'price-asc' },
+  { label: 'Price: High to Low', value: 'price-desc' },
+  { label: 'Best Selling', value: 'sold-desc' },
+]
+
+export const formatPrice = (amount) => `Rs. ${amount.toLocaleString()}`

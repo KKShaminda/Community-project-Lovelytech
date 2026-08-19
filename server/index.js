@@ -1,10 +1,14 @@
 import express from "express";
 import dotenv from "dotenv";
 import "colors";
+import cookieParser from "cookie-parser";
 import connectDB from "./config/db.js";
 import cors from "cors";
 
 import userRoutes from "./routes/userRoute.js";
+import productRoutes from "./routes/productRoutes.js";
+import saleRoutes from "./routes/saleRoutes.js";
+import repairRoutes from "./routes/repairRoutes.js";
 
 const app = express();
 
@@ -16,10 +20,15 @@ connectDB();
 
 // Middleware
 app.use(express.json());
+app.use(cookieParser());
 app.use(cors({ origin: true, credentials: true }));
+app.use('/uploads', express.static('uploads'));
 
 // Routes
 app.use("/api/users", userRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/sales", saleRoutes);
+app.use("/api/repairs", repairRoutes);
 
 // Test route  
 app.get("/", (req, res) => {

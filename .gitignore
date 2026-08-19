@@ -2,4 +2,8 @@
 
 # Node modules
 node_modules/
+
+# Uploaded images
+package-lock.json
+server/uploads/
 config.bat
