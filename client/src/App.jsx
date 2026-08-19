@@ -48,12 +48,36 @@ function App() {
             }
           />
 
-          {/* Receptionist Dashboard */}
+          {/* Receptionist Dashboard & Management Routes */}
           <Route
             path="/receptionist/dashboard"
             element={
               <ProtectedRoute allowedRoles={['Receptionist', 'admin']}>
                 <ReceptionistDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/receptionist/inventory"
+            element={
+              <ProtectedRoute allowedRoles={['Receptionist', 'admin']}>
+                <InventoryManagementPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/receptionist/repair-orders"
+            element={
+              <ProtectedRoute allowedRoles={['Receptionist', 'admin']}>
+                <RepairOrdersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/receptionist/sales-log"
+            element={
+              <ProtectedRoute allowedRoles={['Receptionist', 'admin']}>
+                <SalesLogPage />
               </ProtectedRoute>
             }
           />
@@ -78,7 +102,7 @@ function App() {
           <Route
             path="/admin/repair-orders"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'Receptionist']}>
+              <ProtectedRoute allowedRoles={['admin']}>
                 <RepairOrdersPage />
               </ProtectedRoute>
             }
@@ -86,7 +110,7 @@ function App() {
           <Route
             path="/admin/sales-log"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'Receptionist']}>
+              <ProtectedRoute allowedRoles={['admin']}>
                 <SalesLogPage />
               </ProtectedRoute>
             }

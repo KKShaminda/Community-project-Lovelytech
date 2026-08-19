@@ -13,12 +13,15 @@ import {
   X,
   Phone,
   AlertTriangle,
-  Mail,
-  MapPin,
-  ClipboardList,
+  Printer,
+  CreditCard,
+  CircleDollarSign,
+  Trash2,
 } from "lucide-react";
 import { getCurrentUser, logoutUser } from "../../services/authServices";
 import { getRepairs, createRepair, updateRepair } from "../../services/repairServices";
+import { getProducts } from "../../services/productServices";
+import { createSale } from "../../services/saleServices";
 
 const DEVICE_LABELS = {
   "smart-phone": "Smart Phone",
@@ -26,14 +29,6 @@ const DEVICE_LABELS = {
   android: "Android",
   laptop: "Laptop",
   iphone: "iPhone",
-};
-
-const STATUS_META = {
-  pending: { label: "Pending Review", className: "bg-yellow-100 text-yellow-800 border-yellow-200" },
-  "in-progress": { label: "In Diagnosis/Repair", className: "bg-blue-100 text-blue-800 border-blue-200" },
-  ready: { label: "Ready for Pickup", className: "bg-green-100 text-green-800 border-green-200" },
-  completed: { label: "Completed/Picked Up", className: "bg-emerald-100 text-emerald-800 border-emerald-200" },
-  cancelled: { label: "Cancelled", className: "bg-red-100 text-red-800 border-red-200" },
 };
 
 const defaultForm = {
@@ -52,10 +47,27 @@ export function ReceptionistDashboard() {
   const navigate = useNavigate();
   const [currentUser] = useState(getCurrentUser());
   const [repairs, setRepairs] = useState([]);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [activeQueueTab, setActiveQueueTab] = useState("ALL"); // ALL, PENDING, IN-PROGRESS
+
+  // Selected Ticket for Checkout
+  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState("CASH"); // CASH, TRANSFER
+
+  // Checkout Items (Dynamic invoice list)
+  const [invoiceItems, setInvoiceItems] = useState([]);
+  const [laborFee, setLaborFee] = useState(75);
+  const [searchProductQuery, setSearchProductQuery] = useState("");
+
+  // Waiting List state (pre-filled with walk-ins)
+  const [waitingList, setWaitingList] = useState([
+    { id: 1, name: "Marcus A.", type: "Walk-in", detail: "Battery replacement", time: "02m 40s" },
+    { id: 2, name: "Lydia K.", type: "Collection", detail: "#8790 pickup", time: "08m 15s" },
+    { id: 3, name: "Thomas B.", type: "Inquiry", detail: "Tech Support details", time: "12m 04s" },
+  ]);
 
   // Modal States
   const [intakeModalOpen, setIntakeModalOpen] = useState(false);
@@ -64,25 +76,100 @@ export function ReceptionistDashboard() {
   const [newTrackingId, setNewTrackingId] = useState("");
   const [formError, setFormError] = useState("");
 
-  // Quick action update states
-  const [updatingId, setUpdatingId] = useState("");
+  // Loading state during checkouts
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
 
-  const loadRepairs = async () => {
+  const loadData = async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await getRepairs();
-      setRepairs(res.repairs || []);
+      const [repairRes, productRes] = await Promise.all([
+        getRepairs(),
+        getProducts({ limit: 100 }),
+      ]);
+      
+      const fetchedRepairs = repairRes.repairs || [];
+      setRepairs(fetchedRepairs);
+      setProducts(productRes.products || []);
+
+      // Auto-select first repair
+      if (fetchedRepairs.length > 0) {
+        handleSelectTicket(fetchedRepairs[0]);
+      }
     } catch (err) {
-      setError(err.message || "Failed to load repair queue.");
+      setError(err.message || "Failed to load dashboard data.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadRepairs();
+    loadData();
   }, []);
+
+  const handleSelectTicket = (ticket) => {
+    setSelectedTicket(ticket);
+    // Initialize checkout list with both repair part and labor fee as standard editable/removable items
+    setInvoiceItems([
+      {
+        id: "part-cost",
+        name: `${ticket.brand} ${ticket.model} Repair Part`,
+        price: ticket.estimatedCost || 189,
+        quantity: 1,
+        isPart: true,
+      },
+      {
+        id: "labor-fee",
+        name: "Labor Fee (Level 2)",
+        price: 75,
+        quantity: 1,
+        isLabor: true,
+      }
+    ]);
+  };
+
+  const handleAddProductToInvoice = (product) => {
+    const exists = invoiceItems.find((item) => item.id === product.id || item.id === product._id);
+    if (exists) {
+      setInvoiceItems((prev) =>
+        prev.map((item) =>
+          (item.id === product.id || item.id === product._id)
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        )
+      );
+    } else {
+      setInvoiceItems((prev) => [
+        ...prev,
+        {
+          id: product.id || product._id,
+          name: product.name,
+          price: product.sellPrice || product.price || 0,
+          quantity: 1,
+          isPart: false,
+        },
+      ]);
+    }
+    setSearchProductQuery("");
+  };
+
+  const handleRemoveInvoiceItem = (id) => {
+    setInvoiceItems((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const handleQuantityChange = (id, newQty) => {
+    if (newQty <= 0) return;
+    setInvoiceItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, quantity: Number(newQty) } : item))
+    );
+  };
+
+  const handlePriceChange = (id, newPrice) => {
+    if (newPrice < 0) return;
+    setInvoiceItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, price: Number(newPrice) } : item))
+    );
+  };
 
   const handleLogout = async () => {
     try {
@@ -103,38 +190,74 @@ export function ReceptionistDashboard() {
       const res = await createRepair(form);
       setNewTrackingId(res.trackingId);
       setForm(defaultForm);
-      loadRepairs();
+      loadData();
     } catch (err) {
-      setFormError(err.message || "Intake submission failed.");
+      setFormError(err.message || "Intake registration failed.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleStatusChange = async (id, newStatus) => {
-    setUpdatingId(id);
+  const handlePrintAndClose = async () => {
+    if (!selectedTicket) return;
+    setCheckoutLoading(true);
+
     try {
-      await updateRepair(id, { status: newStatus });
-      // Update local state directly for responsive UI
-      setRepairs((prev) =>
-        prev.map((r) => (r._id === id ? { ...r, status: newStatus } : r))
-      );
+      const totalAmount = invoiceItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+      // 1. Submit completed Sale record to update POS logs & inventory stock levels
+      const saleItems = invoiceItems
+        .filter((item) => item.id !== "part-cost" && item.id !== "labor-fee") // exclude main service & labor from inventory products
+        .map((item) => ({
+          productId: item.id,
+          quantity: item.quantity,
+        }));
+
+      await createSale({
+        customerName: selectedTicket.customerName,
+        paymentMethod: "Cash", // Cash default checkout
+        status: "complete",
+        total: totalAmount,
+        items: saleItems,
+      });
+
+      // 2. Mark repair ticket as completed
+      await updateRepair(selectedTicket._id || selectedTicket.id, {
+        status: "completed",
+        estimatedCost: invoiceItems.find(i => i.isPart)?.price || selectedTicket.estimatedCost,
+      });
+
+      // 3. Trigger print popup
+      window.print();
+
+      alert(`Sale registered and checkout completed for ${selectedTicket.trackingId}`);
+      loadData();
     } catch (err) {
-      alert(err.message || "Failed to update status.");
+      alert("Checkout failed: " + err.message);
     } finally {
-      setUpdatingId("");
+      setCheckoutLoading(false);
     }
   };
 
-  // Stats Counters
-  const stats = useMemo(() => {
-    const pending = repairs.filter((r) => r.status === "pending").length;
-    const active = repairs.filter((r) => r.status === "in-progress").length;
-    const ready = repairs.filter((r) => r.status === "ready").length;
-    return { pending, active, ready };
-  }, [repairs]);
+  const handleAddWalkIn = () => {
+    const name = prompt("Enter customer name:");
+    if (!name) return;
+    const detail = prompt("Enter ticket/issue details:");
+    if (!detail) return;
+    
+    setWaitingList((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        name,
+        type: "Walk-in",
+        detail,
+        time: "00m 05s",
+      },
+    ]);
+  };
 
-  // Filtered/Searched Repairs list
+  // Filter queue by active tab (ALL, PENDING, IN-PROGRESS) and search query
   const filteredRepairs = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     return repairs.filter((r) => {
@@ -142,207 +265,479 @@ export function ReceptionistDashboard() {
         q === "" ||
         (r.trackingId || "").toLowerCase().includes(q) ||
         (r.customerName || "").toLowerCase().includes(q) ||
-        (r.customerPhone || "").toLowerCase().includes(q) ||
         (r.brand || "").toLowerCase().includes(q) ||
         (r.model || "").toLowerCase().includes(q);
 
-      const matchesStatus = statusFilter === "" || r.status === statusFilter;
+      let matchesTab = true;
+      if (activeQueueTab === "PENDING") {
+        matchesTab = r.status === "pending";
+      } else if (activeQueueTab === "IN-PROGRESS") {
+        matchesTab = r.status === "in-progress";
+      }
 
-      return matchesSearch && matchesStatus;
+      return matchesSearch && matchesTab;
     });
-  }, [repairs, searchQuery, statusFilter]);
+  }, [repairs, searchQuery, activeQueueTab]);
+
+  // Invoice calculations
+  const invoiceSubtotal = useMemo(() => {
+    return invoiceItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  }, [invoiceItems]);
+
+  // Filtered inventory products for search dropdown
+  const filteredProducts = useMemo(() => {
+    const q = searchProductQuery.toLowerCase().trim();
+    if (!q) return [];
+    return products.filter((p) =>
+      p.name.toLowerCase().includes(q) ||
+      (p.brand || "").toLowerCase().includes(q)
+    ).slice(0, 5);
+  }, [products, searchProductQuery]);
+
+  // Daily stats calculation from database
+  const dailyStats = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const todayRepairs = repairs.filter(
+      (r) => r.createdAt && r.createdAt.slice(0, 10) === today
+    ).length;
+    const completedVal = repairs
+      .filter((r) => r.status === "completed")
+      .reduce((sum, r) => sum + (r.estimatedCost || 0), 0);
+
+    return {
+      booked: todayRepairs || repairs.length,
+      invoiced: completedVal ? `${(completedVal / 1000).toFixed(1)}k` : "2.4k",
+    };
+  }, [repairs]);
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
-      {/* Top Header Navbar */}
-      <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/90 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#E4342F] text-white font-bold text-lg">LT</span>
-            <div>
-              <p className="text-xs font-bold text-[#E4342F] uppercase tracking-[0.2em] leading-none">Reception Desk</p>
-              <h1 className="text-xl font-bold tracking-tight text-slate-900 mt-1">Welcome, {currentUser?.fullname || "Receptionist"}</h1>
+    <div className="min-h-screen bg-[#1f1f1f] text-neutral-900 font-sans">
+      <div className="flex min-h-screen w-full flex-col bg-white shadow-[0_18px_45px_rgba(0,0,0,0.25)]">
+        {/* ── Top Header Navbar ── */}
+        <header className="border-b border-[#ff2020] bg-white/95 backdrop-blur-xl h-20 shrink-0 print:hidden">
+          <div className="flex h-20 items-center justify-between px-4 sm:px-6 lg:px-8">
+            {/* Logo */}
+            <div className="flex items-center gap-3">
+              <img
+                src="/Logo.png"
+                alt="Lovely Tech"
+                className="h-12 w-12 object-contain sm:h-14 sm:w-14"
+              />
+              <div className="hidden flex-col leading-none sm:flex">
+                <span className="text-xl font-bold tracking-tight text-neutral-900 sm:text-2xl">
+                  Lovely Tech
+                </span>
+              </div>
+            </div>
+
+            {/* Header Right Actions */}
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ef2027] text-sm font-semibold text-white">
+                  {currentUser?.fullname?.[0]?.toUpperCase() || "R"}
+                </span>
+                <div className="hidden text-right sm:block">
+                  <p className="text-xs font-medium text-neutral-600">
+                    {currentUser?.role || "Receptionist"}
+                  </p>
+                  <p className="text-sm font-semibold text-neutral-900">Account</p>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <Link
-              to="/admin/sales-log"
-              className="hidden sm:block text-sm font-semibold text-slate-600 hover:text-slate-900"
-            >
-              Sales Log
-            </Link>
-            <Link
-              to="/admin/repair-orders"
-              className="hidden sm:block text-sm font-semibold text-slate-600 hover:text-[#E4342F]"
-            >
-              Repair Registry
-            </Link>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
-            >
-              <LogOut size={16} />
-              Logout
-            </button>
-          </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Main dashboard body */}
-      <main className="mx-auto max-w-7xl px-6 py-10">
-
-        {/* Stats Counter Section */}
-        <section className="grid gap-5 sm:grid-cols-3">
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-bold tracking-wider text-slate-400 uppercase">Awaiting Diagnosis</p>
-            <p className="mt-2 text-3xl font-extrabold text-yellow-600">{stats.pending}</p>
-          </article>
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-bold tracking-wider text-slate-400 uppercase">Undergoing Repair</p>
-            <p className="mt-2 text-3xl font-extrabold text-blue-600">{stats.active}</p>
-          </article>
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-bold tracking-wider text-slate-400 uppercase">Ready For Pickup</p>
-            <p className="mt-2 text-3xl font-extrabold text-green-600">{stats.ready}</p>
-          </article>
-        </section>
-
-        {/* Action Panel: Search + Filters + New Intake button */}
-        <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="flex flex-1 flex-wrap gap-3">
-              {/* Search */}
-              <div className="relative min-w-[280px] flex-1">
-                <Search size={18} className="absolute left-4 top-3 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search customer name, phone, or tracking ID..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 py-2.5 pl-11 pr-4 text-sm outline-none focus:border-[#E4342F] focus:ring-1 focus:ring-red-150 bg-slate-50/50"
-                />
-              </div>
-              {/* Status Filter */}
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none bg-slate-50/50 focus:border-[#E4342F]"
+        {/* ── Sidebar + Content Body ── */}
+        <div className="flex flex-1 bg-[#f4f4f4] print:bg-white">
+          {/* Sidebar */}
+          <aside className="hidden w-[210px] shrink-0 bg-[#ef2027] pb-12 lg:block print:hidden">
+            <div className="mt-2 space-y-1">
+              <button
+                type="button"
+                className="flex w-full items-center gap-3 rounded-r-md px-3 py-3 text-left text-sm font-medium transition bg-[#8F0F11] text-white"
               >
-                <option value="">All Statuses</option>
-                <option value="pending">Pending Review</option>
-                <option value="in-progress">In Diagnosis/Repair</option>
-                <option value="ready">Ready for Pickup</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
+                <span className="flex h-5 w-5 items-center justify-center rounded-sm border border-current text-[11px]">▣</span>
+                <span>Dashboard</span>
+              </button>
+              <Link
+                to="/receptionist/inventory"
+                className="flex w-full items-center gap-3 rounded-r-md px-3 py-3 text-left text-sm font-medium transition text-white/95 hover:bg-white/10"
+              >
+                <span className="flex h-5 w-5 items-center justify-center rounded-sm border border-current text-[11px]">▣</span>
+                <span>Inventory</span>
+              </Link>
+              <Link
+                to="/receptionist/repair-orders"
+                className="flex w-full items-center gap-3 rounded-r-md px-3 py-3 text-left text-sm font-medium transition text-white/95 hover:bg-white/10"
+              >
+                <span className="flex h-5 w-5 items-center justify-center rounded-sm border border-current text-[11px]">▣</span>
+                <span>Repair Orders</span>
+              </Link>
+              <Link
+                to="/receptionist/sales-log"
+                className="flex w-full items-center gap-3 rounded-r-md px-3 py-3 text-left text-sm font-medium transition text-white/95 hover:bg-white/10"
+              >
+                <span className="flex h-5 w-5 items-center justify-center rounded-sm border border-current text-[11px]">▣</span>
+                <span>Sales Log</span>
+              </Link>
             </div>
+          </aside>
 
-            {/* Book Intake Button */}
-            <button
-              onClick={() => {
-                setForm(defaultForm);
-                setNewTrackingId("");
-                setFormError("");
-                setIntakeModalOpen(true);
-              }}
-              className="flex items-center justify-center gap-2 rounded-xl bg-[#E4342F] px-5 py-3 text-sm font-bold text-white shadow-md hover:bg-[#c92923] hover:shadow-lg transition duration-200"
-            >
-              <Plus size={18} />
-              New Intake
-            </button>
-          </div>
+          {/* Main workspace container */}
+          <main className="min-w-0 flex-1 bg-white px-4 py-6 sm:px-6 lg:px-8 xl:px-10 print:px-0 print:py-0">
+            
+            {/* Real Printable Invoice Layout (Hidden except when printing) */}
+            <div className="hidden print:block font-mono text-xs w-[80mm] p-4 bg-white text-black space-y-4">
+              <div className="text-center">
+                <h1 className="text-lg font-bold">LOVELY TECH PRECISION</h1>
+                <p className="text-[10px]">Service Receipt & Bill Invoice</p>
+                <p className="text-[10px] mt-1">Date: {new Date().toLocaleString()}</p>
+              </div>
 
-          {/* Repairs List */}
-          <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white">
-            {error && (
-              <div className="border-b border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                {error}
+              <div className="border-t border-dashed border-black pt-2 space-y-1 text-[10px]">
+                <p><span className="font-bold">Ticket:</span> {selectedTicket?.trackingId}</p>
+                <p><span className="font-bold">Customer:</span> {selectedTicket?.customerName}</p>
+                <p><span className="font-bold">Contact:</span> {selectedTicket?.customerPhone}</p>
               </div>
-            )}
 
-            {loading ? (
-              <div className="py-16 text-center">
-                <Loader2 size={32} className="mx-auto animate-spin text-[#E4342F]" />
-                <p className="mt-4 text-sm text-slate-500">Retrieving repair queue...</p>
-              </div>
-            ) : filteredRepairs.length === 0 ? (
-              <div className="py-16 text-center">
-                <ClipboardList size={40} className="mx-auto text-slate-300" />
-                <p className="mt-4 text-sm text-slate-500">No active repair request matches your filter.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-left text-sm">
+              <div className="border-t border-dashed border-black pt-2">
+                <table className="w-full text-left text-[10px]">
                   <thead>
-                    <tr className="bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200">
-                      <th className="px-6 py-4">Tracking ID</th>
-                      <th className="px-6 py-4">Customer Details</th>
-                      <th className="px-6 py-4">Device Info</th>
-                      <th className="px-6 py-4">Status</th>
-                      <th className="px-6 py-4">Quick Update</th>
+                    <tr className="border-b border-dashed border-black font-bold">
+                      <th>Item</th>
+                      <th className="text-right">Qty</th>
+                      <th className="text-right">Price</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {filteredRepairs.map((repair) => {
-                      const meta = STATUS_META[repair.status] || STATUS_META.pending;
-                      const isUpdating = updatingId === repair._id;
-                      return (
-                        <tr key={repair._id || repair.id} className="hover:bg-slate-50/50">
-                          <td className="whitespace-nowrap px-6 py-4">
-                            <span className="rounded bg-red-50 border border-red-150 px-2.5 py-1 text-xs font-semibold text-[#E4342F]">
-                              {repair.trackingId}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <p className="font-bold text-slate-900">{repair.customerName}</p>
-                            <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                              <Phone size={12} /> {repair.customerPhone}
-                            </p>
-                          </td>
-                          <td className="px-6 py-4">
-                            <p className="font-semibold text-slate-800">
-                              {repair.brand} {repair.model}
-                            </p>
-                            <p className="text-xs text-slate-500 mt-1">
-                              {DEVICE_LABELS[repair.deviceType] || repair.deviceType} {repair.imei ? `• IMEI: ${repair.imei}` : ""}
-                            </p>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={`inline-block rounded-full border px-2.5 py-0.5 text-xs font-semibold ${meta.className}`}>
-                              {meta.label}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            {isUpdating ? (
-                              <Loader2 size={16} className="animate-spin text-[#E4342F]" />
-                            ) : (
-                              <select
-                                value={repair.status}
-                                onChange={(e) => handleStatusChange(repair._id, e.target.value)}
-                                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs outline-none focus:border-[#E4342F] bg-white cursor-pointer"
-                              >
-                                <option value="pending">Awaiting Review</option>
-                                <option value="in-progress">Under Repair</option>
-                                <option value="ready">Ready for Pickup</option>
-                                <option value="completed">Completed / Collected</option>
-                                <option value="cancelled">Cancelled</option>
-                              </select>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                  <tbody>
+                    {invoiceItems.map((item) => (
+                      <tr key={item.id}>
+                        <td className="truncate max-w-[40mm]">{item.name}</td>
+                        <td className="text-right">x{item.quantity}</td>
+                        <td className="text-right">${item.price * item.quantity}.00</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
-            )}
-          </div>
-        </section>
-      </main>
 
-      {/* Device Intake Modal */}
+              <div className="border-t border-dashed border-black pt-2 text-[10px] space-y-1">
+                <div className="flex justify-between font-bold text-sm">
+                  <span>Grand Total:</span>
+                  <span>${invoiceSubtotal}.00</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Payment Mode:</span>
+                  <span>{paymentMethod}</span>
+                </div>
+              </div>
+
+              <div className="text-center pt-4 border-t border-dashed border-black text-[9px] text-neutral-500">
+                <p>Thank you for choosing Lovely Tech!</p>
+                <p>Visit again for precision repairs.</p>
+              </div>
+            </div>
+
+            <div className="print:hidden space-y-8">
+              {/* Dashboard Header Bar */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-3xl font-extrabold tracking-tight text-neutral-900">Operational Dashboard</h1>
+                  <p className="text-neutral-500 mt-1">Manage incoming repairs and customer transactions with precision.</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setForm(defaultForm);
+                    setNewTrackingId("");
+                    setFormError("");
+                    setIntakeModalOpen(true);
+                  }}
+                  className="bg-[#ef2027] text-white px-6 py-3.5 rounded-xl font-bold hover:bg-[#d61219] transition flex items-center gap-2 shadow-md"
+                >
+                  <Plus size={18} />
+                  New Repair Ticket
+                </button>
+              </div>
+
+              <div className="grid gap-8 lg:grid-cols-[1.8fr_1.2fr]">
+                {/* ── Left Column: Active Repair Queue ── */}
+                <div className="space-y-8">
+                  <div className="bg-white rounded-3xl border border-neutral-200 shadow-sm overflow-hidden">
+                    <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
+                      <h2 className="text-sm font-extrabold uppercase tracking-widest text-[#ef2027]">Active Repair Queue</h2>
+                      {/* Tabs */}
+                      <div className="flex bg-neutral-100 rounded-lg p-1 text-xs font-bold text-neutral-500">
+                        <button
+                          onClick={() => setActiveQueueTab("ALL")}
+                          className={`px-4 py-2 rounded-md transition ${activeQueueTab === "ALL" ? "bg-[#ef2027] text-white" : "hover:text-neutral-800"}`}
+                        >
+                          ALL
+                        </button>
+                        <button
+                          onClick={() => setActiveQueueTab("PENDING")}
+                          className={`px-4 py-2 rounded-md transition ${activeQueueTab === "PENDING" ? "bg-[#ef2027] text-white" : "hover:text-neutral-800"}`}
+                        >
+                          PENDING
+                        </button>
+                        <button
+                          onClick={() => setActiveQueueTab("IN-PROGRESS")}
+                          className={`px-4 py-2 rounded-md transition ${activeQueueTab === "IN-PROGRESS" ? "bg-[#ef2027] text-white" : "hover:text-neutral-800"}`}
+                        >
+                          IN-PROGRESS
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Repair Queue Table */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-sm border-collapse">
+                        <thead>
+                          <tr className="bg-neutral-50/50 text-xs font-bold uppercase tracking-wider text-neutral-400 border-b border-neutral-100">
+                            <th className="px-6 py-4">Ticket</th>
+                            <th className="px-6 py-4">Customer</th>
+                            <th className="px-6 py-4">Device</th>
+                            <th className="px-6 py-4">Status</th>
+                            <th className="px-6 py-4">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-neutral-100 font-medium">
+                          {loading ? (
+                            <tr>
+                              <td colSpan={5} className="py-12 text-center text-neutral-400">
+                                <Loader2 size={24} className="animate-spin mx-auto text-[#ef2027]" />
+                                <p className="mt-2 text-xs">Loading queue details...</p>
+                              </td>
+                            </tr>
+                          ) : filteredRepairs.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="py-12 text-center text-neutral-400">
+                                No repairs found matching this category.
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredRepairs.map((item) => (
+                              <tr key={item._id || item.id} className="hover:bg-neutral-50/40">
+                                <td className="px-6 py-4 text-xs font-bold text-neutral-500">
+                                  #{item.trackingId ? item.trackingId.slice(-4) : "—"}
+                                </td>
+                                <td className="px-6 py-4">
+                                  <p className="font-bold text-neutral-900">{item.customerName}</p>
+                                </td>
+                                <td className="px-6 py-4 text-neutral-700">
+                                  {item.brand} {item.model}
+                                </td>
+                                <td className="px-6 py-4">
+                                  <span
+                                    className={`inline-block px-2.5 py-0.5 rounded text-[10px] font-extrabold uppercase border ${
+                                      item.status === "ready"
+                                        ? "bg-green-50 text-green-700 border-green-200"
+                                        : item.status === "in-progress"
+                                        ? "bg-red-50 text-red-700 border-red-200"
+                                        : "bg-yellow-50 text-yellow-700 border-yellow-200"
+                                    }`}
+                                  >
+                                    {item.status === "in-progress" ? "IN PROGRESS" : item.status || "PENDING"}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <button
+                                    onClick={() => handleSelectTicket(item)}
+                                    className="text-xs font-bold text-[#ef2027] hover:underline"
+                                  >
+                                    {item.status === "ready" ? "Invoice" : "Details"}
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── Right Column: Billing / Waiting / Stats ── */}
+                <div className="space-y-8">
+                  {/* Billing & Invoice Interactive Checkout Panel */}
+                  <div className="bg-white rounded-3xl border border-neutral-200 p-6 shadow-sm space-y-4">
+                    <h2 className="text-sm font-extrabold uppercase tracking-widest text-[#ef2027]">Billing & Invoice</h2>
+                    
+                    {selectedTicket ? (
+                      <div className="space-y-4">
+                        {/* Search and Add accessories dropdown */}
+                        <div className="relative">
+                          <label className="block text-xs font-bold text-neutral-500 mb-1">Add Accessory/Product to Invoice</label>
+                          <input
+                            type="text"
+                            placeholder="Type casing, charger, tools..."
+                            value={searchProductQuery}
+                            onChange={(e) => setSearchProductQuery(e.target.value)}
+                            className="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm outline-none focus:border-[#ef2027] bg-neutral-50/50"
+                          />
+                          {filteredProducts.length > 0 && (
+                            <div className="absolute left-0 right-0 mt-1 z-30 bg-white border border-neutral-200 rounded-xl shadow-lg max-h-48 overflow-y-auto divide-y divide-neutral-100">
+                              {filteredProducts.map((p) => (
+                                <button
+                                  key={p._id || p.id}
+                                  onClick={() => handleAddProductToInvoice(p)}
+                                  className="w-full text-left px-4 py-2.5 text-xs font-semibold hover:bg-neutral-50 transition"
+                                >
+                                  {p.name} - ${p.sellPrice || p.price || 0} ({p.stock} left)
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Invoice Checkout List */}
+                        <div className="bg-neutral-800 rounded-2xl p-5 text-white space-y-4">
+                          <div className="flex items-center justify-between border-b border-neutral-750 pb-2">
+                            <span className="text-xs text-neutral-450 font-bold uppercase">Selected Ticket</span>
+                            <span className="font-extrabold text-[#ef2027]">#{selectedTicket.trackingId ? selectedTicket.trackingId.slice(-4) : "—"}</span>
+                          </div>
+                          
+                          <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
+                            {/* Dynamically mapped Items */}
+                            {invoiceItems.map((item) => (
+                              <div key={item.id} className="flex justify-between items-center text-xs">
+                                <div className="space-y-0.5">
+                                  <p className="font-semibold truncate max-w-[140px]">{item.name}</p>
+                                  {(item.isPart || item.isLabor) ? (
+                                    <input
+                                      type="number"
+                                      value={item.price}
+                                      onChange={(e) => handlePriceChange(item.id, e.target.value)}
+                                      className="w-16 bg-neutral-700 text-white text-[10px] rounded px-1.5 py-0.5 outline-none border border-neutral-600 focus:border-[#ef2027]"
+                                    />
+                                  ) : (
+                                    <p className="text-[10px] text-neutral-400">${item.price} each</p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {!item.isPart && !item.isLabor && (
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      value={item.quantity}
+                                      onChange={(e) => handleQuantityChange(item.id, e.target.value)}
+                                      className="w-10 bg-neutral-700 text-white text-center rounded px-1 py-0.5 outline-none"
+                                    />
+                                  )}
+                                  <span className="font-bold">${item.price * item.quantity}.00</span>
+                                  <button
+                                    onClick={() => handleRemoveInvoiceItem(item.id)}
+                                    className="text-neutral-400 hover:text-red-500 transition ml-1"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="flex justify-between items-center border-t border-neutral-750 pt-3">
+                            <span className="text-xs text-neutral-300 font-bold uppercase">Total Amount</span>
+                            <span className="text-xl font-extrabold text-[#ef2027]">${invoiceSubtotal}.00</span>
+                          </div>
+
+                          {/* Payment Options */}
+                          <div className="grid grid-cols-2 gap-4 pt-2">
+                            <button
+                              onClick={() => setPaymentMethod("CASH")}
+                              className={`flex items-center justify-center gap-2 rounded-xl py-3 text-xs font-bold transition border ${
+                                paymentMethod === "CASH"
+                                  ? "bg-white text-neutral-900 border-white"
+                                  : "bg-neutral-700 text-neutral-300 border-neutral-600 hover:bg-neutral-600"
+                              }`}
+                            >
+                              <CircleDollarSign size={16} />
+                              CASH
+                            </button>
+                            <button
+                              onClick={() => setPaymentMethod("TRANSFER")}
+                              className={`flex items-center justify-center gap-2 rounded-xl py-3 text-xs font-bold transition border ${
+                                paymentMethod === "TRANSFER"
+                                  ? "bg-white text-neutral-900 border-white"
+                                  : "bg-neutral-700 text-neutral-300 border-neutral-600 hover:bg-neutral-600"
+                              }`}
+                            >
+                              <CreditCard size={16} />
+                              TRANSFER
+                            </button>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={handlePrintAndClose}
+                          disabled={checkoutLoading}
+                          className="w-full bg-[#ef2027] text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-[#d61219] transition shadow-md disabled:opacity-50"
+                        >
+                          {checkoutLoading ? <Loader2 className="animate-spin" size={18} /> : <Printer size={18} />}
+                          Print Receipt & Close
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-neutral-400 text-center py-6">Select a repair ticket to calculate invoice details.</p>
+                    )}
+                  </div>
+
+                  {/* Waiting List Widget */}
+                  <div className="bg-white rounded-3xl border border-neutral-200 p-6 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-sm font-extrabold uppercase tracking-widest text-[#ef2027]">Waiting List</h2>
+                      <span className="rounded-full bg-red-100 text-red-600 text-[10px] font-bold px-2 py-0.5 uppercase">
+                        {waitingList.length} In Queue
+                      </span>
+                    </div>
+
+                    <div className="space-y-3">
+                      {waitingList.map((item) => (
+                        <div key={item.id} className="flex justify-between items-center rounded-xl bg-neutral-50 p-4 border border-neutral-100">
+                          <div>
+                            <p className="font-extrabold text-sm text-neutral-800">{item.name}</p>
+                            <p className="text-xs text-neutral-400 mt-0.5">{item.type}: {item.detail}</p>
+                          </div>
+                          <span className="text-xs font-bold text-[#ef2027]">{item.time}</span>
+                        </div>
+                      ))}
+                      <button
+                        onClick={handleAddWalkIn}
+                        className="w-full border-2 border-dashed border-neutral-300 rounded-xl py-3.5 text-xs font-bold text-neutral-500 hover:bg-neutral-50 hover:text-neutral-700 transition"
+                      >
+                        + Add Walk-in to Queue
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Daily Stats Widget */}
+                  <div className="bg-white rounded-3xl border border-neutral-200 p-6 shadow-sm space-y-4">
+                    <h2 className="text-sm font-extrabold uppercase tracking-widest text-[#ef2027]">Daily Stats</h2>
+                    <div className="grid grid-cols-2 gap-4 text-center">
+                      <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
+                        <p className="text-xs text-neutral-400 font-bold uppercase">Repairs Booked</p>
+                        <p className="text-3xl font-extrabold text-neutral-800 mt-2">{dailyStats.booked}</p>
+                      </div>
+                      <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
+                        <p className="text-xs text-neutral-400 font-bold uppercase">Invoiced</p>
+                        <p className="text-3xl font-extrabold text-[#ef2027] mt-2">${dailyStats.invoiced}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+
+        <footer className="border-t border-neutral-200 bg-white px-4 py-4 text-center text-xs text-neutral-500 sm:px-6 lg:px-8 print:hidden">
+          Copyright © 2025. All Rights Reserved by LovelyTech
+        </footer>
+      </div>
+
+      {/* Intake / New Ticket Modal */}
       {intakeModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto print:hidden">
           <div className="relative w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
             <button
               onClick={() => setIntakeModalOpen(false)}
@@ -352,7 +747,7 @@ export function ReceptionistDashboard() {
             </button>
 
             <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-              <Wrench size={24} className="text-[#E4342F]" />
+              <Wrench size={24} className="text-[#ef2027]" />
               New Device Intake Check-in
             </h2>
             <p className="text-sm text-slate-500 mt-1">Submit this intake form to register a new repair ticket.</p>
@@ -369,8 +764,8 @@ export function ReceptionistDashboard() {
                 <CheckCircle size={48} className="mx-auto text-green-500" />
                 <h3 className="text-lg font-bold text-slate-800 mt-4">Intake Form Registered Successfully</h3>
                 <p className="text-sm text-slate-500 mt-1">A unique tracking code has been generated:</p>
-                <div className="mt-4 inline-block rounded-xl border border-dashed border-[#E4342F] bg-red-50/50 px-8 py-3.5">
-                  <span className="text-2xl font-mono font-extrabold tracking-widest text-[#E4342F]">
+                <div className="mt-4 inline-block rounded-xl border border-dashed border-[#ef2027] bg-red-50/50 px-8 py-3.5">
+                  <span className="text-2xl font-mono font-extrabold tracking-widest text-[#ef2027]">
                     {newTrackingId}
                   </span>
                 </div>
@@ -381,7 +776,7 @@ export function ReceptionistDashboard() {
                       setNewTrackingId("");
                       setForm(defaultForm);
                     }}
-                    className="rounded-xl bg-[#E4342F] px-6 py-2.5 text-sm font-bold text-white hover:bg-[#c92923]"
+                    className="rounded-xl bg-[#ef2027] px-6 py-2.5 text-sm font-bold text-white hover:bg-[#d61219]"
                   >
                     Register Another Device
                   </button>
@@ -400,7 +795,7 @@ export function ReceptionistDashboard() {
                         type="text"
                         value={form.customerName}
                         onChange={(e) => setForm((prev) => ({ ...prev, customerName: e.target.value }))}
-                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#E4342F]"
+                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#ef2027]"
                       />
                     </label>
                     <label>
@@ -410,7 +805,7 @@ export function ReceptionistDashboard() {
                         type="text"
                         value={form.customerPhone}
                         onChange={(e) => setForm((prev) => ({ ...prev, customerPhone: e.target.value }))}
-                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#E4342F]"
+                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#ef2027]"
                       />
                     </label>
                   </div>
@@ -422,7 +817,7 @@ export function ReceptionistDashboard() {
                         type="email"
                         value={form.customerEmail}
                         onChange={(e) => setForm((prev) => ({ ...prev, customerEmail: e.target.value }))}
-                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#E4342F]"
+                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#ef2027]"
                       />
                     </label>
                     <label>
@@ -431,7 +826,7 @@ export function ReceptionistDashboard() {
                         type="text"
                         value={form.customerAddress}
                         onChange={(e) => setForm((prev) => ({ ...prev, customerAddress: e.target.value }))}
-                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#E4342F]"
+                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#ef2027]"
                       />
                     </label>
                   </div>
@@ -446,7 +841,7 @@ export function ReceptionistDashboard() {
                       <select
                         value={form.deviceType}
                         onChange={(e) => setForm((prev) => ({ ...prev, deviceType: e.target.value }))}
-                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#E4342F]"
+                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#ef2027]"
                       >
                         {Object.entries(DEVICE_LABELS).map(([key, val]) => (
                           <option key={key} value={key}>{val}</option>
@@ -461,7 +856,7 @@ export function ReceptionistDashboard() {
                         placeholder="Ex: Apple, Samsung, Asus"
                         value={form.brand}
                         onChange={(e) => setForm((prev) => ({ ...prev, brand: e.target.value }))}
-                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#E4342F]"
+                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#ef2027]"
                       />
                     </label>
                   </div>
@@ -474,7 +869,7 @@ export function ReceptionistDashboard() {
                         placeholder="Ex: iPhone 15 Pro, ROG Phone 8"
                         value={form.model}
                         onChange={(e) => setForm((prev) => ({ ...prev, model: e.target.value }))}
-                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#E4342F]"
+                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#ef2027]"
                       />
                     </label>
                     <label>
@@ -483,7 +878,7 @@ export function ReceptionistDashboard() {
                         type="text"
                         value={form.imei}
                         onChange={(e) => setForm((prev) => ({ ...prev, imei: e.target.value }))}
-                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#E4342F]"
+                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#ef2027]"
                       />
                     </label>
                   </div>
@@ -495,7 +890,7 @@ export function ReceptionistDashboard() {
                       placeholder="Ex: Device does not boot up. Broken screen glass. Water damage diagnostics requested."
                       value={form.issue}
                       onChange={(e) => setForm((prev) => ({ ...prev, issue: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#E4342F] resize-none"
+                      className="w-full rounded-xl border border-[#ef2027] px-4 py-2.5 text-sm outline-none focus:border-[#ef2027] resize-none"
                     />
                   </label>
                 </fieldset>
@@ -511,7 +906,7 @@ export function ReceptionistDashboard() {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="flex items-center gap-2 rounded-xl bg-[#E4342F] px-6 py-3 text-sm font-bold text-white hover:bg-[#c92923] disabled:opacity-50"
+                    className="flex items-center gap-2 rounded-xl bg-[#ef2027] px-6 py-3 text-sm font-bold text-white hover:bg-[#d61219] disabled:opacity-50"
                   >
                     {submitting && <Loader2 size={16} className="animate-spin" />}
                     Register Intake
