@@ -43,6 +43,14 @@ const defaultForm = {
   issue: "",
 };
 
+const formatLKR = (value = 0) =>
+  new Intl.NumberFormat("en-LK", {
+    style: "currency",
+    currency: "LKR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(value) || 0);
+
 export function ReceptionistDashboard() {
   const navigate = useNavigate();
   const [currentUser] = useState(getCurrentUser());
@@ -91,11 +99,6 @@ export function ReceptionistDashboard() {
       const fetchedRepairs = repairRes.repairs || [];
       setRepairs(fetchedRepairs);
       setProducts(productRes.products || []);
-
-      // Auto-select first repair
-      if (fetchedRepairs.length > 0) {
-        handleSelectTicket(fetchedRepairs[0]);
-      }
     } catch (err) {
       setError(err.message || "Failed to load dashboard data.");
     } finally {
@@ -414,7 +417,7 @@ export function ReceptionistDashboard() {
                       <tr key={item.id}>
                         <td className="truncate max-w-[40mm]">{item.name}</td>
                         <td className="text-right">x{item.quantity}</td>
-                        <td className="text-right">${item.price * item.quantity}.00</td>
+                        <td className="text-right">{formatLKR(item.price * item.quantity)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -424,7 +427,7 @@ export function ReceptionistDashboard() {
               <div className="border-t border-dashed border-black pt-2 text-[10px] space-y-1">
                 <div className="flex justify-between font-bold text-sm">
                   <span>Grand Total:</span>
-                  <span>${invoiceSubtotal}.00</span>
+                  <span>{formatLKR(invoiceSubtotal)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Payment Mode:</span>
@@ -582,7 +585,7 @@ export function ReceptionistDashboard() {
                                   onClick={() => handleAddProductToInvoice(p)}
                                   className="w-full text-left px-4 py-2.5 text-xs font-semibold hover:bg-neutral-50 transition"
                                 >
-                                  {p.name} - ${p.sellPrice || p.price || 0} ({p.stock} left)
+                                  {p.name} - {formatLKR(p.sellPrice || p.price || 0)} ({p.stock} left)
                                 </button>
                               ))}
                             </div>
@@ -610,7 +613,7 @@ export function ReceptionistDashboard() {
                                       className="w-16 bg-neutral-700 text-white text-[10px] rounded px-1.5 py-0.5 outline-none border border-neutral-600 focus:border-[#ef2027]"
                                     />
                                   ) : (
-                                    <p className="text-[10px] text-neutral-400">${item.price} each</p>
+                                    <p className="text-[10px] text-neutral-400">{formatLKR(item.price)} each</p>
                                   )}
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -623,7 +626,7 @@ export function ReceptionistDashboard() {
                                       className="w-10 bg-neutral-700 text-white text-center rounded px-1 py-0.5 outline-none"
                                     />
                                   )}
-                                  <span className="font-bold">${item.price * item.quantity}.00</span>
+                                  <span className="font-bold">{formatLKR(item.price * item.quantity)}</span>
                                   <button
                                     onClick={() => handleRemoveInvoiceItem(item.id)}
                                     className="text-neutral-400 hover:text-red-500 transition ml-1"
@@ -637,7 +640,7 @@ export function ReceptionistDashboard() {
 
                           <div className="flex justify-between items-center border-t border-neutral-750 pt-3">
                             <span className="text-xs text-neutral-300 font-bold uppercase">Total Amount</span>
-                            <span className="text-xl font-extrabold text-[#ef2027]">${invoiceSubtotal}.00</span>
+                            <span className="text-xl font-extrabold text-[#ef2027]">{formatLKR(invoiceSubtotal)}</span>
                           </div>
 
                           {/* Payment Options */}
@@ -719,7 +722,7 @@ export function ReceptionistDashboard() {
                       </div>
                       <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
                         <p className="text-xs text-neutral-400 font-bold uppercase">Invoiced</p>
-                        <p className="text-3xl font-extrabold text-[#ef2027] mt-2">${dailyStats.invoiced}</p>
+                        <p className="text-3xl font-extrabold text-[#ef2027] mt-2">LKR {dailyStats.invoiced}</p>
                       </div>
                     </div>
                   </div>
