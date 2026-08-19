@@ -432,6 +432,29 @@ export function ReceptionistDashboard() {
             
             {/* Real Printable Invoice Layout (Hidden except when printing) */}
             <div className="hidden print:block font-mono text-xs w-[80mm] p-4 bg-white text-black space-y-4">
+              <style dangerouslySetInnerHTML={{__html: `
+                @media print {
+                  body, html, #root {
+                    background: white !important;
+                    color: black !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    height: auto !important;
+                    min-height: 0 !important;
+                  }
+                  .print\\:hidden {
+                    display: none !important;
+                  }
+                  div, main, header, footer, aside {
+                    box-shadow: none !important;
+                    border: none !important;
+                    background: transparent !important;
+                  }
+                  @page {
+                    margin: 0;
+                  }
+                }
+              `}} />
               <div className="text-center">
                 <h1 className="text-lg font-bold">LOVELY TECH PRECISION</h1>
                 <p className="text-[10px]">Service Receipt & Bill Invoice</p>
