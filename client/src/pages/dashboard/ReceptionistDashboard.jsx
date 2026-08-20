@@ -97,7 +97,7 @@ export function ReceptionistDashboard() {
         getRepairs(),
         getProducts({ limit: 100 }),
       ]);
-      
+
       const fetchedRepairs = (repairRes.data || repairRes.repairs || []).map((r) => ({
         ...r,
         customerName: r.customer || r.customerName || "",
@@ -284,7 +284,7 @@ export function ReceptionistDashboard() {
       // 4. Reset billing checkout panel states
       setSelectedTicket(null);
       setInvoiceItems([]);
-      
+
       alert(`Sale registered and checkout completed for ${selectedTicket.trackingId}`);
       loadData();
     } catch (err) {
@@ -388,10 +388,11 @@ export function ReceptionistDashboard() {
 
           {/* Main workspace container */}
           <main className="min-w-0 flex-1 bg-white px-4 py-6 sm:px-6 lg:px-8 xl:px-10 print:px-0 print:py-0">
-            
+
             {/* Real Printable Invoice Layout (Hidden except when printing) */}
             <div className="hidden print:block font-mono text-xs w-[80mm] p-4 bg-white text-black space-y-4">
-              <style dangerouslySetInnerHTML={{__html: `
+              <style dangerouslySetInnerHTML={{
+                __html: `
                 @media print {
                   body, html, #root {
                     background: white !important;
@@ -507,7 +508,7 @@ export function ReceptionistDashboard() {
               </div>
 
               <div className="grid gap-8 lg:grid-cols-[1.8fr_1.2fr]">
-                
+
                 {/* ── Left Column: Active Repair Queue ── */}
                 <div className="space-y-8">
                   <div className="bg-white rounded-3xl border border-neutral-200 shadow-sm overflow-hidden">
@@ -576,13 +577,12 @@ export function ReceptionistDashboard() {
                                 </td>
                                 <td className="px-6 py-4">
                                   <span
-                                    className={`inline-block px-2.5 py-0.5 rounded text-[10px] font-extrabold uppercase border ${
-                                      item.status === "ready"
+                                    className={`inline-block px-2.5 py-0.5 rounded text-[10px] font-extrabold uppercase border ${item.status === "ready"
                                         ? "bg-green-50 text-green-700 border-green-200"
                                         : item.status === "in-progress"
-                                        ? "bg-red-50 text-red-700 border-red-200"
-                                        : "bg-yellow-50 text-yellow-700 border-yellow-200"
-                                    }`}
+                                          ? "bg-red-50 text-red-700 border-red-200"
+                                          : "bg-yellow-50 text-yellow-700 border-yellow-200"
+                                      }`}
                                   >
                                     {item.status === "in-progress" ? "IN PROGRESS" : item.status || "PENDING"}
                                   </span>
@@ -625,130 +625,128 @@ export function ReceptionistDashboard() {
                         </button>
                       )}
                     </div>
-                    
-                        {/* Search and Add accessories dropdown */}
-                        <div className="relative">
-                          <label className="block text-xs font-bold text-neutral-500 mb-1">Add Accessory/Product to Invoice</label>
-                          <input
-                            type="text"
-                            disabled={!selectedTicket}
-                            placeholder={selectedTicket ? "Type casing, charger, tools..." : "Select a ready ticket first"}
-                            value={searchProductQuery}
-                            onChange={(e) => setSearchProductQuery(e.target.value)}
-                            className="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm outline-none focus:border-[#ef2027] bg-neutral-50/50 disabled:cursor-not-allowed disabled:opacity-55"
-                          />
-                          {selectedTicket && filteredProducts.length > 0 && (
-                            <div className="absolute left-0 right-0 mt-1 z-30 bg-white border border-neutral-200 rounded-xl shadow-lg max-h-48 overflow-y-auto divide-y divide-neutral-100">
-                              {filteredProducts.map((p) => (
+
+                    {/* Search and Add accessories dropdown */}
+                    <div className="relative">
+                      <label className="block text-xs font-bold text-neutral-500 mb-1">Add Accessory/Product to Invoice</label>
+                      <input
+                        type="text"
+                        disabled={!selectedTicket}
+                        placeholder={selectedTicket ? "Type casing, charger, tools..." : "Select a ready ticket first"}
+                        value={searchProductQuery}
+                        onChange={(e) => setSearchProductQuery(e.target.value)}
+                        className="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm outline-none focus:border-[#ef2027] bg-neutral-50/50 disabled:cursor-not-allowed disabled:opacity-55"
+                      />
+                      {selectedTicket && filteredProducts.length > 0 && (
+                        <div className="absolute left-0 right-0 mt-1 z-30 bg-white border border-neutral-200 rounded-xl shadow-lg max-h-48 overflow-y-auto divide-y divide-neutral-100">
+                          {filteredProducts.map((p) => (
+                            <button
+                              key={p._id || p.id}
+                              onClick={() => handleAddProductToInvoice(p)}
+                              className="w-full text-left px-4 py-2.5 text-xs font-semibold hover:bg-neutral-50 transition"
+                            >
+                              {p.name} - {formatLKR(p.sellPrice || p.price || 0)} ({p.stock} left)
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Invoice Checkout List */}
+                    <div className="bg-neutral-800 rounded-2xl p-5 text-white space-y-4">
+                      <div className="flex items-center justify-between border-b border-neutral-750 pb-2">
+                        <span className="text-xs text-neutral-450 font-bold uppercase">Selected Ticket</span>
+                        <span className="font-extrabold text-[#ef2027]">
+                          {selectedTicket ? `#${selectedTicket.trackingId ? selectedTicket.trackingId.slice(-4) : "—"}` : "# —"}
+                        </span>
+                      </div>
+
+                      <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
+                        {selectedTicket ? (
+                          invoiceItems.map((item) => (
+                            <div key={item.id} className="flex justify-between items-center text-xs">
+                              <div className="space-y-0.5">
+                                <p className="font-semibold truncate max-w-35">{item.name}</p>
+                                {(item.isPart || item.isLabor) ? (
+                                  <input
+                                    type="number"
+                                    value={item.price}
+                                    onChange={(e) => handlePriceChange(item.id, e.target.value)}
+                                    className="w-16 bg-neutral-700 text-white text-[10px] rounded px-1.5 py-0.5 outline-none border border-neutral-600 focus:border-[#ef2027]"
+                                  />
+                                ) : (
+                                  <p className="text-[10px] text-neutral-400">{formatLKR(item.price)} each</p>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {!item.isPart && !item.isLabor && (
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={item.quantity}
+                                    onChange={(e) => handleQuantityChange(item.id, e.target.value)}
+                                    className="w-10 bg-neutral-700 text-white text-center rounded px-1 py-0.5 outline-none"
+                                  />
+                                )}
+                                <span className="font-bold">{formatLKR(item.price * item.quantity)}</span>
                                 <button
-                                  key={p._id || p.id}
-                                  onClick={() => handleAddProductToInvoice(p)}
-                                  className="w-full text-left px-4 py-2.5 text-xs font-semibold hover:bg-neutral-50 transition"
+                                  onClick={() => handleRemoveInvoiceItem(item.id)}
+                                  className="text-neutral-400 hover:text-red-500 transition ml-1"
                                 >
-                                  {p.name} - {formatLKR(p.sellPrice || p.price || 0)} ({p.stock} left)
+                                  <Trash2 size={12} />
                                 </button>
-                              ))}
+                              </div>
                             </div>
-                          )}
-                        </div>
+                          ))
+                        ) : (
+                          <p className="text-xs text-neutral-450 italic text-center py-4">
+                            Select a "Ready" ticket in the queue to load checkout items.
+                          </p>
+                        )}
+                      </div>
 
-                        {/* Invoice Checkout List */}
-                        <div className="bg-neutral-800 rounded-2xl p-5 text-white space-y-4">
-                          <div className="flex items-center justify-between border-b border-neutral-750 pb-2">
-                            <span className="text-xs text-neutral-450 font-bold uppercase">Selected Ticket</span>
-                            <span className="font-extrabold text-[#ef2027]">
-                              {selectedTicket ? `#${selectedTicket.trackingId ? selectedTicket.trackingId.slice(-4) : "—"}` : "# —"}
-                            </span>
-                          </div>
-                          
-                          <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
-                            {selectedTicket ? (
-                              invoiceItems.map((item) => (
-                                <div key={item.id} className="flex justify-between items-center text-xs">
-                                  <div className="space-y-0.5">
-                                    <p className="font-semibold truncate max-w-35">{item.name}</p>
-                                    {(item.isPart || item.isLabor) ? (
-                                      <input
-                                        type="number"
-                                        value={item.price}
-                                        onChange={(e) => handlePriceChange(item.id, e.target.value)}
-                                        className="w-16 bg-neutral-700 text-white text-[10px] rounded px-1.5 py-0.5 outline-none border border-neutral-600 focus:border-[#ef2027]"
-                                      />
-                                    ) : (
-                                      <p className="text-[10px] text-neutral-400">{formatLKR(item.price)} each</p>
-                                    )}
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    {!item.isPart && !item.isLabor && (
-                                      <input
-                                        type="number"
-                                        min="1"
-                                        value={item.quantity}
-                                        onChange={(e) => handleQuantityChange(item.id, e.target.value)}
-                                        className="w-10 bg-neutral-700 text-white text-center rounded px-1 py-0.5 outline-none"
-                                      />
-                                    )}
-                                    <span className="font-bold">{formatLKR(item.price * item.quantity)}</span>
-                                    <button
-                                      onClick={() => handleRemoveInvoiceItem(item.id)}
-                                      className="text-neutral-400 hover:text-red-500 transition ml-1"
-                                    >
-                                      <Trash2 size={12} />
-                                    </button>
-                                  </div>
-                                </div>
-                              ))
-                            ) : (
-                              <p className="text-xs text-neutral-450 italic text-center py-4">
-                                Select a "Ready" ticket in the queue to load checkout items.
-                              </p>
-                            )}
-                          </div>
+                      <div className="flex justify-between items-center border-t border-neutral-750 pt-3">
+                        <span className="text-xs text-neutral-300 font-bold uppercase">Total Amount</span>
+                        <span className="text-xl font-extrabold text-[#ef2027]">
+                          {selectedTicket ? formatLKR(invoiceSubtotal) : formatLKR(0)}
+                        </span>
+                      </div>
 
-                          <div className="flex justify-between items-center border-t border-neutral-750 pt-3">
-                            <span className="text-xs text-neutral-300 font-bold uppercase">Total Amount</span>
-                            <span className="text-xl font-extrabold text-[#ef2027]">
-                              {selectedTicket ? formatLKR(invoiceSubtotal) : formatLKR(0)}
-                            </span>
-                          </div>
-
-                          {/* Payment Options */}
-                          <div className="grid grid-cols-2 gap-4 pt-2">
-                            <button
-                              disabled={!selectedTicket}
-                              onClick={() => setPaymentMethod("CASH")}
-                              className={`flex items-center justify-center gap-2 rounded-xl py-3 text-xs font-bold transition border disabled:opacity-50 disabled:cursor-not-allowed ${
-                                selectedTicket && paymentMethod === "CASH"
-                                  ? "bg-white text-neutral-900 border-white"
-                                  : "bg-neutral-700 text-neutral-300 border-neutral-600 hover:bg-neutral-600"
-                              }`}
-                            >
-                              <CircleDollarSign size={16} />
-                              CASH
-                            </button>
-                            <button
-                              disabled={!selectedTicket}
-                              onClick={() => setPaymentMethod("TRANSFER")}
-                              className={`flex items-center justify-center gap-2 rounded-xl py-3 text-xs font-bold transition border disabled:opacity-50 disabled:cursor-not-allowed ${
-                                selectedTicket && paymentMethod === "TRANSFER"
-                                  ? "bg-white text-neutral-900 border-white"
-                                  : "bg-neutral-700 text-neutral-300 border-neutral-600 hover:bg-neutral-600"
-                              }`}
-                            >
-                              <CreditCard size={16} />
-                              TRANSFER
-                            </button>
-                          </div>
-                        </div>
-
+                      {/* Payment Options */}
+                      <div className="grid grid-cols-2 gap-4 pt-2">
                         <button
-                          onClick={handlePrintAndClose}
-                          disabled={!selectedTicket || checkoutLoading}
-                          className="w-full bg-[#ef2027] text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-[#d61219] transition shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={!selectedTicket}
+                          onClick={() => setPaymentMethod("CASH")}
+                          className={`flex items-center justify-center gap-2 rounded-xl py-3 text-xs font-bold transition border disabled:opacity-50 disabled:cursor-not-allowed ${selectedTicket && paymentMethod === "CASH"
+                              ? "bg-white text-neutral-900 border-white"
+                              : "bg-neutral-700 text-neutral-300 border-neutral-600 hover:bg-neutral-600"
+                            }`}
                         >
-                          {checkoutLoading ? <Loader2 className="animate-spin" size={18} /> : <Printer size={18} />}
-                          Print Receipt & Close
+                          <CircleDollarSign size={16} />
+                          CASH
                         </button>
+                        <button
+                          disabled={!selectedTicket}
+                          onClick={() => setPaymentMethod("TRANSFER")}
+                          className={`flex items-center justify-center gap-2 rounded-xl py-3 text-xs font-bold transition border disabled:opacity-50 disabled:cursor-not-allowed ${selectedTicket && paymentMethod === "TRANSFER"
+                              ? "bg-white text-neutral-900 border-white"
+                              : "bg-neutral-700 text-neutral-300 border-neutral-600 hover:bg-neutral-600"
+                            }`}
+                        >
+                          <CreditCard size={16} />
+                          TRANSFER
+                        </button>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handlePrintAndClose}
+                      disabled={!selectedTicket || checkoutLoading}
+                      className="w-full bg-[#ef2027] text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-[#d61219] transition shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {checkoutLoading ? <Loader2 className="animate-spin" size={18} /> : <Printer size={18} />}
+                      Print Receipt & Close
+                    </button>
                   </div>
 
                   {/* Daily Stats Widget */}
@@ -772,303 +770,7 @@ export function ReceptionistDashboard() {
           </main>
         </div>
       </div>
-
-      {/* Intake / New Ticket Modal */}
-      {intakeModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto print:hidden">
-          <div className="relative w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
-            <button
-              onClick={() => setIntakeModalOpen(false)}
-              className="absolute right-6 top-6 rounded-full p-1.5 hover:bg-slate-100 text-slate-400 hover:text-slate-700"
-            >
-              <X size={20} />
-            </button>
-
-            <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-              <Wrench size={24} className="text-[#ef2027]" />
-              New Device Intake Check-in
-            </h2>
-            <p className="text-sm text-slate-500 mt-1">Submit this intake form to register a new repair ticket.</p>
-
-            {formError && (
-              <div className="mt-4 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                <AlertTriangle size={18} />
-                {formError}
-              </div>
-            )}
-
-            {newTrackingId ? (
-              <div className="mt-6 text-center p-8 bg-slate-50 border border-slate-100 rounded-2xl">
-                <CheckCircle size={48} className="mx-auto text-green-500" />
-                <h3 className="text-lg font-bold text-slate-800 mt-4">Intake Form Registered Successfully</h3>
-                <p className="text-sm text-slate-500 mt-1">A unique tracking code has been generated:</p>
-                <div className="mt-4 inline-block rounded-xl border border-dashed border-[#ef2027] bg-red-50/50 px-8 py-3.5">
-                  <span className="text-2xl font-mono font-extrabold tracking-widest text-[#ef2027]">
-                    {newTrackingId}
-                  </span>
-                </div>
-                <p className="mt-4 text-xs text-slate-400">Provide this tracking ID to the customer for status lookups.</p>
-                <div className="mt-6">
-                  <button
-                    onClick={() => {
-                      setNewTrackingId("");
-                      setForm(defaultForm);
-                    }}
-                    className="rounded-xl bg-[#ef2027] px-6 py-2.5 text-sm font-bold text-white hover:bg-[#d61219]"
-                  >
-                    Register Another Device
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <form onSubmit={handleIntakeSubmit} className="mt-6 space-y-5">
-                {/* Customer Contact */}
-                <fieldset className="space-y-4">
-                  <legend className="text-sm font-bold text-slate-400 uppercase tracking-wider">1. Customer Information</legend>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <label>
-                      <span className="block text-xs font-semibold text-slate-600 mb-1">Customer Full Name</span>
-                      <input
-                        required
-                        type="text"
-                        value={form.customerName}
-                        onChange={(e) => setForm((prev) => ({ ...prev, customerName: e.target.value }))}
-                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#ef2027]"
-                      />
-                    </label>
-                    <label>
-                      <span className="block text-xs font-semibold text-slate-600 mb-1">Mobile Number</span>
-                      <input
-                        required
-                        type="text"
-                        value={form.customerPhone}
-                        onChange={(e) => setForm((prev) => ({ ...prev, customerPhone: e.target.value }))}
-                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#ef2027]"
-                      />
-                    </label>
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <label>
-                      <span className="block text-xs font-semibold text-slate-600 mb-1">Email Address</span>
-                      <input
-                        required
-                        type="email"
-                        value={form.customerEmail}
-                        onChange={(e) => setForm((prev) => ({ ...prev, customerEmail: e.target.value }))}
-                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#ef2027]"
-                      />
-                    </label>
-                    <label>
-                      <span className="block text-xs font-semibold text-slate-600 mb-1">Home Address</span>
-                      <input
-                        type="text"
-                        value={form.customerAddress}
-                        onChange={(e) => setForm((prev) => ({ ...prev, customerAddress: e.target.value }))}
-                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#ef2027]"
-                      />
-                    </label>
-                  </div>
-                </fieldset>
-
-                {/* Device Info */}
-                <fieldset className="space-y-4 pt-2 border-t border-slate-100">
-                  <legend className="text-sm font-bold text-slate-400 uppercase tracking-wider">2. Device Specifications</legend>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <label>
-                      <span className="block text-xs font-semibold text-slate-600 mb-1">Device Category</span>
-                      <select
-                        value={form.deviceType}
-                        onChange={(e) => setForm((prev) => ({ ...prev, deviceType: e.target.value }))}
-                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#ef2027]"
-                      >
-                        {Object.entries(DEVICE_LABELS).map(([key, val]) => (
-                          <option key={key} value={key}>{val}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      <span className="block text-xs font-semibold text-slate-600 mb-1">Brand Name</span>
-                      <input
-                        required
-                        type="text"
-                        placeholder="Ex: Apple, Samsung, Asus"
-                        value={form.brand}
-                        onChange={(e) => setForm((prev) => ({ ...prev, brand: e.target.value }))}
-                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#ef2027]"
-                      />
-                    </label>
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <label>
-                      <span className="block text-xs font-semibold text-slate-600 mb-1">Model Name</span>
-                      <input
-                        required
-                        type="text"
-                        placeholder="Ex: iPhone 15 Pro, ROG Phone 8"
-                        value={form.model}
-                        onChange={(e) => setForm((prev) => ({ ...prev, model: e.target.value }))}
-                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#ef2027]"
-                      />
-                    </label>
-                    <label>
-                      <span className="block text-xs font-semibold text-slate-600 mb-1">IMEI or Serial No (Optional)</span>
-                      <input
-                        type="text"
-                        value={form.imei}
-                        onChange={(e) => setForm((prev) => ({ ...prev, imei: e.target.value }))}
-                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#ef2027]"
-                      />
-                    </label>
-                  </div>
-                  <label className="block">
-                    <span className="block text-xs font-semibold text-slate-600 mb-1">Defect / Symptom Description</span>
-                    <textarea
-                      required
-                      rows={3}
-                      placeholder="Ex: Device does not boot up. Broken screen glass. Water damage diagnostics requested."
-                      value={form.issue}
-                      onChange={(e) => setForm((prev) => ({ ...prev, issue: e.target.value }))}
-                      className="w-full rounded-xl border border-[#ef2027] px-4 py-2.5 text-sm outline-none focus:border-[#ef2027] resize-none"
-                    />
-                  </label>
-                </fieldset>
-
-                <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={() => setIntakeModalOpen(false)}
-                    className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="flex items-center gap-2 rounded-xl bg-[#ef2027] px-6 py-3 text-sm font-bold text-white hover:bg-[#d61219] disabled:opacity-50"
-                  >
-                    {submitting && <Loader2 size={16} className="animate-spin" />}
-                    Register Intake
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Edit Repair Order / Status Change Modal */}
-      {editModalOpen && editingTicket && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto print:hidden">
-          <div className="relative w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
-            <button
-              onClick={() => {
-                setEditModalOpen(false);
-                setEditingTicket(null);
-              }}
-              className="absolute right-6 top-6 rounded-full p-1.5 hover:bg-slate-100 text-slate-400 hover:text-slate-700"
-            >
-              <X size={20} />
-            </button>
-
-            <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-              <Wrench size={24} className="text-[#ef2027]" />
-              Edit Repair Order Details
-            </h2>
-            <p className="text-sm text-slate-500 mt-1">
-              Update the active diagnostic status, technician assignment, or pricing parameters.
-            </p>
-
-            {formError && (
-              <div className="mt-4 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                <AlertTriangle size={18} />
-                {formError}
-              </div>
-            )}
-
-            <form onSubmit={handleEditSubmit} className="mt-6 space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label>
-                  <span className="block text-xs font-semibold text-slate-600 mb-1">Diagnostic Status</span>
-                  <select
-                    value={editForm.status}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, status: e.target.value }))}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#ef2027] bg-white"
-                  >
-                    <option value="pending">Pending Diagnostics</option>
-                    <option value="in-progress">In Progress / Repairing</option>
-                    <option value="ready">Ready for Pickup (Invoicing)</option>
-                    <option value="completed">Completed / Dispatched</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
-                </label>
-
-                <label>
-                  <span className="block text-xs font-semibold text-slate-600 mb-1">Assigned Technician</span>
-                  <input
-                    type="text"
-                    placeholder="Ex: Nimal Perera, Unassigned"
-                    value={editForm.technician}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, technician: e.target.value }))}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#ef2027]"
-                  />
-                </label>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label>
-                  <span className="block text-xs font-semibold text-slate-600 mb-1">Repair Cost (LKR)</span>
-                  <input
-                    type="number"
-                    value={editForm.estimatedCost}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, estimatedCost: Number(e.target.value) }))}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#ef2027]"
-                  />
-                </label>
-                <div>
-                  <span className="block text-xs font-semibold text-slate-400 mb-1">Ticket Tracking Reference</span>
-                  <p className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5 text-sm font-mono font-bold text-slate-600">
-                    {editingTicket.trackingId}
-                  </p>
-                </div>
-              </div>
-
-              <label className="block">
-                <span className="block text-xs font-semibold text-slate-600 mb-1">Diagnostic & Technician Notes</span>
-                <textarea
-                  rows={4}
-                  placeholder="Details regarding part availability, specific defects found, or customer communication logs."
-                  value={editForm.notes}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, notes: e.target.value }))}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#ef2027] resize-none"
-                />
-              </label>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditModalOpen(false);
-                    setEditingTicket(null);
-                  }}
-                  className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="flex items-center gap-2 rounded-xl bg-[#ef2027] px-6 py-3 text-sm font-bold text-white hover:bg-[#d61219] disabled:opacity-50"
-                >
-                  {submitting && <Loader2 size={16} className="animate-spin" />}
-                  Save Changes
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-      </Layout>
-  
+    </div>
   );
 }
 

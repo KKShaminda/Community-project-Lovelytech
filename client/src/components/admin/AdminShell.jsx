@@ -1,47 +1,30 @@
 import { Link } from "react-router-dom";
 import Layout from "../layout/Layout";
-import { getCurrentUser } from "../../services/authServices";
-import { LayoutDashboard, ClipboardList, Clipboard, Receipt, Users, Settings } from "lucide-react";
 
-function SidebarItem({ label, to, active = false, icon: Icon }) {
+function SidebarItem({ label, to, active = false }) {
   return (
     <Link
       to={to}
       className={`flex w-full items-center gap-3 rounded-r-md px-3 py-3 text-left text-sm font-medium transition ${active ? "bg-[#8F0F11] text-white" : "text-white/95 hover:bg-white/10"}`}
     >
-      {Icon && <Icon size={18} />}
+      <span className="flex h-5 w-5 items-center justify-center rounded-sm border border-current text-[11px]">▣</span>
       <span>{label}</span>
-    </Link >
+    </Link>
   );
 }
 
 export function AdminShell({ activeSection = "dashboard", children }) {
-  const user = getCurrentUser();
-  const userRole = (user?.role || "").toLowerCase();
-  const isReceptionist = userRole === "receptionist";
-
   return (
     <Layout>
       <div className="flex min-h-[calc(100vh-10rem)] bg-[#f4f4f4] text-neutral-900">
         <aside className="hidden w-[210px] shrink-0 bg-[#ef2027] pb-12 lg:block">
           <div className="mt-2 space-y-1">
-            {isReceptionist ? (
-              <>
-                <SidebarItem label="Dashboard" to="/receptionist/dashboard" active={activeSection === "dashboard"} icon={LayoutDashboard} />
-                <SidebarItem label="Inventory" to="/receptionist/inventory" active={activeSection === "inventory"} icon={ClipboardList} />
-                <SidebarItem label="Repair Orders" to="/receptionist/repair-orders" active={activeSection === "repair-orders"} icon={Clipboard} />
-                <SidebarItem label="Sales Log" to="/receptionist/sales-log" active={activeSection === "sales-log"} icon={Receipt} />
-              </>
-            ) : (
-              <>
-                <SidebarItem label="Dashboard" to="/admin/dashboard" active={activeSection === "dashboard"} icon={LayoutDashboard} />
-                <SidebarItem label="Inventory" to="/admin/inventory" active={activeSection === "inventory"} icon={ClipboardList} />
-                <SidebarItem label="Repair Orders" to="/admin/repair-orders" active={activeSection === "repair-orders"} icon={Clipboard} />
-                <SidebarItem label="Sales Log" to="/admin/sales-log" active={activeSection === "sales-log"} icon={Receipt} />
-                <SidebarItem label="Customers" to="/admin/customers" active={activeSection === "customers"} icon={Users} />
-                <SidebarItem label="Settings" to="/admin/dashboard" icon={Settings} />
-              </>
-            )}
+            <SidebarItem label="Dashboard" to="/admin/dashboard" active={activeSection === "dashboard"} />
+            <SidebarItem label="Inventory" to="/admin/inventory" active={activeSection === "inventory"} />
+            <SidebarItem label="Repair Orders" to="/admin/repair-orders" active={activeSection === "repair-orders"} />
+            <SidebarItem label="Sales Log" to="/admin/sales-log" active={activeSection === "sales-log"} />
+            <SidebarItem label="Customers" to="/admin/customers" active={activeSection === "customers"} />
+            <SidebarItem label="Settings" to="/admin/dashboard" />
           </div>
         </aside>
 

@@ -286,63 +286,6 @@ export const updatePhone = async (req, res) => {
   }
 };
 
-// Update user profile (fullname, phone, profilePicture)
-export const updateProfile = async (req, res) => {
-  try {
-    const { fullname, phone, profilePicture } = req.body;
-    const updates = {};
-
-    if (fullname !== undefined) updates.fullname = fullname.trim();
-    if (profilePicture !== undefined) updates.profilePicture = profilePicture;
-
-    if (phone !== undefined) {
-      if (!/^[0-9]{10}$/.test(phone)) {
-        return res.status(400).json({
-          success: false,
-          message: "Phone number must be 10 digits",
-        });
-      }
-
-      const existingPhone = await User.findOne({
-        phone,
-        _id: { $ne: req.user._id },
-      });
-      if (existingPhone) {
-        return res.status(400).json({
-          success: false,
-          message: "Phone number already in use",
-        });
-      }
-      updates.phone = phone;
-    }
-
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      updates,
-      { new: true, runValidators: true }
-    ).select("-password");
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Profile updated successfully",
-      user,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error updating profile",
-      error: error.message,
-    });
-  }
-};
-
 //get all users (admin)
 export const getAllUsers = async (req, res) => {
   try {

@@ -1,7 +1,56 @@
-import { buildUrl, request, getAuthHeaders } from './api.js'
+const normalizeUrlPart = (value = "") => value.replace(/\/+$/, "");
+const ensureLeadingSlash = (value = "") => (value.startsWith("/") ? value : `/${value}`);
 
-const API_URL = buildUrl('/users')
+const rawBaseUrl = (import.meta.env.VITE_API_BASE_URL || "http://localhost:5000").trim();
+const normalizedBaseUrl = normalizeUrlPart(rawBaseUrl.replace(/\/api$/i, ""));
+const apiPrefix = ensureLeadingSlash(
+  (import.meta.env.VITE_API_PREFIX || "/api/users").trim()
+);
+const API_URL = `${normalizedBaseUrl}${apiPrefix}`;
 
+console.log("🔗 Auth API URL:", API_URL);
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+  return {
+    "Content-Type": "application/json",
+    ...(token && { Authorization: `Bearer ${token}` }),
+  };
+};
+
+const parseResponse = async (response) => {
+  const text = await response.text();
+  if (!text) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: text };
+  }
+};
+
+const request = async (url, options = {}) => {
+  const headers = {
+    ...getAuthHeaders(),
+    ...(options.headers || {}),
+  };
+
+  const response = await fetch(url, {
+    ...options,
+    headers,
+    credentials: "include",
+  });
+  const data = await parseResponse(response);
+
+  if (!response.ok) {
+    const message = data?.message || data?.error || response.statusText || "Request failed";
+    throw new Error(message);
+  }
+
+  return data;
+};
 
 export const loginUser = async (credentials, rememberMe = true) => {
   try {

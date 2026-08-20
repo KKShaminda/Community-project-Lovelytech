@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+//import { AnimatePresence, motion } from 'framer-motion';
 import headphonesImg from '../../assets/headphone.png';
 import keyboardImg from '../../assets/keyboard.png';
 import powerbankImg from '../../assets/powerbank.png';
