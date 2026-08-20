@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
+import { createNotificationForUser } from "./notificationController.js";
 
 // Generate JWT Token
 const generateToken = (userId) => {
@@ -537,6 +538,14 @@ export const suspendUser = async (req, res) => {
       user,
     });
 
+    // Notify the suspended user (they'll see it when reinstated / upon next login)
+    createNotificationForUser(user._id, {
+      type: "account",
+      title: "Account Suspended",
+      message: "Your account has been suspended by an administrator. Please contact support for assistance.",
+      referenceId: user._id.toString(),
+      referenceType: "User",
+    });
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -576,6 +585,14 @@ export const unsuspendUser = async (req, res) => {
       user,
     });
 
+    // Notify the user that their suspension was lifted
+    createNotificationForUser(user._id, {
+      type: "account",
+      title: "Account Reinstated",
+      message: "Your account suspension has been lifted. Welcome back to Lovely Tech!",
+      referenceId: user._id.toString(),
+      referenceType: "User",
+    });
   } catch (error) {
     res.status(500).json({
       success: false,

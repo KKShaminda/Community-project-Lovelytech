@@ -1,4 +1,8 @@
 import Repair from "../models/Repair.js";
+import {
+  createNotificationsForRole,
+  createNotificationForEmail,
+} from "./notificationController.js";
 
 // ──────────────────────────────────────────────
 // PUBLIC — POST /api/repairs
@@ -44,6 +48,17 @@ export const createRepair = async (req, res) => {
       trackingId: repair.trackingId,
       repair,
     });
+
+    // Fire notifications to staff after responding (non-blocking)
+    const notifPayload = {
+      type: "repair",
+      title: "New Repair Request",
+      message: `New repair request: ${repair.brand} ${repair.model} (${repair.trackingId}) is awaiting review.`,
+      referenceId: repair._id.toString(),
+      referenceType: "Repair",
+    };
+    createNotificationsForRole("admin", notifPayload);
+    createNotificationsForRole("Receptionist", notifPayload);
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -193,6 +208,16 @@ export const updateRepair = async (req, res) => {
     if (customerEmail !== undefined) updateFields.customerEmail = customerEmail;
     if (customerAddress !== undefined) updateFields.customerAddress = customerAddress;
 
+    // Fetch current repair to capture previous status before updating
+    const existingRepair = await Repair.findById(req.params.id);
+    if (!existingRepair) {
+      return res.status(404).json({
+        success: false,
+        message: "Repair not found.",
+      });
+    }
+    const previousStatus = existingRepair.status;
+
     const repair = await Repair.findByIdAndUpdate(
       req.params.id,
       updateFields,
@@ -211,6 +236,34 @@ export const updateRepair = async (req, res) => {
       message: "Repair updated successfully.",
       repair,
     });
+
+    // Fire customer notification if status changed (non-blocking)
+    if (status && status !== previousStatus) {
+      const statusMessages = {
+        "in-progress": `Your ${repair.brand} ${repair.model} repair (${repair.trackingId}) is now In Progress — our technician is working on it.`,
+        ready: `Great news! Your ${repair.brand} ${repair.model} (${repair.trackingId}) is ready for pickup.`,
+        completed: `Your ${repair.brand} ${repair.model} repair (${repair.trackingId}) has been marked as Completed.`,
+        cancelled: `We're sorry — your ${repair.brand} ${repair.model} repair (${repair.trackingId}) has been cancelled.`,
+        pending: `Your ${repair.brand} ${repair.model} repair (${repair.trackingId}) has been moved back to Pending Review.`,
+      };
+      const statusTitles = {
+        "in-progress": "Repair In Progress",
+        ready: "Device Ready for Pickup",
+        completed: "Repair Completed",
+        cancelled: "Repair Cancelled",
+        pending: "Repair Status Updated",
+      };
+      const msg = statusMessages[status];
+      if (msg) {
+        createNotificationForEmail(repair.customerEmail, {
+          type: "repair",
+          title: statusTitles[status] || "Repair Status Updated",
+          message: msg,
+          referenceId: repair._id.toString(),
+          referenceType: "Repair",
+        });
+      }
+    }
   } catch (error) {
     res.status(500).json({
       success: false,

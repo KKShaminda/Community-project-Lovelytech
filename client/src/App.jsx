@@ -16,6 +16,7 @@ import { BookRepairPage } from './pages/repair/BookRepairPage'
 import { RepairHistoryPage } from './pages/repair/RepairHistoryPage'
 import { RepairTrackingPage } from './pages/repair/RepairTrackingPage'
 import { ProtectedRoute } from './components/common/ProtectedRoute'
+import { NotificationsPage } from './pages/notifications/NotificationsPage'
 
 function App() {
   return (
@@ -96,6 +97,16 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <CustomersPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Notifications (all authenticated roles) */}
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute allowedRoles={['User', 'admin', 'Receptionist']}>
+                <NotificationsPage />
               </ProtectedRoute>
             }
           />
