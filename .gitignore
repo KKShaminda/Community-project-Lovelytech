@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Ignore environment files containing secrets
 .env
 
@@ -7,13 +6,3 @@ node_modules/
 
 # Uploaded images
 server/uploads/
-=======
-# Ignore environment files containing secrets
-
-# Node modules
-node_modules/
-
-# Uploaded images
-server/uploads/
-config.bat
->>>>>>> 2d192ccc0e8d530d443d37b6fda26af16fd3626d
