@@ -1,49 +1,3 @@
-<<<<<<< HEAD
-import express from "express";
-import dotenv from "dotenv";
-import "colors";
-import cookieParser from "cookie-parser";
-import connectDB from "./config/db.js";
-import cors from "cors";
-
-import userRoutes from "./routes/userRoute.js";
-import productRoutes from "./routes/productRoutes.js";
-import saleRoutes from "./routes/saleRoutes.js";
-import repairRoutes from "./routes/repairRoutes.js";
-
-const app = express();
-
-// Load environment variables
-dotenv.config();
-
-// Connect to database
-connectDB();
-
-// Middleware
-app.use(express.json());
-app.use(cookieParser());
-app.use(cors({ origin: true, credentials: true }));
-app.use('/uploads', express.static('uploads'));
-
-// Routes
-app.use("/api/users", userRoutes);
-app.use("/api/products", productRoutes);
-app.use("/api/sales", saleRoutes);
-app.use("/api/repairs", repairRoutes);
-
-// Test route  
-app.get("/", (req, res) => {
-  res.send({ message: "Welcome to the LovelyTech API" });
-});
-
-// Start server
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV} mode`.bgCyan.white);
-  console.log(`Server is running on port ${PORT}`.bgCyan.white);
-});
-=======
 import express from "express";
 import dotenv from "dotenv";
 import "colors";
@@ -82,4 +36,3 @@ app.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode`.bgCyan.white);
   console.log(`Server is running on port ${PORT}`.bgCyan.white);
 });
->>>>>>> 20501282b1f059e730b954eec24bf8e68882c0d0
