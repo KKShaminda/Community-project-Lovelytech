@@ -183,6 +183,9 @@ export function currency(value) {
     style: "currency",
     currency: "USD",
   });
+<<<<<<< HEAD
+}
+=======
 }
 
 
@@ -208,3 +211,4 @@ export const REPAIR_HISTORY = [
     initials: "AS",
   },
 ];
+>>>>>>> 20501282b1f059e730b954eec24bf8e68882c0d0

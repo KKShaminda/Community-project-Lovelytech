@@ -1,16 +1,33 @@
 import { Mail, MapPin, Phone } from 'lucide-react'
 
 const infoLinks = [
+<<<<<<< HEAD
+  { label: 'About Us', href: '#about-us' },
+  { label: 'Products', href: '#products' },
+  { label: 'Services', href: '#services' },
+  { label: 'Contact Us', href: '#contact-us' },
+=======
   { label: 'About Us', href: '/about-us' },
   { label: 'Products', href: '#products' },
   { label: 'Services', href: '/services' },
   { label: 'Contact Us', href: '/contact-us' },
+>>>>>>> 20501282b1f059e730b954eec24bf8e68882c0d0
   { label: 'Q & A', href: '#q-and-a' },
 ]
 
 export function Footer() {
   return (
     <footer className=" bg-black text-white">
+<<<<<<< HEAD
+      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        <div className="grid gap-10 lg:grid-cols-[1fr_1fr_1fr] lg:items-start">
+          <div className="flex flex-col items-center text-center">
+            <img src="/Logo white.png" alt="Lovely Tech" className="h-28 w-28 object-contain" />
+            <h2 className="font-display text-xl tracking-tight sm:text-2xl">Lovely Tech</h2>
+          </div>
+
+          <div className="lg:pl-16">
+=======
       <div className="mx-auto max-w-full pt-10 sm:px-6 lg:px-8">
         <div className="grid gap-10 text-center lg:grid-cols-[1fr_1fr_1fr] lg:items-start lg:text-left">
           <div className="flex flex-col items-center px-6 lg:items-start">
@@ -19,6 +36,7 @@ export function Footer() {
           </div>
 
           <div className="flex flex-col items-center lg:items-start lg:pl-16">
+>>>>>>> 20501282b1f059e730b954eec24bf8e68882c0d0
             <h3 className="text-2xl font-semibold">Info</h3>
             <ul className="mt-3 space-y-2 text-base text-white/85">
               {infoLinks.map((item) => (
@@ -31,16 +49,27 @@ export function Footer() {
             </ul>
           </div>
 
+<<<<<<< HEAD
+          <div>
+            <h3 className="text-2xl font-semibold">Contact</h3>
+            <ul className="mt-4 space-y-3 text-base text-white/85">
+              <li className="flex items-start gap-3">
+=======
           <div className="flex flex-col items-center lg:items-start">
             <h3 className="text-2xl font-semibold">Contact</h3>
             <ul className="mt-4 space-y-3 text-base text-white/85">
               <li className="flex items-center justify-center gap-3 lg:justify-start">
+>>>>>>> 20501282b1f059e730b954eec24bf8e68882c0d0
                 <span className="mt-0.5 text-[#ff2020]">
                   <MapPin className="h-5 w-5" />
                 </span>
                 <span>Thalgahawila Juction, Millewa, Horana</span>
               </li>
+<<<<<<< HEAD
+              <li className="flex items-start gap-3">
+=======
               <li className="flex items-center justify-center gap-3 lg:justify-start">
+>>>>>>> 20501282b1f059e730b954eec24bf8e68882c0d0
                 <span className="mt-0.5 text-[#ff2020]">
                   <Mail className="h-5 w-5" />
                 </span>
@@ -51,7 +80,11 @@ export function Footer() {
                   lovelytech.lk@gmail.com
                 </a>
               </li>
+<<<<<<< HEAD
+              <li className="flex items-start gap-3">
+=======
               <li className="flex items-center justify-center gap-3 lg:justify-start">
+>>>>>>> 20501282b1f059e730b954eec24bf8e68882c0d0
                 <span className="mt-0.5 text-[#ff2020]">
                   <Phone className="h-5 w-5" />
                 </span>

@@ -1,4 +1,8 @@
 import { Link } from "react-router-dom";
+<<<<<<< HEAD
+import { getCurrentUser } from "../../services/authServices";
+=======
+>>>>>>> 20501282b1f059e730b954eec24bf8e68882c0d0
 
 function Logo() {
   return (
@@ -30,6 +34,19 @@ function SidebarItem({ label, to, active = false }) {
 }
 
 export function AdminShell({ activeSection = "dashboard", children, action }) {
+<<<<<<< HEAD
+  const currentUser = getCurrentUser();
+  const isReceptionist = currentUser?.role === "Receptionist";
+  const userInitial = currentUser?.fullname?.[0]?.toUpperCase() || "A";
+  const userRoleText = currentUser?.role || "Admin";
+
+  const dashboardUrl = isReceptionist ? "/receptionist/dashboard" : "/admin/dashboard";
+  const inventoryUrl = isReceptionist ? "/receptionist/inventory" : "/admin/inventory";
+  const repairsUrl   = isReceptionist ? "/receptionist/repair-orders" : "/admin/repair-orders";
+  const salesUrl     = isReceptionist ? "/receptionist/sales-log" : "/admin/sales-log";
+
+=======
+>>>>>>> 20501282b1f059e730b954eec24bf8e68882c0d0
   return (
     <div className="min-h-screen bg-[#1f1f1f] text-neutral-900">
       <div className="flex min-h-screen w-full flex-col bg-white shadow-[0_18px_45px_rgba(0,0,0,0.25)]">
@@ -40,9 +57,17 @@ export function AdminShell({ activeSection = "dashboard", children, action }) {
             <div className="flex items-center gap-3 sm:gap-4">
               {action}
               <div className="flex items-center gap-2">
+<<<<<<< HEAD
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ef2027] text-sm font-semibold text-white">
+                  {userInitial}
+                </span>
+                <div className="hidden text-right sm:block">
+                  <p className="text-xs font-medium text-neutral-600">{userRoleText}</p>
+=======
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ef2027] text-sm font-semibold text-white">A</span>
                 <div className="hidden text-right sm:block">
                   <p className="text-xs font-medium text-neutral-600">Admin</p>
+>>>>>>> 20501282b1f059e730b954eec24bf8e68882c0d0
                   <p className="text-sm font-semibold text-neutral-900">Account</p>
                 </div>
               </div>
@@ -53,12 +78,22 @@ export function AdminShell({ activeSection = "dashboard", children, action }) {
         <div className="flex flex-1 bg-[#f4f4f4]">
           <aside className="hidden w-[210px] shrink-0 bg-[#ef2027] pb-12 lg:block">
             <div className="mt-2 space-y-1">
+<<<<<<< HEAD
+              <SidebarItem label="Dashboard" to={dashboardUrl} active={activeSection === "dashboard"} />
+              <SidebarItem label="Inventory" to={inventoryUrl} active={activeSection === "inventory"} />
+              <SidebarItem label="Repair Orders" to={repairsUrl} active={activeSection === "repair-orders"} />
+              <SidebarItem label="Sales Log" to={salesUrl} active={activeSection === "sales-log"} />
+              {!isReceptionist && (
+                <SidebarItem label="Customers" to="/admin/customers" active={activeSection === "customers"} />
+              )}
+=======
               <SidebarItem label="Dashboard" to="/admin/dashboard" active={activeSection === "dashboard"} />
               <SidebarItem label="Inventory" to="/admin/inventory" active={activeSection === "inventory"} />
               <SidebarItem label="Repair Orders" to="/admin/repair-orders" active={activeSection === "repair-orders"} />
               <SidebarItem label="Sales Log" to="/admin/sales-log" active={activeSection === "sales-log"} />
               <SidebarItem label="Customers" to="/admin/customers" active={activeSection === "customers"} />
               <SidebarItem label="Settings" to="/admin/dashboard" />
+>>>>>>> 20501282b1f059e730b954eec24bf8e68882c0d0
             </div>
           </aside>
 
