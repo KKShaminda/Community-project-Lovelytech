@@ -1,40 +1,33 @@
 import express from "express";
 import {
   createRepair,
-  trackRepair,
   getRepairs,
-  getRepairById,
+  getRepairByTrackingId,
   updateRepair,
   deleteRepair,
-  getMyRepairs,
 } from "../controllers/repairController.js";
-import { requiredSignIn, isAdmin, isAdminOrReceptionist } from "../middlewares/authMiddleware.js";
+import { validateRepairInput } from "../middleware/validationMiddleware.js";
 
 const router = express.Router();
 
-// ── Public Routes ──────────────────────────────
-// Anyone can submit a repair booking
-router.post("/", createRepair);
+// Repair routes
+router
+  .route("/")
+  .get(getRepairs)
+  .post(validateRepairInput, createRepair);
 
-// Anyone can track their repair by tracking ID
-router.get("/track/:trackingId", trackRepair);
+router
+  .route("/book")
+  .post(validateRepairInput, createRepair);
 
-// ── Authenticated Customer Routes ──────────────
-// User gets their own repair list based on email match
-router.get("/my-repairs", requiredSignIn, getMyRepairs);
+router
+  .route("/track/:trackingId")
+  .get(getRepairByTrackingId);
 
-// ── Staff Routes (Admin or Receptionist) ───────
-// List all repairs (with optional filters)
-router.get("/", requiredSignIn, isAdminOrReceptionist, getRepairs);
-
-// Get single repair by MongoDB ID
-router.get("/:id", requiredSignIn, isAdminOrReceptionist, getRepairById);
-
-// Update repair status, technician, cost, notes etc.
-router.put("/:id", requiredSignIn, isAdminOrReceptionist, updateRepair);
-
-// ── Admin Only ──────────────────────────────────
-// Only admin can permanently delete a repair record
-router.delete("/:id", requiredSignIn, isAdmin, deleteRepair);
+router
+  .route("/:id")
+  .get(getRepairByTrackingId)
+  .put(updateRepair)
+  .delete(deleteRepair);
 
 export default router;
