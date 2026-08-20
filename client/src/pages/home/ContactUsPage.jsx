@@ -1,11 +1,9 @@
 import {
-  Globe,
   Mail,
   MapPin,
-  MessageCircle,
   Phone,
 } from 'lucide-react'
-import { FaFacebook, FaInstagram } from 'react-icons/fa'
+import { FaFacebook, FaInstagram, FaWhatsapp,FaTiktok } from 'react-icons/fa'
 import Layout from '../../components/layout/Layout'
 
 const contactItems = [
@@ -19,7 +17,7 @@ const contactItems = [
     href: 'tel:+94770290008',
   },
   {
-    icon: MessageCircle,
+    icon: FaWhatsapp,
     label: '+94 71 029 0008',
     href: 'https://wa.me/94710290008',
   },
@@ -31,17 +29,17 @@ const contactItems = [
   {
     icon: FaFacebook,
     label: 'Lovely Tech',
-    href: '#',
-  },
-  {
-    icon: Globe,
-    label: 'lovelytech.lk',
-    href: '#',
+    href: 'https://www.facebook.com/share/1aJb48DRYU/?mibextid=wwXIfr',
   },
   {
     icon: FaInstagram,
+    label: 'lovelytech.lk',
+    href: 'https://www.instagram.com/lovelytech.lk?igsh=MXB1aXVpOXJnMWZmMA==',
+  },
+  {
+    icon: FaTiktok,
     label: '@lovely_tech',
-    href: '#',
+    href: 'https://www.tiktok.com/@lovely_tech?_r=1&_t=ZS-98jRV9rI8bV',
   },
 ]
 
