@@ -1,5 +1,59 @@
 import Repair from "../models/Repair.js";
 import Order from "../models/Order.js";
+import Product from "../models/Product.js";
+
+const initialProducts = [
+  {
+    name: "Samsung Galaxy S23 Ultra 5G",
+    description: "Samsung flagship phone with 200MP camera, S-Pen included, 256GB storage.",
+    category: "Mobile Phones",
+    brand: "Samsung",
+    color: "Phantom Black",
+    price: 349000,
+    stock: 12,
+    rating: 4.8,
+  },
+  {
+    name: "Apple iPhone 14 Pro Max",
+    description: "Apple iPhone 14 Pro Max with Dynamic Island, A16 Bionic chip, 128GB storage.",
+    category: "Mobile Phones",
+    brand: "Apple",
+    color: "Deep Purple",
+    price: 385000,
+    stock: 8,
+    rating: 4.9,
+  },
+  {
+    name: "ASUS Vivobook 15 Laptop",
+    description: "ASUS Vivobook 15 with Intel Core i5 12th Gen, 8GB RAM, 512GB SSD.",
+    category: "Laptops",
+    brand: "ASUS",
+    color: "Quiet Blue",
+    price: 185000,
+    stock: 5,
+    rating: 4.2,
+  },
+  {
+    name: "iPad Air (5th Generation)",
+    description: "Apple iPad Air with M1 chip, 10.9-inch Liquid Retina Display, 64GB Wi-Fi.",
+    category: "iPads & Tablets",
+    brand: "Apple",
+    color: "Space Gray",
+    price: 240000,
+    stock: 15,
+    rating: 4.7,
+  },
+  {
+    name: "Sony WH-1000XM4 Wireless Headphones",
+    description: "Sony industry-leading noise canceling over-ear headphones with mic.",
+    category: "Speakers & Audios",
+    brand: "Sony",
+    color: "Black",
+    price: 95000,
+    stock: 20,
+    rating: 4.6,
+  }
+];
 
 const initialRepairs = [
   {
@@ -81,7 +135,7 @@ const initialRepairs = [
     submitted: "June 18, 2026",
     estimatedCompletion: "June 22, 2026",
     trackingSteps: [
-      { label: "Request Submitted", detail: "Repair request received", status: "complete" },
+      { label: "Request Submitted", detail: "Request received", status: "complete" },
       { label: "Diagnosing", detail: "Technician is checking the device", status: "complete" },
       { label: "Repairing", detail: "Repair in progress", status: "complete" },
       { label: "Testing", detail: "Quality inspection", status: "complete" },
@@ -151,6 +205,12 @@ const initialOrders = [
 
 export const seedInitialData = async () => {
   try {
+    const productCount = await Product.countDocuments();
+    if (productCount === 0) {
+      await Product.insertMany(initialProducts);
+      console.log("Initial seed data inserted for Products.".bgGreen.black);
+    }
+
     const repairCount = await Repair.countDocuments();
     if (repairCount === 0) {
       await Repair.insertMany(initialRepairs);

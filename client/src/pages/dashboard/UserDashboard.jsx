@@ -40,7 +40,7 @@ export function UserDashboard() {
     setError("");
     try {
       const data = await getMyRepairs();
-      setRepairs(data.repairs || []);
+      setRepairs(data.data || data.repairs || []);
     } catch (err) {
       setError(err.message || "Failed to load your repairs.");
     } finally {

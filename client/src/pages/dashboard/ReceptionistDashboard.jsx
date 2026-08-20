@@ -11,6 +11,10 @@ import {
   CreditCard,
   CircleDollarSign,
   Trash2,
+  LayoutDashboard,
+  ClipboardList,
+  Clipboard,
+  Receipt,
 } from "lucide-react";
 import { getCurrentUser, logoutUser } from "../../services/authServices";
 import { getRepairs, createRepair, updateRepair } from "../../services/repairServices";
@@ -94,7 +98,13 @@ export function ReceptionistDashboard() {
         getProducts({ limit: 100 }),
       ]);
       
-      const fetchedRepairs = repairRes.repairs || [];
+      const fetchedRepairs = (repairRes.data || repairRes.repairs || []).map((r) => ({
+        ...r,
+        customerName: r.customer || r.customerName || "",
+        customerPhone: r.phone || r.customerPhone || "",
+        customerEmail: r.email || r.customerEmail || "",
+        customerAddress: r.address || r.customerAddress || "",
+      }));
       setRepairs(fetchedRepairs);
       setProducts(productRes.products || []);
     } catch (err) {
@@ -343,34 +353,34 @@ export function ReceptionistDashboard() {
         {/* ── Sidebar + Content Body ── */}
         <div className="flex flex-1 bg-[#f4f4f4] print:bg-white">
           {/* Sidebar */}
-          <aside className="hiddenw-[210px]  shrink-0 bg-[#ef2027] pb-12 lg:block print:hidden">
+          <aside className="hidden w-[210px] shrink-0 bg-[#ef2027] pb-12 lg:block print:hidden">
             <div className="mt-2 space-y-1">
               <button
                 type="button"
                 className="flex w-full items-center gap-3 rounded-r-md px-3 py-3 text-left text-sm font-medium transition bg-[#8F0F11] text-white"
               >
-                <span className="flex h-5 w-5 items-center justify-center rounded-sm border border-current text-[11px]">▣</span>
+                <LayoutDashboard size={18} />
                 <span>Dashboard</span>
               </button>
               <Link
                 to="/receptionist/inventory"
                 className="flex w-full items-center gap-3 rounded-r-md px-3 py-3 text-left text-sm font-medium transition text-white/95 hover:bg-white/10"
               >
-                <span className="flex h-5 w-5 items-center justify-center rounded-sm border border-current text-[11px]">▣</span>
+                <ClipboardList size={18} />
                 <span>Inventory</span>
               </Link>
               <Link
                 to="/receptionist/repair-orders"
                 className="flex w-full items-center gap-3 rounded-r-md px-3 py-3 text-left text-sm font-medium transition text-white/95 hover:bg-white/10"
               >
-                <span className="flex h-5 w-5 items-center justify-center rounded-sm border border-current text-[11px]">▣</span>
+                <Clipboard size={18} />
                 <span>Repair Orders</span>
               </Link>
               <Link
                 to="/receptionist/sales-log"
                 className="flex w-full items-center gap-3 rounded-r-md px-3 py-3 text-left text-sm font-medium transition text-white/95 hover:bg-white/10"
               >
-                <span className="flex h-5 w-5 items-center justify-center rounded-sm border border-current text-[11px]">▣</span>
+                <Receipt size={18} />
                 <span>Sales Log</span>
               </Link>
             </div>
@@ -474,6 +484,13 @@ export function ReceptionistDashboard() {
                   New Repair Ticket
                 </button>
               </div>
+
+              {error && (
+                <div className="bg-red-50 text-red-700 p-4 rounded-xl border border-red-200 flex items-center gap-3">
+                  <AlertTriangle className="shrink-0" size={20} />
+                  <p className="font-semibold">{error}</p>
+                </div>
+              )}
 
               <div className="mb-8 bg-white rounded-3xl border border-neutral-200 p-6 shadow-sm space-y-4">
                 <h2 className="text-sm font-extrabold uppercase tracking-widest text-[#ef2027]">Daily Stats</h2>

@@ -65,6 +65,9 @@ function App() {
           <Route path="/admin/sales-log" element={<SalesLogPage />} />
           <Route path="/admin/customers" element={<CustomersPage />} />
           <Route path="/receptionist/dashboard" element={<ReceptionistDashboard />} />
+          <Route path="/receptionist/inventory" element={<InventoryManagementPage />} />
+          <Route path="/receptionist/repair-orders" element={<RepairOrdersPage />} />
+          <Route path="/receptionist/sales-log" element={<SalesLogPage />} />
 
 
         </Routes>

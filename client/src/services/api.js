@@ -12,7 +12,7 @@
 // The /api prefix is appended per-service via buildUrl()
 
 const rawBase = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000').trim()
-export const BASE_URL = rawBase.replace(/\/+$/, '') // strip trailing slashes
+export const BASE_URL = rawBase.replace(/\/+$/, '').replace(/\/api$/i, '') // strip trailing slashes and /api
 
 /**
  * Build a full API URL for a given resource path.
