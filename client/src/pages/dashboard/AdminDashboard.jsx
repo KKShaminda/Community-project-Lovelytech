@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { CirclePlus, Ellipsis, Receipt, TriangleAlert, TrendingUp, Wrench } from "lucide-react";
 import { AdminShell } from '../../components/admin/AdminShell'
 
 const stats = [
@@ -7,28 +8,28 @@ const stats = [
     value: "LKR 48,290.00",
     badge: "+12.5%",
     badgeClass: "bg-red-100 text-red-500",
-    icon: "◫",
+    icon: Receipt,
   },
   {
     label: "REVENUE",
     value: "LKR 124,500.00",
     badge: "+8.2%",
     badgeClass: "bg-red-100 text-red-500",
-    icon: "↗",
+    icon: TrendingUp,
   },
   {
     label: "REPAIR REQUESTS",
     value: "142",
     badge: "-4.1%",
     badgeClass: "bg-red-200 text-red-700",
-    icon: "✳",
+    icon: Wrench,
   },
   {
     label: "LOW STOCK",
     value: "12 Items",
     badge: "CRITICAL",
     badgeClass: "bg-rose-200 text-rose-700",
-    icon: "△",
+    icon: TriangleAlert,
   },
 ];
 
@@ -98,7 +99,7 @@ export function AdminDashboard() {
             to="/repair-ticket"
             className="inline-flex items-center justify-center gap-2 self-start rounded-xl bg-gradient-to-b from-[#ff4c4f] to-[#e01c23] px-6 py-3 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(224,28,35,0.32)]"
           >
-            <span className="text-base leading-none">⊕</span>
+            <CirclePlus aria-hidden="true" size={18} strokeWidth={2.25} />
             New Repair Ticket
           </Link>
         </div>
@@ -107,7 +108,7 @@ export function AdminDashboard() {
           {stats.map((item) => (
             <article key={item.label} className="rounded-2xl border border-red-400 bg-[#efefef] p-4">
               <div className="flex items-start justify-between gap-3">
-                <span className="text-lg text-red-500">{item.icon}</span>
+                <item.icon aria-hidden="true" className="text-red-500" size={20} strokeWidth={2} />
                 <span className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase ${item.badgeClass}`}>{item.badge}</span>
               </div>
               <p className="mt-7 text-sm font-medium tracking-wide text-neutral-800">{item.label}</p>
@@ -141,8 +142,8 @@ export function AdminDashboard() {
         <section id="revenue" className="rounded-2xl bg-[#efefef]">
           <div className="flex items-center justify-between px-5 py-4">
             <h2 className="text-sm font-medium text-neutral-900">Recent Orders</h2>
-            <button type="button" className="text-lg leading-none text-neutral-900">
-              ...
+            <button type="button" aria-label="More order options" className="text-neutral-900">
+              <Ellipsis aria-hidden="true" size={20} />
             </button>
           </div>
 
