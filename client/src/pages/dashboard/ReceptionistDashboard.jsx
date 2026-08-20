@@ -1,17 +1,11 @@
-import React, { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Wrench,
-  User,
-  LogOut,
-  Clock,
   CheckCircle,
-  XCircle,
-  Search,
   Plus,
   Loader2,
   X,
-  Phone,
   AlertTriangle,
   Printer,
   CreditCard,
@@ -22,6 +16,7 @@ import { getCurrentUser, logoutUser } from "../../services/authServices";
 import { getRepairs, createRepair, updateRepair } from "../../services/repairServices";
 import { getProducts } from "../../services/productServices";
 import { createSale } from "../../services/saleServices";
+import Layout from "../../components/layout/Layout";
 
 const DEVICE_LABELS = {
   "smart-phone": "Smart Phone",
@@ -69,13 +64,6 @@ export function ReceptionistDashboard() {
   const [invoiceItems, setInvoiceItems] = useState([]);
   const [laborFee, setLaborFee] = useState(75);
   const [searchProductQuery, setSearchProductQuery] = useState("");
-
-  // Waiting List state (pre-filled with walk-ins)
-  const [waitingList, setWaitingList] = useState([
-    { id: 1, name: "Marcus A.", type: "Walk-in", detail: "Battery replacement", time: "02m 40s" },
-    { id: 2, name: "Lydia K.", type: "Collection", detail: "#8790 pickup", time: "08m 15s" },
-    { id: 3, name: "Thomas B.", type: "Inquiry", detail: "Tech Support details", time: "12m 04s" },
-  ]);
 
   // Modal States
   const [intakeModalOpen, setIntakeModalOpen] = useState(false);
@@ -296,24 +284,6 @@ export function ReceptionistDashboard() {
     }
   };
 
-  const handleAddWalkIn = () => {
-    const name = prompt("Enter customer name:");
-    if (!name) return;
-    const detail = prompt("Enter ticket/issue details:");
-    if (!detail) return;
-    
-    setWaitingList((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        name,
-        type: "Walk-in",
-        detail,
-        time: "00m 05s",
-      },
-    ]);
-  };
-
   // Filter queue by active tab (ALL, PENDING, IN-PROGRESS) and search query
   const filteredRepairs = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
@@ -368,46 +338,12 @@ export function ReceptionistDashboard() {
   }, [repairs]);
 
   return (
-    <div className="min-h-screen bg-[#1f1f1f] text-neutral-900 font-sans">
-      <div className="flex min-h-screen w-full flex-col bg-white shadow-[0_18px_45px_rgba(0,0,0,0.25)]">
-        {/* ── Top Header Navbar ── */}
-        <header className="border-b border-[#ff2020] bg-white/95 backdrop-blur-xl h-20 shrink-0 print:hidden">
-          <div className="flex h-20 items-center justify-between px-4 sm:px-6 lg:px-8">
-            {/* Logo */}
-            <div className="flex items-center gap-3">
-              <img
-                src="/Logo.png"
-                alt="Lovely Tech"
-                className="h-12 w-12 object-contain sm:h-14 sm:w-14"
-              />
-              <div className="hidden flex-col leading-none sm:flex">
-                <span className="text-xl font-bold tracking-tight text-neutral-900 sm:text-2xl">
-                  Lovely Tech
-                </span>
-              </div>
-            </div>
-
-            {/* Header Right Actions */}
-            <div className="flex items-center gap-3 sm:gap-4">
-              <div className="flex items-center gap-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ef2027] text-sm font-semibold text-white">
-                  {currentUser?.fullname?.[0]?.toUpperCase() || "R"}
-                </span>
-                <div className="hidden text-right sm:block">
-                  <p className="text-xs font-medium text-neutral-600">
-                    {currentUser?.role || "Receptionist"}
-                  </p>
-                  <p className="text-sm font-semibold text-neutral-900">Account</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </header>
-
+    <Layout>
+      <div className="min-h-screen bg-[#1f1f1f] font-sans text-neutral-900">
         {/* ── Sidebar + Content Body ── */}
         <div className="flex flex-1 bg-[#f4f4f4] print:bg-white">
           {/* Sidebar */}
-          <aside className="hidden w-[210px] shrink-0 bg-[#ef2027] pb-12 lg:block print:hidden">
+          <aside className="hiddenw-[210px]  shrink-0 bg-[#ef2027] pb-12 lg:block print:hidden">
             <div className="mt-2 space-y-1">
               <button
                 type="button"
@@ -539,7 +475,22 @@ export function ReceptionistDashboard() {
                 </button>
               </div>
 
+              <div className="mb-8 bg-white rounded-3xl border border-neutral-200 p-6 shadow-sm space-y-4">
+                <h2 className="text-sm font-extrabold uppercase tracking-widest text-[#ef2027]">Daily Stats</h2>
+                <div className="grid grid-cols-2 gap-4 text-center">
+                  <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
+                    <p className="text-xs text-neutral-400 font-bold uppercase">Repairs Booked</p>
+                    <p className="text-3xl font-extrabold text-neutral-800 mt-2">{dailyStats.booked}</p>
+                  </div>
+                  <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
+                    <p className="text-xs text-neutral-400 font-bold uppercase">Invoiced</p>
+                    <p className="text-3xl font-extrabold text-[#ef2027] mt-2">LKR {dailyStats.invoiced}</p>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid gap-8 lg:grid-cols-[1.8fr_1.2fr]">
+                
                 {/* ── Left Column: Active Repair Queue ── */}
                 <div className="space-y-8">
                   <div className="bg-white rounded-3xl border border-neutral-200 shadow-sm overflow-hidden">
@@ -698,7 +649,7 @@ export function ReceptionistDashboard() {
                               invoiceItems.map((item) => (
                                 <div key={item.id} className="flex justify-between items-center text-xs">
                                   <div className="space-y-0.5">
-                                    <p className="font-semibold truncate max-w-[140px]">{item.name}</p>
+                                    <p className="font-semibold truncate max-w-35">{item.name}</p>
                                     {(item.isPart || item.isLabor) ? (
                                       <input
                                         type="number"
@@ -783,36 +734,8 @@ export function ReceptionistDashboard() {
                         </button>
                   </div>
 
-                  {/* Waiting List Widget */}
-                  <div className="bg-white rounded-3xl border border-neutral-200 p-6 shadow-sm space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-sm font-extrabold uppercase tracking-widest text-[#ef2027]">Waiting List</h2>
-                      <span className="rounded-full bg-red-100 text-red-600 text-[10px] font-bold px-2 py-0.5 uppercase">
-                        {waitingList.length} In Queue
-                      </span>
-                    </div>
-
-                    <div className="space-y-3">
-                      {waitingList.map((item) => (
-                        <div key={item.id} className="flex justify-between items-center rounded-xl bg-neutral-50 p-4 border border-neutral-100">
-                          <div>
-                            <p className="font-extrabold text-sm text-neutral-800">{item.name}</p>
-                            <p className="text-xs text-neutral-400 mt-0.5">{item.type}: {item.detail}</p>
-                          </div>
-                          <span className="text-xs font-bold text-[#ef2027]">{item.time}</span>
-                        </div>
-                      ))}
-                      <button
-                        onClick={handleAddWalkIn}
-                        className="w-full border-2 border-dashed border-neutral-300 rounded-xl py-3.5 text-xs font-bold text-neutral-500 hover:bg-neutral-50 hover:text-neutral-700 transition"
-                      >
-                        + Add Walk-in to Queue
-                      </button>
-                    </div>
-                  </div>
-
                   {/* Daily Stats Widget */}
-                  <div className="bg-white rounded-3xl border border-neutral-200 p-6 shadow-sm space-y-4">
+                  {/* <div className="bg-white rounded-3xl border border-neutral-200 p-6 shadow-sm space-y-4">
                     <h2 className="text-sm font-extrabold uppercase tracking-widest text-[#ef2027]">Daily Stats</h2>
                     <div className="grid grid-cols-2 gap-4 text-center">
                       <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
@@ -824,17 +747,13 @@ export function ReceptionistDashboard() {
                         <p className="text-3xl font-extrabold text-[#ef2027] mt-2">LKR {dailyStats.invoiced}</p>
                       </div>
                     </div>
-                  </div>
+                  </div> */}
 
                 </div>
               </div>
             </div>
           </main>
         </div>
-
-        <footer className="border-t border-neutral-200 bg-white px-4 py-4 text-center text-xs text-neutral-500 sm:px-6 lg:px-8 print:hidden">
-          Copyright © 2025. All Rights Reserved by LovelyTech
-        </footer>
       </div>
 
       {/* Intake / New Ticket Modal */}
@@ -1131,7 +1050,8 @@ export function ReceptionistDashboard() {
           </div>
         </div>
       )}
-    </div>
+      </Layout>
+  
   );
 }
 
