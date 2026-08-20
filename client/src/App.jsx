@@ -14,6 +14,8 @@ import { SalesLogPage } from './pages/admin/SalesLogPage'
 import { CustomersPage } from './pages/admin/CustomersPage'
 import { ReceptionistDashboard } from './pages/dashboard/ReceptionistDashboard'
 import { Products } from './pages/products/Products'
+import { WishlistPage } from './pages/products/Wishlist'
+import { ProductDetailsPage } from './pages/products/ProductDetailsPage'
 import { RepairPage } from './pages/repair/RepairPage'
 import { BookRepairPage } from './pages/repair/BookRepairPage'
 import { RepairHistoryPage } from './pages/repair/RepairHistoryPage'
@@ -39,6 +41,8 @@ function App() {
           {/* Contact Us Page */}
           <Route path="/contact-us" element={<ContactUsPage />} />
           <Route path="/products" element={<Products />} />
+          <Route path="/products/:id" element={<ProductDetailsPage />} />
+          <Route path="/wishlist" element={<WishlistPage />} />
           <Route path="/orders" element={<OrderPage />} />
 
           {/* Repair Services Pages */}
