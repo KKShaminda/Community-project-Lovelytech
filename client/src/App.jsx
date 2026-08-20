@@ -22,8 +22,6 @@ import { RepairHistoryPage } from './pages/repair/RepairHistoryPage'
 import { RepairTrackingPage } from './pages/repair/RepairTrackingPage'
 import { OrderPage } from './pages/order/OrderPage'
 
-
-
 function App() {
   return (
     <>
@@ -31,14 +29,8 @@ function App() {
         <Routes>
           {/* Public Pages */}
           <Route path="/" element={<HomePage />} />
-
-          {/* About Us Page */}
           <Route path="/about-us" element={<AboutUs />} />
-
-          {/* Services Page */}
           <Route path="/services" element={<ServicesPage />} />
-
-          {/* Contact Us Page */}
           <Route path="/contact-us" element={<ContactUsPage />} />
           <Route path="/products" element={<Products />} />
           <Route path="/products/:id" element={<ProductDetailsPage />} />
@@ -47,15 +39,9 @@ function App() {
 
           {/* Repair Services Pages */}
           <Route path="/repair" element={<RepairPage />} />
-           <Route path="/repair/book" element={<BookRepairPage />} />
-           <Route path="/repair/history" element={<RepairHistoryPage />} />
+          <Route path="/repair/book" element={<BookRepairPage />} />
+          <Route path="/repair/history" element={<RepairHistoryPage />} />
           <Route path="/repair/track" element={<RepairTrackingPage />} />
-
-          
-         
-        
-        
-      
 
           {/* Authentication Routes */}
           <Route path="/login" element={<SigninPage />} />
@@ -68,9 +54,12 @@ function App() {
           <Route path="/admin/repair-orders" element={<RepairOrdersPage />} />
           <Route path="/admin/sales-log" element={<SalesLogPage />} />
           <Route path="/admin/customers" element={<CustomersPage />} />
-          <Route path="/receptionist/dashboard" element={<ReceptionistDashboard />} />
 
-          
+          {/* Receptionist Routes */}
+          <Route path="/receptionist/dashboard" element={<ReceptionistDashboard />} />
+          <Route path="/receptionist/inventory" element={<InventoryManagementPage />} />
+          <Route path="/receptionist/repair-orders" element={<RepairOrdersPage />} />
+          <Route path="/receptionist/sales-log" element={<SalesLogPage />} />
         </Routes>
       </Router>
     </>

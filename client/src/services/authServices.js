@@ -10,8 +10,8 @@ const API_URL = `${normalizedBaseUrl}${apiPrefix}`;
 
 console.log("🔗 Auth API URL:", API_URL);
 
-const getAuthHeaders = () => {
-  const token = localStorage.getItem("token");
+export const getAuthHeaders = () => {
+  const token = localStorage.getItem("token") || sessionStorage.getItem("token");
   return {
     "Content-Type": "application/json",
     ...(token && { Authorization: `Bearer ${token}` }),
