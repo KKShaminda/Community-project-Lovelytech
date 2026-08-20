@@ -183,4 +183,32 @@ export function currency(value) {
     style: "currency",
     currency: "USD",
   });
+<<<<<<< HEAD
 }
+=======
+}
+
+
+export const REPAIR_HISTORY = [
+  {
+    id: "1",
+    trackingId: "PR124596",
+    deviceName: "Samsung S23 Ultra",
+    brandModel: "Samsung S23 Ultra",
+    submitted: "July 5, 2026",
+    estimatedCompletion: "July 8, 2026",
+    issue: "Cracked screen and touch issue",
+    initials: "SS",
+  },
+  {
+    id: "2",
+    trackingId: "PR124485",
+    deviceName: "ASUS Vivobook",
+    brandModel: "ASUS Vivobook X157V",
+    submitted: "January 23, 2026",
+    estimatedCompletion: "January 27, 2026",
+    issue: "Battery charging problem",
+    initials: "AS",
+  },
+];
+>>>>>>> 20501282b1f059e730b954eec24bf8e68882c0d0
