@@ -1,12 +1,13 @@
-import { Link } from 'react-router-dom'
-import { useEffect, useState } from 'react'
-import { Bell, CircleUserRound } from 'lucide-react'
-import { getCurrentUser, isAuthenticated } from '../../services/authServices'
 import { Link, useLocation } from 'react-router-dom'
-import { Menu, X, User, ShoppingCart } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Bell, CircleUserRound, Menu, X } from 'lucide-react'
+import { getCurrentUser, isAuthenticated } from '../../services/authServices'
 import { getCartCount } from '../../utils/cartStorage'
 
 export function Navbar() {
+  const location = useLocation()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [cartCount, setCartCount] = useState(() => getCartCount())
   const [authState, setAuthState] = useState(() => ({
     isLoggedIn: isAuthenticated(),
     user: getCurrentUser(),
@@ -20,13 +21,19 @@ export function Navbar() {
       })
     }
 
-    // Refresh auth UI when storage changes in other tabs or focus returns.
+    const handleCartUpdate = () => {
+      setCartCount(getCartCount())
+    }
+
+    // Refresh auth and cart UI when storage changes or focus returns.
     window.addEventListener('storage', syncAuthState)
     window.addEventListener('focus', syncAuthState)
+    window.addEventListener('cart-updated', handleCartUpdate)
 
     return () => {
       window.removeEventListener('storage', syncAuthState)
       window.removeEventListener('focus', syncAuthState)
+      window.removeEventListener('cart-updated', handleCartUpdate)
     }
   }, [])
 
@@ -39,13 +46,24 @@ export function Navbar() {
         ? '/receptionist/dashboard'
         : '/user/dashboard'
 
-  const navItems = [
+  // Dynamic Navigation Items based on authentication state
+  const publicNavItems = [
+    { label: 'Home', href: '/' },
+    { label: 'Products', href: '/products' },
+    { label: 'Service', href: '/services' },
+    { label: 'About Us', href: '/about-us' },
+    { label: 'Contact Us', href: '/contact-us' },
+  ]
+
+  const loggedInNavItems = [
     { label: 'Home', href: '/' },
     { label: 'Products', href: '/products' },
     { label: 'Cart', href: '/cart' },
     { label: 'Orders', href: '/orders' },
     { label: 'Repair', href: '/repair' },
   ]
+
+  const navItems = authState.isLoggedIn ? loggedInNavItems : publicNavItems
 
   const isActive = (href) => {
     if (href === '/') return location.pathname === '/'
@@ -69,17 +87,28 @@ export function Navbar() {
           </div>
         </Link>
 
+        {/* Desktop Navigation Links */}
         {!hideNavItemsForRole && (
           <nav className="hidden items-center gap-8 lg:flex">
-            {navItems.map((item) => (
-              <a
-                key={item.label}
-                href={item.href}
-                className="text-sm font-medium text-black transition-colors duration-200 hover:text-[#ff2020]"
-              >
-                {item.label}
-              </a>
-            ))}
+            {navItems.map((item) => {
+              const active = isActive(item.href)
+              return (
+                <Link
+                  key={item.label}
+                  to={item.href}
+                  className={`relative text-sm font-semibold transition-colors duration-200 ${
+                    active ? 'text-[#ff2020]' : 'text-gray-800 hover:text-[#ff2020]'
+                  }`}
+                >
+                  {item.label}
+                  {item.href === '/cart' && cartCount > 0 && (
+                    <span className="ml-1.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#ff2020] px-1 text-[10px] font-bold text-white">
+                      {cartCount}
+                    </span>
+                  )}
+                </Link>
+              )
+            })}
           </nav>
         )}
 
@@ -90,7 +119,7 @@ export function Navbar() {
               <button
                 type="button"
                 aria-label="Notifications"
-                className="rounded-full border border-[#ff2020] p-2.5 text-[#ff2020] transition-colors duration-200 hover:bg-[#ff2020] hover:text-black"
+                className="rounded-full border border-[#ff2020] p-2.5 text-[#ff2020] transition-colors duration-200 hover:bg-[#ff2020] hover:text-white"
               >
                 <Bell className="h-5 w-5" />
               </button>
@@ -98,7 +127,7 @@ export function Navbar() {
               <Link
                 to={accountPath}
                 aria-label="Account"
-                className="rounded-full border border-[#ff2020] p-2.5 text-[#ff2020] transition-colors duration-200 hover:bg-[#ff2020] hover:text-black"
+                className="rounded-full border border-[#ff2020] p-2.5 text-[#ff2020] transition-colors duration-200 hover:bg-[#ff2020] hover:text-white"
               >
                 <CircleUserRound className="h-5 w-5" />
               </Link>
@@ -106,11 +135,21 @@ export function Navbar() {
           ) : (
             <Link
               to="/login"
-              className="rounded-full border border-[#ff2020] px-5 py-2.5 text-sm font-semibold text-[#ff2020] transition-colors duration-200 hover:bg-[#ff2020] hover:text-black"
+              className="rounded-full border border-[#ff2020] px-5 py-2.5 text-sm font-semibold text-[#ff2020] transition-colors duration-200 hover:bg-[#ff2020] hover:text-white"
             >
               Sign In
             </Link>
           )}
+
+          {/* Mobile menu button */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="rounded-lg p-2 text-gray-600 hover:text-black lg:hidden"
+            aria-label="Toggle menu"
+          >
+            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
         </div>
       </div>
 
@@ -118,30 +157,42 @@ export function Navbar() {
       {mobileMenuOpen && (
         <div className="border-t border-gray-200 bg-white px-4 py-4 shadow-lg lg:hidden">
           <nav className="flex flex-col space-y-3">
-            {navItems.map((item) => (
-              <Link
-                key={item.label}
-                to={item.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center justify-between py-2 text-base font-semibold ${isActive(item.href) ? 'text-[#ff2020]' : 'text-gray-800'
+            {!hideNavItemsForRole &&
+              navItems.map((item) => (
+                <Link
+                  key={item.label}
+                  to={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center justify-between py-2 text-base font-semibold ${
+                    isActive(item.href) ? 'text-[#ff2020]' : 'text-gray-800'
                   }`}
+                >
+                  <span>{item.label}</span>
+                  {item.href === '/cart' && cartCount > 0 && (
+                    <span className="rounded-full bg-[#ff2020] px-2 py-0.5 text-xs text-white">
+                      {cartCount}
+                    </span>
+                  )}
+                </Link>
+              ))}
+            {authState.isLoggedIn ? (
+              <Link
+                to={accountPath}
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2 py-2 text-base font-semibold text-gray-800"
               >
-                <span>{item.label}</span>
-                {item.href === '/cart' && cartCount > 0 && (
-                  <span className="rounded-full bg-[#ff2020] px-2 py-0.5 text-xs text-white">
-                    {cartCount}
-                  </span>
-                )}
+                <CircleUserRound size={18} />
+                <span>My Account</span>
               </Link>
-            ))}
-            <Link
-              to="/user/dashboard"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 py-2 text-base font-semibold text-gray-800"
-            >
-              <User size={18} />
-              <span>My Account</span>
-            </Link>
+            ) : (
+              <Link
+                to="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2 py-2 text-base font-semibold text-[#ff2020]"
+              >
+                <span>Sign In</span>
+              </Link>
+            )}
           </nav>
         </div>
       )}

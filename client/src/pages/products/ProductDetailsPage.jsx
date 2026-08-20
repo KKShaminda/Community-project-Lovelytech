@@ -20,8 +20,10 @@ import {
   formatPrice,
   getMockProductById,
   resolveImageUrl,
+  getCategoryFallbackImage,
   FALLBACK_PRODUCT_IMAGE,
 } from '../../data/productsData'
+
 import { getProductById } from '../../services/productServices'
 import { isProductWishlisted, toggleWishlistProduct } from '../../utils/wishlistStorage'
 import { addToCart } from '../../utils/cartStorage'
@@ -67,47 +69,25 @@ export function ProductDetailsPage() {
 
     const loadProductData = async () => {
       setLoading(true)
-      try {
-        // First try fetching from API service
-        const apiData = await getProductById(id)
-        if (apiData && (apiData._id || apiData.id) && isMounted) {
-          const normalized = {
-            id: apiData._id || apiData.id,
-            name: apiData.name || apiData.title || 'Product Details',
-            price: apiData.price || 0,
-            originalPrice: apiData.originalPrice || Math.round((apiData.price || 0) * 1.2),
-            rating: apiData.rating || 4.8,
-            sold: apiData.sold || 50,
-            category: apiData.category || 'Electronics',
-            availability: apiData.stock > 0 ? 'In Stock' : (apiData.availability || 'In Stock'),
-            stock: apiData.stock !== undefined ? apiData.stock : 20,
-            description:
-              apiData.description ||
-              'High quality product engineered for maximum durability, performance, and everyday convenience.',
-            images:
-              apiData.images && apiData.images.length > 0
-                ? apiData.images.map((img) => (typeof img === 'string' ? img : img.url))
-                : [apiData.image || 'https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=1200&q=80'],
-            features: apiData.features || [
-              { title: 'Premium Build', desc: 'Crafted with high-grade components for long-lasting performance.' },
-              { title: 'Energy Efficient', desc: 'Smart power management designed for optimal performance.' },
-            ],
-            reviewsCount: apiData.reviewsCount || 128,
-          }
-          setProduct(normalized)
-          setSelectedImage(normalized.images[0])
-          setQuantity(1)
-          setLoading(false)
-          return
-        }
-      } catch (err) {
-        // Fallback to local mock data if API is offline or not found
-      }
+
+      // Directly load curated demo product with full images & specs
+      const mockItem = getMockProductById(id) || productsData[0]
+      const category = mockItem.category || 'Speakers & Audios'
+      const defaultImg = getCategoryFallbackImage(category)
+
+      const resolvedImages = (mockItem.images && mockItem.images.length > 0
+        ? mockItem.images
+        : [mockItem.image || defaultImg]
+      ).map((img) => resolveImageUrl(img, category))
 
       if (isMounted) {
-        const fallback = getMockProductById(id) || productsData[0]
-        setProduct(fallback)
-        setSelectedImage(fallback.images ? fallback.images[0] : fallback.image)
+        setProduct({
+          ...mockItem,
+          id: mockItem.id || mockItem._id,
+          image: resolvedImages[0],
+          images: resolvedImages,
+        })
+        setSelectedImage(resolvedImages[0])
         setQuantity(1)
         setLoading(false)
       }
@@ -119,6 +99,7 @@ export function ProductDetailsPage() {
       isMounted = false
     }
   }, [id])
+
 
   const similarProducts = useMemo(() => {
     if (!product) return productsData.slice(0, 4)

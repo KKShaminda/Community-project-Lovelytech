@@ -2,7 +2,9 @@ import { useState, useMemo, useEffect } from 'react'
 import { ChevronDown, Heart, Search, ShoppingCart, ArrowRight } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import Layout from '../../components/layout/Layout'
-import { formatPrice, resolveImageUrl, FALLBACK_PRODUCT_IMAGE } from '../../data/productsData'
+import { formatPrice, resolveImageUrl, getCategoryFallbackImage, FALLBACK_PRODUCT_IMAGE } from '../../data/productsData'
+
+
 import {
   getWishlistProducts,
   toggleWishlistProduct,
@@ -171,10 +173,16 @@ export function WishlistPage() {
                 >
                   <div className="relative mb-3 overflow-hidden rounded-[16px] bg-[#f2f2f2]">
                     <img
-                      src={item.image}
+                      src={resolveImageUrl(item.image, item.category)}
                       alt={item.name}
                       className="h-48 w-full object-cover transition duration-300 group-hover:scale-105"
                       loading="lazy"
+                      onError={(event) => {
+                        const fallback = getCategoryFallbackImage(item.category)
+                        if (event.currentTarget.src !== fallback) {
+                          event.currentTarget.src = fallback
+                        }
+                      }}
                     />
                     <button
                       type="button"
@@ -186,6 +194,7 @@ export function WishlistPage() {
                       <Heart className="h-4 w-4 fill-current" />
                     </button>
                   </div>
+
 
                   <h3 className="mb-2 min-h-[48px] text-[15px] font-semibold leading-5 text-[#1f1f1f] transition group-hover:text-[#E4342F]">
                     <Link

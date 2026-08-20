@@ -21,7 +21,8 @@ import { RepairPage } from './pages/repair/RepairPage'
 import { BookRepairPage } from './pages/repair/BookRepairPage'
 import { RepairHistoryPage } from './pages/repair/RepairHistoryPage'
 import { RepairTrackingPage } from './pages/repair/RepairTrackingPage'
-import { OrderPage } from './pages/order/OrderPage'
+import { MyOrders } from './pages/order/MyOrders'
+
 
 
 
@@ -45,20 +46,21 @@ function App() {
           <Route path="/products/:id" element={<ProductDetailsPage />} />
           <Route path="/wishlist" element={<WishlistPage />} />
           <Route path="/cart" element={<CartPage />} />
-          <Route path="/orders" element={<OrderPage />} />
+          <Route path="/orders" element={<MyOrders />} />
+
 
 
           {/* Repair Services Pages */}
           <Route path="/repair" element={<RepairPage />} />
-           <Route path="/repair/book" element={<BookRepairPage />} />
-           <Route path="/repair/history" element={<RepairHistoryPage />} />
+          <Route path="/repair/book" element={<BookRepairPage />} />
+          <Route path="/repair/history" element={<RepairHistoryPage />} />
           <Route path="/repair/track" element={<RepairTrackingPage />} />
 
-          
-         
-        
-        
-      
+
+
+
+
+
 
           {/* Authentication Routes */}
           <Route path="/login" element={<SigninPage />} />
@@ -73,7 +75,7 @@ function App() {
           <Route path="/admin/customers" element={<CustomersPage />} />
           <Route path="/receptionist/dashboard" element={<ReceptionistDashboard />} />
 
-          
+
         </Routes>
       </Router>
     </>

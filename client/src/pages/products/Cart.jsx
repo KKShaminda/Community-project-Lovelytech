@@ -12,7 +12,13 @@ import {
   Tag,
 } from 'lucide-react'
 import Layout from '../../components/layout/Layout'
-import { formatPrice, resolveImageUrl, FALLBACK_PRODUCT_IMAGE } from '../../data/productsData'
+import {
+  formatPrice,
+  resolveImageUrl,
+  getCategoryFallbackImage,
+  FALLBACK_PRODUCT_IMAGE,
+} from '../../data/productsData'
+
 import {
   getCartItems,
   updateCartQuantity,
@@ -185,13 +191,12 @@ export function CartPage() {
                               alt={item.name}
                               className="h-full w-full object-cover transition duration-300 hover:scale-105"
                               onError={(event) => {
-                                if (
-                                  event.currentTarget.src !== FALLBACK_PRODUCT_IMAGE &&
-                                  !event.currentTarget.src.endsWith(FALLBACK_PRODUCT_IMAGE)
-                                ) {
-                                  event.currentTarget.src = FALLBACK_PRODUCT_IMAGE
+                                const fallback = getCategoryFallbackImage(item.category)
+                                if (event.currentTarget.src !== fallback) {
+                                  event.currentTarget.src = fallback
                                 }
                               }}
+
                             />
                           </Link>
                         </div>

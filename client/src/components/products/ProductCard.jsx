@@ -2,14 +2,19 @@ import { useState } from 'react'
 import { Heart, ShoppingCart } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { StarRating } from './StarRating'
-import { formatPrice, resolveImageUrl, FALLBACK_PRODUCT_IMAGE } from '../../data/productsData'
+import {
+  formatPrice,
+  resolveImageUrl,
+  getCategoryFallbackImage,
+} from '../../data/productsData'
 import { addToCart } from '../../utils/cartStorage'
 
 export function ProductCard({ product, isWishlisted, onToggleWishlist }) {
   const [justAdded, setJustAdded] = useState(false)
   const outOfStock = product.availability === 'Out of Stock'
   const productId = product.id || product._id
-  const imageUrl = resolveImageUrl(product.image || product.images?.[0])
+  const fallbackImage = getCategoryFallbackImage(product.category)
+  const imageUrl = resolveImageUrl(product.image || product.images?.[0], product.category)
 
   const handleAddToCart = (e) => {
     e.preventDefault()
@@ -19,7 +24,6 @@ export function ProductCard({ product, isWishlisted, onToggleWishlist }) {
     setJustAdded(true)
     setTimeout(() => setJustAdded(false), 1400)
   }
-
 
   const handleHeartClick = (e) => {
     e.preventDefault()
@@ -39,11 +43,8 @@ export function ProductCard({ product, isWishlisted, onToggleWishlist }) {
             className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
             loading="lazy"
             onError={(event) => {
-              if (
-                event.currentTarget.src !== FALLBACK_PRODUCT_IMAGE &&
-                !event.currentTarget.src.endsWith(FALLBACK_PRODUCT_IMAGE)
-              ) {
-                event.currentTarget.src = FALLBACK_PRODUCT_IMAGE
+              if (event.currentTarget.src !== fallbackImage) {
+                event.currentTarget.src = fallbackImage
               }
             }}
           />

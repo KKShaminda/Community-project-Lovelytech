@@ -424,13 +424,28 @@ export const formatPrice = (amount) => `Rs. ${Number(amount || 0).toLocaleString
 const RAW_API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000').trim()
 export const API_BASE_URL = RAW_API_BASE.replace(/\/+$/, '').replace(/\/api$/i, '')
 export const FALLBACK_PRODUCT_IMAGE = '/placeholder-product.svg'
+export const CATEGORY_FALLBACK_IMAGES = {
 
-export const resolveImageUrl = (img) => {
-  if (!img) return FALLBACK_PRODUCT_IMAGE
+  'Mobile Phones': 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=900&q=80',
+  'Laptops': 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=900&q=80',
+  'Desktops': 'https://images.unsplash.com/photo-1587202372775-e229f172b9d7?auto=format&fit=crop&w=900&q=80',
+  'iPads & Tablets': 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=900&q=80',
+  'Speakers & Audios': 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=900&q=80',
+  default: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=900&q=80',
+}
+
+export const getCategoryFallbackImage = (category) => {
+  return CATEGORY_FALLBACK_IMAGES[category] || CATEGORY_FALLBACK_IMAGES.default
+}
+
+export const resolveImageUrl = (img, category = '') => {
+  if (!img) return getCategoryFallbackImage(category)
   const rawUrl = typeof img === 'string' ? img : (img?.url || img?.path || '')
-  if (!rawUrl || typeof rawUrl !== 'string') return FALLBACK_PRODUCT_IMAGE
+  if (!rawUrl || typeof rawUrl !== 'string') return getCategoryFallbackImage(category)
   const trimmed = rawUrl.trim()
-  if (!trimmed) return FALLBACK_PRODUCT_IMAGE
+  if (!trimmed || trimmed === '/placeholder-product.png' || trimmed === '/placeholder-product.svg') {
+    return getCategoryFallbackImage(category)
+  }
 
   // External HTTPS or Data URLs
   if (trimmed.startsWith('https://') || trimmed.startsWith('data:')) {
@@ -448,8 +463,7 @@ export const resolveImageUrl = (img) => {
   }
 
   if (trimmed.startsWith('/')) {
-    // If it's a local public asset like /placeholder-product.svg or /assets/
-    if (trimmed.startsWith('/placeholder-') || trimmed.startsWith('/src/assets/')) {
+    if (trimmed.startsWith('/src/assets/')) {
       return trimmed
     }
     return `${API_BASE_URL}${trimmed}`
@@ -461,5 +475,6 @@ export const resolveImageUrl = (img) => {
 export const getMockProductById = (id) => {
   if (!id) return productsData[0]
   const idStr = String(id)
-  return productsData.find((p) => String(p.id) === idStr || String(p._id) === idStr) || null
+  return productsData.find((p) => String(p.id) === idStr || String(p._id) === idStr) || productsData[0]
 }
+

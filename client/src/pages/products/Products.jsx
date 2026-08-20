@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { ShoppingBag } from 'lucide-react'
 
 import { SearchSortBar } from '../../components/products/SearchSortBar'
@@ -6,13 +6,12 @@ import { FilterSidebar } from '../../components/products/FilterSidebar'
 import { ProductGrid } from '../../components/products/ProductGrid'
 import { Pagination } from '../../components/products/Pagination'
 import Layout from '../../components/layout/Layout'
-import { getProductFacets, getProducts } from '../../services/productServices'
 import {
   productsData,
   categories as defaultCategories,
   ratingOptions as defaultRatingOptions,
   resolveImageUrl,
-  FALLBACK_PRODUCT_IMAGE,
+  getCategoryFallbackImage,
 } from '../../data/productsData'
 import { getWishlistIds, toggleWishlistProduct } from '../../utils/wishlistStorage'
 
@@ -20,17 +19,18 @@ const ITEMS_PER_PAGE = 9
 const DEFAULT_PRICE_MAX = 600000
 
 const normalizeProduct = (product) => {
-  const primaryImage =
+  const category = product.category || 'Speakers & Audios'
+  const rawImage =
     product.images?.[0]?.url ||
     product.images?.[0]?.path ||
     product.images?.[0] ||
     product.image ||
-    FALLBACK_PRODUCT_IMAGE
+    getCategoryFallbackImage(category)
 
   return {
     ...product,
-    id: product._id || product.id,
-    image: resolveImageUrl(primaryImage),
+    id: product.id || product._id,
+    image: resolveImageUrl(rawImage, category),
     availability:
       product.stock > 0
         ? 'In Stock'
@@ -45,18 +45,8 @@ export function Products() {
   const [selectedRatings, setSelectedRatings] = useState([])
   const [availability, setAvailability] = useState({ inStock: true, outOfStock: true })
   const [priceRange, setPriceRange] = useState(DEFAULT_PRICE_MAX)
-  const [maxPriceLimit, setMaxPriceLimit] = useState(DEFAULT_PRICE_MAX)
   const [wishlistIds, setWishlistIds] = useState(() => getWishlistIds())
   const [page, setPage] = useState(1)
-
-  const [products, setProducts] = useState([])
-  const [totalPages, setTotalPages] = useState(1)
-  const [facets, setFacets] = useState({
-    categories: defaultCategories.map((c) => ({ category: c.label, count: c.count })),
-    ratings: defaultRatingOptions.map((r) => ({ rating: r.value, count: r.count })),
-    priceRange: { min: 0, max: DEFAULT_PRICE_MAX },
-  })
-  const [loading, setLoading] = useState(true)
 
   // Listen to wishlist updates across the app
   useEffect(() => {
@@ -71,114 +61,53 @@ export function Products() {
     }
   }, [])
 
-  useEffect(() => {
-    const loadFacets = async () => {
-      try {
-        const response = await getProductFacets()
-        const maximumPrice = response?.priceRange?.max || DEFAULT_PRICE_MAX
-
-        setFacets({
-          categories:
-            response?.categories && response.categories.length > 0
-              ? response.categories
-              : defaultCategories.map((c) => ({ category: c.label, count: c.count })),
-          ratings:
-            response?.ratings && response.ratings.length > 0
-              ? response.ratings
-              : defaultRatingOptions.map((r) => ({ rating: r.value, count: r.count })),
-          priceRange: response?.priceRange || { min: 0, max: DEFAULT_PRICE_MAX },
-        })
-        setMaxPriceLimit(maximumPrice)
-        setPriceRange(maximumPrice)
-      } catch {
-        // Fallback to default facets
-        setFacets({
-          categories: defaultCategories.map((c) => ({ category: c.label, count: c.count })),
-          ratings: defaultRatingOptions.map((r) => ({ rating: r.value, count: r.count })),
-          priceRange: { min: 0, max: DEFAULT_PRICE_MAX },
-        })
-      }
-    }
-
-    loadFacets()
+  // Calculate dynamic facet counts based on demo products
+  const categoryOptions = useMemo(() => {
+    return defaultCategories.map(({ label }) => {
+      const count = productsData.filter((item) => item.category === label).length
+      return { label, count }
+    })
   }, [])
 
-  useEffect(() => {
-    const loadProducts = async () => {
-      setLoading(true)
+  const ratingOptions = useMemo(() => {
+    return defaultRatingOptions.map(({ value }) => {
+      const count = productsData.filter((item) => Math.round(item.rating) >= value).length
+      return { value, count }
+    })
+  }, [])
 
-      try {
-        const params = {
-          page,
-          limit: ITEMS_PER_PAGE,
-          search: searchTerm.trim() || undefined,
-          category: selectedCategories.length > 0 ? selectedCategories.join(',') : undefined,
-          maxPrice: Math.min(priceRange, maxPriceLimit),
-          minPrice: 0,
-          minRating:
-            selectedRatings.length > 0 ? Math.min(...selectedRatings) : undefined,
-          inStock:
-            availability.inStock && availability.outOfStock
-              ? undefined
-              : availability.inStock
-                ? 'true'
-                : 'false',
-          sort:
-            sortBy === 'price-asc'
-              ? 'Price: Low to High'
-              : sortBy === 'price-desc'
-                ? 'Price: High to Low'
-                : sortBy === 'sold-desc'
-                  ? 'Best Selling'
-                  : undefined,
-        }
+  // Filter and sort products from the curated catalog
+  const filteredProducts = useMemo(() => {
+    const filtered = productsData.filter((item) => {
+      const matchSearch =
+        !searchTerm.trim() ||
+        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.category && item.category.toLowerCase().includes(searchTerm.toLowerCase()))
+      const matchCategory =
+        selectedCategories.length === 0 || selectedCategories.includes(item.category)
+      const matchRating =
+        selectedRatings.length === 0 || selectedRatings.some((r) => item.rating >= r)
+      const matchPrice = item.price <= priceRange
+      const isStockOk =
+        (availability.inStock && item.availability !== 'Out of Stock') ||
+        (availability.outOfStock && item.availability === 'Out of Stock')
 
-        const response = await getProducts(params)
-        if (response?.products && response.products.length > 0) {
-          setProducts(response.products.map(normalizeProduct))
-          setTotalPages(response?.pagination?.totalPages || 1)
-          setLoading(false)
-          return
-        }
-      } catch {
-        // Continue to local catalog fallback below
-      }
+      return matchSearch && matchCategory && matchRating && matchPrice && isStockOk
+    })
 
-      // Local catalog filtering
-      const filtered = productsData.filter((item) => {
-        const matchSearch =
-          !searchTerm.trim() ||
-          item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (item.category && item.category.toLowerCase().includes(searchTerm.toLowerCase()))
-        const matchCategory =
-          selectedCategories.length === 0 || selectedCategories.includes(item.category)
-        const matchRating =
-          selectedRatings.length === 0 || selectedRatings.some((r) => item.rating >= r)
-        const matchPrice = item.price <= priceRange
-        const isStockOk =
-          (availability.inStock && item.availability !== 'Out of Stock') ||
-          (availability.outOfStock && item.availability === 'Out of Stock')
+    const sorted = [...filtered].sort((a, b) => {
+      if (sortBy === 'price-asc') return a.price - b.price
+      if (sortBy === 'price-desc') return b.price - a.price
+      if (sortBy === 'sold-desc') return (b.sold || 0) - (a.sold || 0)
+      return 0
+    })
 
-        return matchSearch && matchCategory && matchRating && matchPrice && isStockOk
-      })
+    return sorted.map(normalizeProduct)
+  }, [searchTerm, selectedCategories, selectedRatings, priceRange, availability, sortBy])
 
-      const sorted = [...filtered].sort((a, b) => {
-        if (sortBy === 'price-asc') return a.price - b.price
-        if (sortBy === 'price-desc') return b.price - a.price
-        if (sortBy === 'sold-desc') return (b.sold || 0) - (a.sold || 0)
-        return 0
-      })
-
-      const startIndex = (page - 1) * ITEMS_PER_PAGE
-      const paginated = sorted.slice(startIndex, startIndex + ITEMS_PER_PAGE)
-
-      setProducts(paginated.map(normalizeProduct))
-      setTotalPages(Math.ceil(sorted.length / ITEMS_PER_PAGE) || 1)
-      setLoading(false)
-    }
-
-    loadProducts()
-  }, [availability, maxPriceLimit, page, priceRange, searchTerm, selectedCategories, selectedRatings, sortBy])
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE) || 1
+  const startIndex = (page - 1) * ITEMS_PER_PAGE
+  const displayedProducts = filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE)
 
   const updateFilterAndResetPage = (updater) => {
     updater()
@@ -215,20 +144,11 @@ export function Products() {
     setSelectedCategories([])
     setSelectedRatings([])
     setAvailability({ inStock: true, outOfStock: true })
-    setPriceRange(maxPriceLimit)
+    setPriceRange(DEFAULT_PRICE_MAX)
     setSearchTerm('')
     setSortBy('none')
     setPage(1)
   }
-
-  const categoryOptions = facets.categories.map(({ category, count }) => ({
-    label: category,
-    count,
-  }))
-  const ratingOptions = facets.ratings.map(({ rating, count }) => ({
-    value: rating,
-    count,
-  }))
 
   return (
     <Layout>
@@ -258,8 +178,8 @@ export function Products() {
             <FilterSidebar
               selectedCategories={selectedCategories}
               onToggleCategory={toggleCategory}
-              priceRange={Math.min(priceRange, maxPriceLimit)}
-              maxPrice={maxPriceLimit}
+              priceRange={priceRange}
+              maxPrice={DEFAULT_PRICE_MAX}
               onPriceRangeChange={(value) => updateFilterAndResetPage(() => setPriceRange(value))}
               selectedRatings={selectedRatings}
               onToggleRating={toggleRating}
@@ -271,11 +191,7 @@ export function Products() {
             />
 
             <div className="flex-1">
-              {loading ? (
-                <div className="rounded-xl border border-gray-200 bg-gray-50 p-10 text-center text-gray-600">
-                  Loading products...
-                </div>
-              ) : products.length === 0 ? (
+              {displayedProducts.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-12 text-center text-gray-500">
                   <p className="text-base font-semibold text-gray-700">No products found</p>
                   <p className="mt-1 text-sm text-gray-500">Try adjusting your search or filters.</p>
@@ -290,7 +206,7 @@ export function Products() {
               ) : (
                 <>
                   <ProductGrid
-                    products={products}
+                    products={displayedProducts}
                     wishlistIds={wishlistIds}
                     onToggleWishlist={toggleWishlist}
                   />
