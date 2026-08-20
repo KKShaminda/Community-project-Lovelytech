@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { getCurrentUser, logoutUser } from "../../services/authServices";
 import { getRepairs, createRepair, updateRepair } from "../../services/repairServices";
+import { NotificationBell } from "../../components/common/NotificationBell";
 
 const DEVICE_LABELS = {
   "smart-phone": "Smart Phone",
@@ -177,6 +178,7 @@ export function ReceptionistDashboard() {
             >
               Repair Registry
             </Link>
+            <NotificationBell />
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"

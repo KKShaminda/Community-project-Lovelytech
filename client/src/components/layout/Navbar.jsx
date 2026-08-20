@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
-import { useState } from 'react'
 import { MenuIcon, XIcon } from 'lucide-react'
+import { NotificationBell } from '../common/NotificationBell'
+import { isAuthenticated } from '../../services/authServices'
 
 export function Navbar() {
   const navItems = [
@@ -10,6 +11,8 @@ export function Navbar() {
     { label: 'Services', href: '#services' },
     { label: 'Contact Us', href: '#contact-us' },
   ]
+
+  const loggedIn = isAuthenticated()
 
   return (
     <header className="sticky top-0 z-50 border-b border-[#ff2020] bg-white/95 backdrop-blur-xl">
@@ -40,12 +43,16 @@ export function Navbar() {
         </nav>
 
         <div className="flex items-center gap-3 sm:gap-4">
-          <Link
-            to="/login"
-            className="rounded-full border border-[#ff2020] px-5 py-2.5 text-sm font-semibold text-[#ff2020] transition-colors duration-200 hover:bg-[#ff2020] hover:text-black"
-          >
-            Sign In
-          </Link>
+          {loggedIn ? (
+            <NotificationBell />
+          ) : (
+            <Link
+              to="/login"
+              className="rounded-full border border-[#ff2020] px-5 py-2.5 text-sm font-semibold text-[#ff2020] transition-colors duration-200 hover:bg-[#ff2020] hover:text-black"
+            >
+              Sign In
+            </Link>
+          )}
         </div>
       </div>
     </header>
