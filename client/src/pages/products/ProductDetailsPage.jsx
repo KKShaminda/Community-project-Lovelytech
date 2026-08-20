@@ -15,8 +15,17 @@ import {
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import Layout from '../../components/layout/Layout'
-import { productsData, formatPrice, getMockProductById } from '../../data/productsData'
+import {
+  productsData,
+  formatPrice,
+  getMockProductById,
+  resolveImageUrl,
+  FALLBACK_PRODUCT_IMAGE,
+} from '../../data/productsData'
 import { getProductById } from '../../services/productServices'
+import { isProductWishlisted, toggleWishlistProduct } from '../../utils/wishlistStorage'
+import { addToCart } from '../../utils/cartStorage'
+
 
 function RatingStars({ rating = 5 }) {
   return (
@@ -39,13 +48,19 @@ export function ProductDetailsPage() {
   const [loading, setLoading] = useState(true)
   const [selectedImage, setSelectedImage] = useState('')
   const [quantity, setQuantity] = useState(1)
-  const [liked, setLiked] = useState(false)
+  const [liked, setLiked] = useState(() => isProductWishlisted(id))
   const [addedToCart, setAddedToCart] = useState(false)
+
+  // Sync liked state when ID changes
+  useEffect(() => {
+    setLiked(isProductWishlisted(id))
+  }, [id])
 
   // Scroll to top whenever ID changes
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [id])
+
 
   useEffect(() => {
     let isMounted = true
@@ -113,9 +128,12 @@ export function ProductDetailsPage() {
   }, [product])
 
   const handleAddToCart = () => {
+    if (!product) return
+    addToCart(product, quantity, { image: selectedImage || product.image })
     setAddedToCart(true)
     setTimeout(() => setAddedToCart(false), 1600)
   }
+
 
   const galleryImages = useMemo(() => {
     if (!product) return []
@@ -166,7 +184,7 @@ export function ProductDetailsPage() {
     <Layout>
       <main className="min-h-screen bg-[#f4f1ef] px-4 py-6 lg:px-10 lg:py-8">
         <div className="mx-auto max-w-[1280px] rounded-[18px] bg-[#f9f7f6] p-4 shadow-[0_0_0_1px_rgba(0,0,0,0.03)] sm:p-6 lg:p-8">
-          
+
           {/* Breadcrumb Navigation */}
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-[#e8d9d7] pb-4">
             <div className="flex items-center gap-2 text-sm font-medium text-[#2f2f2f]">
@@ -213,11 +231,10 @@ export function ProductDetailsPage() {
                       key={image + index}
                       type="button"
                       onClick={() => setSelectedImage(image)}
-                      className={`overflow-hidden rounded-[14px] border-2 transition ${
-                        selectedImage === image
+                      className={`overflow-hidden rounded-[14px] border-2 transition ${selectedImage === image
                           ? 'border-[#E4342F] ring-2 ring-[#E4342F]/30 scale-105'
                           : 'border-[#d0d0d0] hover:border-[#E4342F]/60'
-                      }`}
+                        }`}
                     >
                       <img
                         src={image}
@@ -239,7 +256,10 @@ export function ProductDetailsPage() {
 
                 <button
                   type="button"
-                  onClick={() => setLiked((value) => !value)}
+                  onClick={() => {
+                    const nextStatus = toggleWishlistProduct(product.id || product._id || id)
+                    setLiked(nextStatus)
+                  }}
                   className={`mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition-transform hover:scale-105 ${
                     liked
                       ? 'border-[#E4342F] bg-[#E4342F] text-white shadow-md'
@@ -250,6 +270,7 @@ export function ProductDetailsPage() {
                 >
                   <Heart className={`h-5 w-5 ${liked ? 'fill-current' : ''}`} />
                 </button>
+
               </div>
 
               <div className="mb-4 flex flex-wrap items-center gap-3 text-sm text-[#4c4c4c]">
@@ -263,11 +284,10 @@ export function ProductDetailsPage() {
                 <span className="text-[#8e8e8e]">•</span>
                 <span className="text-[#666]">{product.sold || 100}+ Sold</span>
                 <span
-                  className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
-                    product.availability === 'Out of Stock'
+                  className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${product.availability === 'Out of Stock'
                       ? 'border border-amber-300 bg-amber-50 text-amber-800'
                       : 'border border-[#7ccf94] bg-[#ebfff2] text-[#1c8d46]'
-                  }`}
+                    }`}
                 >
                   {product.availability || 'In Stock'}
                 </span>
@@ -341,11 +361,10 @@ export function ProductDetailsPage() {
                   type="button"
                   onClick={handleAddToCart}
                   disabled={product.availability === 'Out of Stock'}
-                  className={`flex flex-1 items-center justify-center gap-2 rounded-[12px] px-6 py-3.5 text-base font-semibold text-white shadow-[0_8px_18px_rgba(228,52,47,0.25)] transition ${
-                    addedToCart
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-[12px] px-6 py-3.5 text-base font-semibold text-white shadow-[0_8px_18px_rgba(228,52,47,0.25)] transition ${addedToCart
                       ? 'bg-emerald-600'
                       : 'bg-[#E4342F] hover:bg-[#d62d2d] disabled:cursor-not-allowed disabled:opacity-60'
-                  }`}
+                    }`}
                 >
                   <ShoppingCart className="h-5 w-5" />
                   {product.availability === 'Out of Stock'

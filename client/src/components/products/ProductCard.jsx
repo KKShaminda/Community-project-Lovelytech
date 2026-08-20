@@ -2,21 +2,31 @@ import { useState } from 'react'
 import { Heart, ShoppingCart } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { StarRating } from './StarRating'
-import { formatPrice } from '../../data/productsData'
-
-const FALLBACK_PRODUCT_IMAGE = '/placeholder-product.svg'
+import { formatPrice, resolveImageUrl, FALLBACK_PRODUCT_IMAGE } from '../../data/productsData'
+import { addToCart } from '../../utils/cartStorage'
 
 export function ProductCard({ product, isWishlisted, onToggleWishlist }) {
   const [justAdded, setJustAdded] = useState(false)
   const outOfStock = product.availability === 'Out of Stock'
   const productId = product.id || product._id
+  const imageUrl = resolveImageUrl(product.image || product.images?.[0])
 
   const handleAddToCart = (e) => {
     e.preventDefault()
     e.stopPropagation()
     if (outOfStock) return
+    addToCart(product, 1)
     setJustAdded(true)
-    setTimeout(() => setJustAdded(false), 1200)
+    setTimeout(() => setJustAdded(false), 1400)
+  }
+
+
+  const handleHeartClick = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (onToggleWishlist) {
+      onToggleWishlist(productId, product)
+    }
   }
 
   return (
@@ -24,36 +34,37 @@ export function ProductCard({ product, isWishlisted, onToggleWishlist }) {
       <div className="relative mb-2.5 aspect-[4/3.2] overflow-hidden rounded-lg bg-gray-50">
         <Link to={`/products/${productId}`} className="block h-full w-full">
           <img
-            src={product.image}
+            src={imageUrl}
             alt={product.name}
             className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
             loading="lazy"
             onError={(event) => {
-              if (event.currentTarget.src.endsWith(FALLBACK_PRODUCT_IMAGE)) return
-              event.currentTarget.src = FALLBACK_PRODUCT_IMAGE
+              if (
+                event.currentTarget.src !== FALLBACK_PRODUCT_IMAGE &&
+                !event.currentTarget.src.endsWith(FALLBACK_PRODUCT_IMAGE)
+              ) {
+                event.currentTarget.src = FALLBACK_PRODUCT_IMAGE
+              }
             }}
           />
         </Link>
         <button
           type="button"
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            onToggleWishlist(productId)
-          }}
+          onClick={handleHeartClick}
           aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-          className={`absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border shadow-sm transition-colors ${
-            isWishlisted ? 'border-white bg-[#E4342F]' : 'border-[#E4342F] bg-white'
+          title={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+          className={`absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border shadow-sm transition duration-150 active:scale-95 ${
+            isWishlisted
+              ? 'border-[#E4342F] bg-[#E4342F] text-white ring-2 ring-red-200'
+              : 'border-[#E4342F]/40 bg-white text-[#E4342F] hover:border-[#E4342F] hover:bg-red-50'
           }`}
         >
-          <Heart size={14} className={isWishlisted ? 'text-white fill-current' : 'text-[#E4342F]'} />
+          <Heart size={14} className={isWishlisted ? 'fill-current text-white' : 'text-[#E4342F]'} />
         </button>
       </div>
 
-      <h3 className="mb-1 line-clamp-2 min-h-[2.4rem] text-xs font-semibold text-gray-900 group-hover:text-[#E4342F] transition-colors">
-        <Link to={`/products/${productId}`}>
-          {product.name}
-        </Link>
+      <h3 className="mb-1 line-clamp-2 min-h-[2.4rem] text-xs font-semibold text-gray-900 transition-colors group-hover:text-[#E4342F]">
+        <Link to={`/products/${productId}`}>{product.name}</Link>
       </h3>
 
       <div className="mb-2 flex items-center gap-2">
@@ -78,4 +89,5 @@ export function ProductCard({ product, isWishlisted, onToggleWishlist }) {
       </button>
     </article>
   )
-}
+}
+export default ProductCard

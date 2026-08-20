@@ -7,16 +7,36 @@ import { ProductGrid } from '../../components/products/ProductGrid'
 import { Pagination } from '../../components/products/Pagination'
 import Layout from '../../components/layout/Layout'
 import { getProductFacets, getProducts } from '../../services/productServices'
+import {
+  productsData,
+  categories as defaultCategories,
+  ratingOptions as defaultRatingOptions,
+  resolveImageUrl,
+  FALLBACK_PRODUCT_IMAGE,
+} from '../../data/productsData'
+import { getWishlistIds, toggleWishlistProduct } from '../../utils/wishlistStorage'
 
 const ITEMS_PER_PAGE = 9
 const DEFAULT_PRICE_MAX = 600000
 
-const normalizeProduct = (product) => ({
-  ...product,
-  id: product._id || product.id,
-  image: product.images?.[0]?.url || product.image || '/placeholder-product.png',
-  availability: product.stock > 0 ? 'In Stock' : 'Out of Stock',
-})
+const normalizeProduct = (product) => {
+  const primaryImage =
+    product.images?.[0]?.url ||
+    product.images?.[0]?.path ||
+    product.images?.[0] ||
+    product.image ||
+    FALLBACK_PRODUCT_IMAGE
+
+  return {
+    ...product,
+    id: product._id || product.id,
+    image: resolveImageUrl(primaryImage),
+    availability:
+      product.stock > 0
+        ? 'In Stock'
+        : product.availability || (product.stock === 0 ? 'Out of Stock' : 'In Stock'),
+  }
+}
 
 export function Products() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -26,18 +46,30 @@ export function Products() {
   const [availability, setAvailability] = useState({ inStock: true, outOfStock: true })
   const [priceRange, setPriceRange] = useState(DEFAULT_PRICE_MAX)
   const [maxPriceLimit, setMaxPriceLimit] = useState(DEFAULT_PRICE_MAX)
-  const [wishlistIds, setWishlistIds] = useState(new Set())
+  const [wishlistIds, setWishlistIds] = useState(() => getWishlistIds())
   const [page, setPage] = useState(1)
-  
+
   const [products, setProducts] = useState([])
   const [totalPages, setTotalPages] = useState(1)
   const [facets, setFacets] = useState({
-    categories: [],
-    ratings: [],
+    categories: defaultCategories.map((c) => ({ category: c.label, count: c.count })),
+    ratings: defaultRatingOptions.map((r) => ({ rating: r.value, count: r.count })),
     priceRange: { min: 0, max: DEFAULT_PRICE_MAX },
   })
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+
+  // Listen to wishlist updates across the app
+  useEffect(() => {
+    const handleWishlistUpdate = () => {
+      setWishlistIds(getWishlistIds())
+    }
+    window.addEventListener('wishlist-updated', handleWishlistUpdate)
+    window.addEventListener('storage', handleWishlistUpdate)
+    return () => {
+      window.removeEventListener('wishlist-updated', handleWishlistUpdate)
+      window.removeEventListener('storage', handleWishlistUpdate)
+    }
+  }, [])
 
   useEffect(() => {
     const loadFacets = async () => {
@@ -46,15 +78,25 @@ export function Products() {
         const maximumPrice = response?.priceRange?.max || DEFAULT_PRICE_MAX
 
         setFacets({
-          categories: response?.categories || [],
-          ratings: response?.ratings || [],
+          categories:
+            response?.categories && response.categories.length > 0
+              ? response.categories
+              : defaultCategories.map((c) => ({ category: c.label, count: c.count })),
+          ratings:
+            response?.ratings && response.ratings.length > 0
+              ? response.ratings
+              : defaultRatingOptions.map((r) => ({ rating: r.value, count: r.count })),
           priceRange: response?.priceRange || { min: 0, max: DEFAULT_PRICE_MAX },
         })
         setMaxPriceLimit(maximumPrice)
-        // set priceRange to the server max so we don't accidentally filter out expensive products
         setPriceRange(maximumPrice)
-      } catch (err) {
-        setError(err.message || 'Unable to load product filters.')
+      } catch {
+        // Fallback to default facets
+        setFacets({
+          categories: defaultCategories.map((c) => ({ category: c.label, count: c.count })),
+          ratings: defaultRatingOptions.map((r) => ({ rating: r.value, count: r.count })),
+          priceRange: { min: 0, max: DEFAULT_PRICE_MAX },
+        })
       }
     }
 
@@ -64,7 +106,6 @@ export function Products() {
   useEffect(() => {
     const loadProducts = async () => {
       setLoading(true)
-      setError('')
 
       try {
         const params = {
@@ -93,14 +134,47 @@ export function Products() {
         }
 
         const response = await getProducts(params)
-        setProducts((response?.products || []).map(normalizeProduct))
-        setTotalPages(response?.pagination?.totalPages || 1)
-      } catch (err) {
-        setError(err.message || 'Unable to load products.')
-        setProducts([])
-      } finally {
-        setLoading(false)
+        if (response?.products && response.products.length > 0) {
+          setProducts(response.products.map(normalizeProduct))
+          setTotalPages(response?.pagination?.totalPages || 1)
+          setLoading(false)
+          return
+        }
+      } catch {
+        // Continue to local catalog fallback below
       }
+
+      // Local catalog filtering
+      const filtered = productsData.filter((item) => {
+        const matchSearch =
+          !searchTerm.trim() ||
+          item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (item.category && item.category.toLowerCase().includes(searchTerm.toLowerCase()))
+        const matchCategory =
+          selectedCategories.length === 0 || selectedCategories.includes(item.category)
+        const matchRating =
+          selectedRatings.length === 0 || selectedRatings.some((r) => item.rating >= r)
+        const matchPrice = item.price <= priceRange
+        const isStockOk =
+          (availability.inStock && item.availability !== 'Out of Stock') ||
+          (availability.outOfStock && item.availability === 'Out of Stock')
+
+        return matchSearch && matchCategory && matchRating && matchPrice && isStockOk
+      })
+
+      const sorted = [...filtered].sort((a, b) => {
+        if (sortBy === 'price-asc') return a.price - b.price
+        if (sortBy === 'price-desc') return b.price - a.price
+        if (sortBy === 'sold-desc') return (b.sold || 0) - (a.sold || 0)
+        return 0
+      })
+
+      const startIndex = (page - 1) * ITEMS_PER_PAGE
+      const paginated = sorted.slice(startIndex, startIndex + ITEMS_PER_PAGE)
+
+      setProducts(paginated.map(normalizeProduct))
+      setTotalPages(Math.ceil(sorted.length / ITEMS_PER_PAGE) || 1)
+      setLoading(false)
     }
 
     loadProducts()
@@ -133,11 +207,8 @@ export function Products() {
     )
 
   const toggleWishlist = (productId) => {
-    setWishlistIds((prev) => {
-      const next = new Set(prev)
-      next.has(productId) ? next.delete(productId) : next.add(productId)
-      return next
-    })
+    toggleWishlistProduct(productId)
+    setWishlistIds(getWishlistIds())
   }
 
   const clearAll = () => {
@@ -163,7 +234,7 @@ export function Products() {
     <Layout>
       <main className="min-h-screen bg-white px-4 py-8 sm:px-6 lg:px-10">
         <div className="mx-auto max-w-[1400px]">
-          <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
               <ShoppingBag size={28} className="text-[#E4342F]" />
               <div>
@@ -172,14 +243,15 @@ export function Products() {
               </div>
             </div>
 
-            <div className="w-full sm:w-[60%] lg:w-[77%]">
-                <SearchSortBar
-                  searchTerm={searchTerm}
-                  onSearchChange={(value) => updateFilterAndResetPage(() => setSearchTerm(value))}
-                  sortBy={sortBy}
-                  onSortChange={setSortBy}
-                />
-              </div>
+            <div className="w-full sm:w-[68%] lg:w-[80%]">
+              <SearchSortBar
+                searchTerm={searchTerm}
+                onSearchChange={(value) => updateFilterAndResetPage(() => setSearchTerm(value))}
+                sortBy={sortBy}
+                onSortChange={setSortBy}
+                wishlistCount={wishlistIds.size}
+              />
+            </div>
           </div>
 
           <div className="flex flex-col gap-8 lg:flex-row">
@@ -203,9 +275,17 @@ export function Products() {
                 <div className="rounded-xl border border-gray-200 bg-gray-50 p-10 text-center text-gray-600">
                   Loading products...
                 </div>
-              ) : error ? (
-                <div className="rounded-xl border border-red-200 bg-red-50 p-10 text-center text-red-600">
-                  {error}
+              ) : products.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-12 text-center text-gray-500">
+                  <p className="text-base font-semibold text-gray-700">No products found</p>
+                  <p className="mt-1 text-sm text-gray-500">Try adjusting your search or filters.</p>
+                  <button
+                    type="button"
+                    onClick={clearAll}
+                    className="mt-4 rounded-xl bg-[#E4342F] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#c92923]"
+                  >
+                    Reset Filters
+                  </button>
                 </div>
               ) : (
                 <>
@@ -224,3 +304,4 @@ export function Products() {
     </Layout>
   )
 }
+export default Products

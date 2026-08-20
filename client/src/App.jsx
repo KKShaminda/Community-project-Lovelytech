@@ -15,6 +15,7 @@ import { CustomersPage } from './pages/admin/CustomersPage'
 import { ReceptionistDashboard } from './pages/dashboard/ReceptionistDashboard'
 import { Products } from './pages/products/Products'
 import { WishlistPage } from './pages/products/Wishlist'
+import { CartPage } from './pages/products/Cart'
 import { ProductDetailsPage } from './pages/products/ProductDetailsPage'
 import { RepairPage } from './pages/repair/RepairPage'
 import { BookRepairPage } from './pages/repair/BookRepairPage'
@@ -43,7 +44,9 @@ function App() {
           <Route path="/products" element={<Products />} />
           <Route path="/products/:id" element={<ProductDetailsPage />} />
           <Route path="/wishlist" element={<WishlistPage />} />
+          <Route path="/cart" element={<CartPage />} />
           <Route path="/orders" element={<OrderPage />} />
+
 
           {/* Repair Services Pages */}
           <Route path="/repair" element={<RepairPage />} />
