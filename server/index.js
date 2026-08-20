@@ -9,6 +9,7 @@ import userRoutes from "./routes/userRoute.js";
 import productRoutes from "./routes/productRoutes.js";
 import saleRoutes from "./routes/saleRoutes.js";
 import repairRoutes from "./routes/repairRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 
 const app = express();
 
@@ -29,6 +30,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/sales", saleRoutes);
 app.use("/api/repairs", repairRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // Test route  
 app.get("/", (req, res) => {

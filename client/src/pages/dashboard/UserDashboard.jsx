@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { getCurrentUser, logoutUser, updateUserProfile } from "../../services/authServices";
 import { getMyRepairs } from "../../services/repairServices";
+import { NotificationBell } from "../../components/common/NotificationBell";
 
 const STATUS_META = {
   pending: { label: "Pending Review", tone: "bg-yellow-100 text-yellow-700 border-yellow-200" },
@@ -92,13 +93,16 @@ export function UserDashboard() {
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#E4342F] text-white font-bold text-lg">LT</span>
             <span className="text-xl font-bold tracking-tight text-slate-900">Lovely Tech Portal</span>
           </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
-          >
-            <LogOut size={16} />
-            Logout
-          </button>
+          <div className="flex items-center gap-3">
+            <NotificationBell />
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+            >
+              <LogOut size={16} />
+              Logout
+            </button>
+          </div>
         </div>
       </header>
 

@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { NotificationBell } from "../common/NotificationBell";
 
 function Logo() {
   return (
@@ -37,8 +38,9 @@ export function AdminShell({ activeSection = "dashboard", children, action }) {
           <div className="flex h-20 items-center justify-between px-4 sm:px-6 lg:px-8">
             <Logo />
 
-            <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
               {action}
+              <NotificationBell />
               <div className="flex items-center gap-2">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ef2027] text-sm font-semibold text-white">A</span>
                 <div className="hidden text-right sm:block">
