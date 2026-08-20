@@ -1,6 +1,9 @@
 import mongoose from "mongoose";
 import Sale from "../models/Sale.js";
 import Product from "../models/Product.js";
+import {
+  createNotificationsForRole,
+} from "./notificationController.js";
 
 const parseMaybeJson = (value) => {
   if (value === undefined || value === null) return value;
@@ -120,6 +123,34 @@ export const createSale = async (req, res) => {
 
     await session.commitTransaction();
     res.status(201).json(saleDoc);
+
+    // Post-commit: notify admin of new sale (non-blocking)
+    const itemCount = items.length;
+    createNotificationsForRole("admin", {
+      type: "sale",
+      title: "New Sale Recorded",
+      message: `New sale recorded for ${customerName}: LKR ${total.toLocaleString()} for ${itemCount} item(s).`,
+      referenceId: saleDoc._id.toString(),
+      referenceType: "Sale",
+    });
+
+    // Post-commit: notify admin + receptionist of any low-stock products
+    if (status === "complete") {
+      for (const item of items) {
+        const prod = await Product.findById(item.product).select("name stock");
+        if (prod && prod.stock <= 5) {
+          const lowStockPayload = {
+            type: "inventory",
+            title: "Low Stock Alert",
+            message: `Low stock alert: "${prod.name}" has only ${prod.stock} unit(s) remaining.`,
+            referenceId: prod._id.toString(),
+            referenceType: "Product",
+          };
+          createNotificationsForRole("admin", lowStockPayload);
+          createNotificationsForRole("Receptionist", lowStockPayload);
+        }
+      }
+    }
   } catch (error) {
     await session.abortTransaction();
     res.status(400).json({ message: "Failed to create sale", error: error.message });
@@ -139,6 +170,7 @@ export const updateSale = async (req, res) => {
     }
 
     const previousItems = sale.items;
+    const previousStatus = sale.status;
 
     const customerName = String(req.body.customerName || req.body.customer || sale.customerName).trim();
     const status = String(req.body.status || sale.status);
@@ -168,6 +200,36 @@ export const updateSale = async (req, res) => {
 
     await sale.save({ session });
     await session.commitTransaction();
+
+    // Notify admin of status change (non-blocking, after commit)
+    if (status && status !== previousStatus) {
+      createNotificationsForRole("admin", {
+        type: "sale",
+        title: "Sale Status Updated",
+        message: `Sale #${(sale._id || "").toString().slice(-8)} status changed to ${status}.`,
+        referenceId: sale._id.toString(),
+        referenceType: "Sale",
+      });
+    }
+
+    // Check low stock after update
+    if (status === "complete") {
+      for (const item of nextItems) {
+        const prod = await Product.findById(item.product).select("name stock");
+        if (prod && prod.stock <= 5) {
+          const lowStockPayload = {
+            type: "inventory",
+            title: "Low Stock Alert",
+            message: `Low stock alert: "${prod.name}" has only ${prod.stock} unit(s) remaining.`,
+            referenceId: prod._id.toString(),
+            referenceType: "Product",
+          };
+          createNotificationsForRole("admin", lowStockPayload);
+          createNotificationsForRole("Receptionist", lowStockPayload);
+        }
+      }
+    }
+
     res.json(sale);
   } catch (error) {
     await session.abortTransaction();

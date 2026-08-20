@@ -1,5 +1,6 @@
 import Product from "../models/Product.js";
 import { uploadImage, deleteImageFile } from "../middlewares/imageUploader.js";
+import { createNotificationsForRole } from "./notificationController.js";
 
 const CATEGORIES = [
   "Mobile Phones",
@@ -164,6 +165,15 @@ export const createProduct = async (req, res) => {
 
     const product = await Product.create(payload);
     res.status(201).json(product);
+
+    // Notify admin of new product (non-blocking)
+    createNotificationsForRole("admin", {
+      type: "inventory",
+      title: "New Product Added",
+      message: `New product added: "${product.name}" (${product.category}).`,
+      referenceId: product._id.toString(),
+      referenceType: "Product",
+    });
   } catch (err) {
     res.status(400).json({ message: "Failed to create product", error: err.message });
   }
@@ -208,8 +218,24 @@ export const updateProduct = async (req, res) => {
 
     Object.assign(product, fields);
 
+    // Capture isActive before save for deactivation detection
+    const wasActive = product.isActive;
+    const willBeInactive =
+      fields.isActive !== undefined && String(fields.isActive) === "false";
+
     await product.save();
     res.json(product);
+
+    // Notify admin when a product is deactivated (non-blocking)
+    if (wasActive && willBeInactive) {
+      createNotificationsForRole("admin", {
+        type: "inventory",
+        title: "Product Deactivated",
+        message: `Product "${product.name}" has been deactivated and hidden from the store.`,
+        referenceId: product._id.toString(),
+        referenceType: "Product",
+      });
+    }
   } catch (err) {
     res.status(400).json({ message: "Failed to update product", error: err.message });
   }

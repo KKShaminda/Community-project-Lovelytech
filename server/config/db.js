@@ -21,6 +21,38 @@ const connectDB = async () => {
   if (configuredDnsServers.length > 0) {
     dns.setServers(configuredDnsServers);
     console.log(`Using custom DNS servers: ${configuredDnsServers.join(", ")}`.bgBlue.white);
+
+    // dns.setServers() only affects dns.resolve*() (used for the SRV lookup).
+    // dns.lookup() -- used internally by the driver/TLS layer to resolve each
+    // shard hostname to an IP -- always falls back to the OS resolver via
+    // getaddrinfo and ignores setServers(). Patch it to go through resolve4()
+    // instead so shard hostnames also use the configured DNS servers.
+    const originalLookup = dns.lookup.bind(dns);
+    dns.lookup = (hostname, options, callback) => {
+      if (typeof options === "function") {
+        callback = options;
+        options = {};
+      } else if (typeof options === "number") {
+        options = { family: options };
+      }
+
+      dns.resolve4(hostname, (err, addresses) => {
+        if (err || !addresses || addresses.length === 0) {
+          originalLookup(hostname, options, callback);
+          return;
+        }
+
+        if (options.all) {
+          callback(
+            null,
+            addresses.map((address) => ({ address, family: 4 }))
+          );
+          return;
+        }
+
+        callback(null, addresses[0], 4);
+      });
+    };
   }
 
   try {
