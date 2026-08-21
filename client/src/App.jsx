@@ -23,6 +23,8 @@ import { RepairTrackingPage } from './pages/repair/RepairTrackingPage'
 import { OrderPage } from './pages/order/OrderPage'
 
 
+import Payment from './pages/Payment/Payment'
+import Profile from './pages/user/Profile'
 
 function App() {
   return (
@@ -56,6 +58,7 @@ function App() {
         
         
       
+          <Route path="/payment" element={<Payment />} />
 
           {/* Authentication Routes */}
           <Route path="/login" element={<SigninPage />} />
@@ -63,6 +66,7 @@ function App() {
 
           {/* Role-based Dashboard Routes */}
           <Route path="/user/dashboard" element={<UserDashboard />} />
+          <Route path="/user/profile" element={<Profile />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/inventory" element={<InventoryManagementPage />} />
           <Route path="/admin/repair-orders" element={<RepairOrdersPage />} />
