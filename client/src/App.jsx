@@ -15,11 +15,13 @@ import { CustomersPage } from './pages/admin/CustomersPage'
 import { ReceptionistDashboard } from './pages/dashboard/ReceptionistDashboard'
 import { Products } from './pages/products/Products'
 import { WishlistPage } from './pages/products/Wishlist'
+import { CartPage } from './pages/products/Cart'
 import { ProductDetailsPage } from './pages/products/ProductDetailsPage'
 import { RepairPage } from './pages/repair/RepairPage'
 import { BookRepairPage } from './pages/repair/BookRepairPage'
 import { RepairHistoryPage } from './pages/repair/RepairHistoryPage'
 import { RepairTrackingPage } from './pages/repair/RepairTrackingPage'
+import { MyOrders } from './pages/order/MyOrders'
 import Payment from './pages/Payment/Payment'
 import Profile from './pages/user/Profile'
 import PlaceOrder from './pages/PlaceOrder/PlaceOrder'
@@ -46,21 +48,19 @@ function App() {
           <Route path="/products" element={<Products />} />
           <Route path="/products/:id" element={<ProductDetailsPage />} />
           <Route path="/wishlist" element={<WishlistPage />} />
-          <Route path="/orders" element={<OrderPage />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/orders" element={<MyOrders />} />
+
+
 
           {/* Repair Services Pages */}
           <Route path="/repair" element={<RepairPage />} />
-           <Route path="/repair/book" element={<BookRepairPage />} />
-           <Route path="/repair/history" element={<RepairHistoryPage />} />
+          <Route path="/repair/book" element={<BookRepairPage />} />
+          <Route path="/repair/history" element={<RepairHistoryPage />} />
           <Route path="/repair/track" element={<RepairTrackingPage />} />
           <Route path="/payment" element={<Payment />} />
           <Route path="/place-order" element={<PlaceOrder />} />
 
-          
-         
-        
-        
-      
           <Route path="/payment" element={<Payment />} />
 
           {/* Authentication Routes */}
@@ -77,7 +77,7 @@ function App() {
           <Route path="/admin/customers" element={<CustomersPage />} />
           <Route path="/receptionist/dashboard" element={<ReceptionistDashboard />} />
 
-          
+
         </Routes>
       </Router>
     </>

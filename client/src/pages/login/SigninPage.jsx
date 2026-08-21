@@ -13,8 +13,9 @@ const getDashboardPath = (role) => {
     return "/receptionist/dashboard";
   }
 
-  return "/user/dashboard";
+  return "/products";
 };
+
 
 export function SigninPage() {
   const navigate = useNavigate();
