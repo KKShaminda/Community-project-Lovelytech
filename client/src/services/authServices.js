@@ -77,6 +77,10 @@ export const loginUser = async (credentials, rememberMe = true) => {
       storage.setItem("user", JSON.stringify(data.user));
     }
 
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("auth-updated"));
+    }
+
     return data;
   } catch (error) {
     throw new Error(error.message || "Login failed");
@@ -107,7 +111,7 @@ export const logoutUser = async () => {
     const data = await request(`${API_URL}/logout`, {
       method: "POST",
       headers: getAuthHeaders(),
-    });
+    }).catch(() => ({ success: true }));
 
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -116,15 +120,23 @@ export const logoutUser = async () => {
     sessionStorage.removeItem("token");
     sessionStorage.removeItem("user");
 
-    return data;
-  } catch (error) {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("auth-updated"));
+    }
+
+    return data || { success: true };
+  } catch {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("rememberEmail");
     sessionStorage.removeItem("token");
     sessionStorage.removeItem("user");
-    throw new Error(error.message || "Logout failed");
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("auth-updated"));
+    }
+    return { success: true };
   }
 };
 
@@ -160,6 +172,9 @@ export const updateUserProfile = async (profileData) => {
 
     if (data.user) {
       localStorage.setItem("user", JSON.stringify(data.user));
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("auth-updated"));
+      }
     }
 
     return data;

@@ -25,6 +25,7 @@ import {
   removeFromCart,
   clearCart,
 } from '../../utils/cartStorage'
+import { isAuthenticated } from '../../services/authServices'
 
 export function CartPage() {
   const navigate = useNavigate()
@@ -33,17 +34,27 @@ export function CartPage() {
   const [discountApplied, setDiscountApplied] = useState(true)
   const [couponDiscountPercent, setCouponDiscountPercent] = useState(10) // 10% demo discount
   const [couponMessage, setCouponMessage] = useState({ text: 'LOVELY10 applied (10% OFF)', type: 'success' })
+  const [isLoggedIn, setIsLoggedIn] = useState(() => isAuthenticated())
 
-  // Listen to external cart updates (e.g. from other tabs or components)
+  // Listen to external cart updates and auth changes
   useEffect(() => {
     const syncCart = () => {
       setItems(getCartItems())
     }
+    const syncAuth = () => {
+      setIsLoggedIn(isAuthenticated())
+    }
     window.addEventListener('cart-updated', syncCart)
+    window.addEventListener('auth-updated', syncAuth)
     window.addEventListener('storage', syncCart)
+    window.addEventListener('storage', syncAuth)
+    window.addEventListener('focus', syncAuth)
     return () => {
       window.removeEventListener('cart-updated', syncCart)
+      window.removeEventListener('auth-updated', syncAuth)
       window.removeEventListener('storage', syncCart)
+      window.removeEventListener('storage', syncAuth)
+      window.removeEventListener('focus', syncAuth)
     }
   }, [])
 
@@ -144,12 +155,14 @@ export function CartPage() {
                   <ArrowRight className="h-4 w-4" />
                   Explore Products
                 </Link>
-                <Link
-                  to="/wishlist"
-                  className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-6 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"
-                >
-                  View Wishlist
-                </Link>
+                {isLoggedIn && (
+                  <Link
+                    to="/wishlist"
+                    className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-6 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"
+                  >
+                    View Wishlist
+                  </Link>
+                )}
               </div>
             </div>
           ) : (

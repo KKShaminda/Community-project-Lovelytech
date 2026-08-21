@@ -1,18 +1,34 @@
-import { Link, useLocation } from 'react-router-dom'
-import { useEffect, useState } from 'react'
-import { Bell, CircleUserRound, Menu, X } from 'lucide-react'
-import { getCurrentUser, isAuthenticated } from '../../services/authServices'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useEffect, useState, useRef } from 'react'
+import {
+  Bell,
+  CircleUserRound,
+  Menu,
+  X,
+  LogOut,
+  User,
+  Package,
+  ShoppingCart,
+  Wrench,
+  ChevronDown,
+} from 'lucide-react'
+import { getCurrentUser, isAuthenticated, logoutUser } from '../../services/authServices'
 import { getCartCount } from '../../utils/cartStorage'
 
 export function Navbar() {
   const location = useLocation()
+  const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [cartCount, setCartCount] = useState(() => getCartCount())
   const [authState, setAuthState] = useState(() => ({
     isLoggedIn: isAuthenticated(),
     user: getCurrentUser(),
   }))
 
+  const userMenuRef = useRef(null)
+
+  // Sync auth and cart state whenever location changes or events fire
   useEffect(() => {
     const syncAuthState = () => {
       setAuthState({
@@ -25,17 +41,47 @@ export function Navbar() {
       setCartCount(getCartCount())
     }
 
-    // Refresh auth and cart UI when storage changes or focus returns.
+    // Immediate sync on render/route change
+    syncAuthState()
+    handleCartUpdate()
+
+    // Refresh auth and cart UI on events
+    window.addEventListener('auth-updated', syncAuthState)
     window.addEventListener('storage', syncAuthState)
     window.addEventListener('focus', syncAuthState)
     window.addEventListener('cart-updated', handleCartUpdate)
 
     return () => {
+      window.removeEventListener('auth-updated', syncAuthState)
       window.removeEventListener('storage', syncAuthState)
       window.removeEventListener('focus', syncAuthState)
       window.removeEventListener('cart-updated', handleCartUpdate)
     }
+  }, [location.pathname])
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setUserMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  // Close mobile drawer on route change
+  useEffect(() => {
+    setMobileMenuOpen(false)
+    setUserMenuOpen(false)
+  }, [location.pathname])
+
+  const handleLogout = async () => {
+    setUserMenuOpen(false)
+    setMobileMenuOpen(false)
+    await logoutUser()
+    navigate('/login')
+  }
 
   const role = (authState.user?.role || '').toLowerCase()
   const hideNavItemsForRole = authState.isLoggedIn && (role === 'admin' || role === 'receptionist')
@@ -50,8 +96,8 @@ export function Navbar() {
   const publicNavItems = [
     { label: 'Home', href: '/' },
     { label: 'Products', href: '/products' },
-    { label: 'Service', href: '/services' },
     { label: 'About Us', href: '/about-us' },
+    { label: 'Services', href: '/services' },
     { label: 'Contact Us', href: '/contact-us' },
   ]
 
@@ -69,6 +115,16 @@ export function Navbar() {
     if (href === '/') return location.pathname === '/'
     return location.pathname.startsWith(href)
   }
+
+  const userName =
+    authState.user?.name ||
+    authState.user?.username ||
+    authState.user?.email?.split('@')[0] ||
+    'User'
+  const userEmail = authState.user?.email || ''
+  const displayRole = authState.user?.role
+    ? authState.user.role.charAt(0).toUpperCase() + authState.user.role.slice(1).toLowerCase()
+    : 'Customer'
 
   return (
     <header className="sticky top-0 z-50 border-b border-[#ff2020] bg-white/95 backdrop-blur-xl">
@@ -115,23 +171,109 @@ export function Navbar() {
         {/* Right Action: Account & Mobile Menu Toggle */}
         <div className="flex items-center gap-3 sm:gap-4">
           {authState.isLoggedIn ? (
-            <>
-              <button
-                type="button"
+            <div className="relative flex items-center gap-2" ref={userMenuRef}>
+              <Link
+                to={accountPath}
                 aria-label="Notifications"
                 className="rounded-full border border-[#ff2020] p-2.5 text-[#ff2020] transition-colors duration-200 hover:bg-[#ff2020] hover:text-white"
               >
                 <Bell className="h-5 w-5" />
-              </button>
+              </Link>
 
-              <Link
-                to={accountPath}
-                aria-label="Account"
-                className="rounded-full border border-[#ff2020] p-2.5 text-[#ff2020] transition-colors duration-200 hover:bg-[#ff2020] hover:text-white"
+              {/* User Avatar & Dropdown Trigger */}
+              <button
+                type="button"
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className="flex items-center gap-2 rounded-full border border-[#ff2020] px-3 py-1.5 text-sm font-semibold text-[#ff2020] transition-colors duration-200 hover:bg-[#ff2020] hover:text-white"
+                aria-expanded={userMenuOpen}
+                aria-label="User Account Menu"
               >
                 <CircleUserRound className="h-5 w-5" />
-              </Link>
-            </>
+                <span className="hidden max-w-[100px] truncate md:inline">{userName}</span>
+                <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* User Dropdown Menu */}
+              {userMenuOpen && (
+                <div className="absolute right-0 top-12 z-50 mt-2 w-64 rounded-2xl border border-gray-100 bg-white p-3 shadow-2xl ring-1 ring-black/5 animate-in fade-in slide-in-from-top-2">
+                  {/* User Profile Header */}
+                  <div className="border-b border-gray-100 pb-3 px-2">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#ff2020]/10 text-[#ff2020] font-bold">
+                        {userName.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-bold text-gray-900">{userName}</p>
+                        {userEmail && (
+                          <p className="truncate text-xs text-gray-500">{userEmail}</p>
+                        )}
+                        <span className="mt-0.5 inline-block rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-[#ff2020]">
+                          {displayRole}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Dropdown Links */}
+                  <div className="py-2 space-y-1">
+                    <Link
+                      to={accountPath}
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-[#ff2020] transition-colors"
+                    >
+                      <User className="h-4 w-4 text-gray-500" />
+                      <span>My Profile & Dashboard</span>
+                    </Link>
+
+                    <Link
+                      to="/orders"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-[#ff2020] transition-colors"
+                    >
+                      <Package className="h-4 w-4 text-gray-500" />
+                      <span>My Orders</span>
+                    </Link>
+
+                    <Link
+                      to="/cart"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-[#ff2020] transition-colors"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <ShoppingCart className="h-4 w-4 text-gray-500" />
+                        <span>Cart</span>
+                      </div>
+                      {cartCount > 0 && (
+                        <span className="rounded-full bg-[#ff2020] px-2 py-0.5 text-xs font-bold text-white">
+                          {cartCount}
+                        </span>
+                      )}
+                    </Link>
+
+                    <Link
+                      to="/repair"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-[#ff2020] transition-colors"
+                    >
+                      <Wrench className="h-4 w-4 text-gray-500" />
+                      <span>Repair Services</span>
+                    </Link>
+                  </div>
+
+                  {/* Logout Button */}
+                  <div className="border-t border-gray-100 pt-2">
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-bold text-[#ff2020] hover:bg-red-50 transition-colors"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           ) : (
             <Link
               to="/login"
@@ -156,6 +298,18 @@ export function Navbar() {
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
         <div className="border-t border-gray-200 bg-white px-4 py-4 shadow-lg lg:hidden">
+          {authState.isLoggedIn && (
+            <div className="mb-4 flex items-center gap-3 rounded-xl bg-gray-50 p-3 border border-gray-100">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#ff2020] text-white font-bold">
+                {userName.charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-gray-900">{userName}</p>
+                {userEmail && <p className="truncate text-xs text-gray-500">{userEmail}</p>}
+              </div>
+            </div>
+          )}
+
           <nav className="flex flex-col space-y-3">
             {!hideNavItemsForRole &&
               navItems.map((item) => (
@@ -175,23 +329,36 @@ export function Navbar() {
                   )}
                 </Link>
               ))}
+
             {authState.isLoggedIn ? (
-              <Link
-                to={accountPath}
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2 py-2 text-base font-semibold text-gray-800"
-              >
-                <CircleUserRound size={18} />
-                <span>My Account</span>
-              </Link>
+              <div className="border-t border-gray-100 pt-3 space-y-2">
+                <Link
+                  to={accountPath}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2 py-2 text-base font-semibold text-gray-800 hover:text-[#ff2020]"
+                >
+                  <CircleUserRound size={18} />
+                  <span>My Profile & Dashboard</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="flex w-full items-center gap-2 py-2 text-base font-semibold text-[#ff2020] hover:underline"
+                >
+                  <LogOut size={18} />
+                  <span>Sign Out</span>
+                </button>
+              </div>
             ) : (
-              <Link
-                to="/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2 py-2 text-base font-semibold text-[#ff2020]"
-              >
-                <span>Sign In</span>
-              </Link>
+              <div className="border-t border-gray-100 pt-3">
+                <Link
+                  to="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2 py-2 text-base font-semibold text-[#ff2020]"
+                >
+                  <span>Sign In</span>
+                </Link>
+              </div>
             )}
           </nav>
         </div>

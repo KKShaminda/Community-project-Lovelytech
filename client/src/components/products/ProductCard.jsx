@@ -9,7 +9,7 @@ import {
 } from '../../data/productsData'
 import { addToCart } from '../../utils/cartStorage'
 
-export function ProductCard({ product, isWishlisted, onToggleWishlist }) {
+export function ProductCard({ product, isWishlisted, onToggleWishlist, showWishlist = false }) {
   const [justAdded, setJustAdded] = useState(false)
   const outOfStock = product.availability === 'Out of Stock'
   const productId = product.id || product._id
@@ -49,19 +49,21 @@ export function ProductCard({ product, isWishlisted, onToggleWishlist }) {
             }}
           />
         </Link>
-        <button
-          type="button"
-          onClick={handleHeartClick}
-          aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-          title={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-          className={`absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border shadow-sm transition duration-150 active:scale-95 ${
-            isWishlisted
-              ? 'border-[#E4342F] bg-[#E4342F] text-white ring-2 ring-red-200'
-              : 'border-[#E4342F]/40 bg-white text-[#E4342F] hover:border-[#E4342F] hover:bg-red-50'
-          }`}
-        >
-          <Heart size={14} className={isWishlisted ? 'fill-current text-white' : 'text-[#E4342F]'} />
-        </button>
+        {showWishlist && (
+          <button
+            type="button"
+            onClick={handleHeartClick}
+            aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+            title={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+            className={`absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border shadow-sm transition duration-150 active:scale-95 ${
+              isWishlisted
+                ? 'border-[#E4342F] bg-[#E4342F] text-white ring-2 ring-red-200'
+                : 'border-[#E4342F]/40 bg-white text-[#E4342F] hover:border-[#E4342F] hover:bg-red-50'
+            }`}
+          >
+            <Heart size={14} className={isWishlisted ? 'fill-current text-white' : 'text-[#E4342F]'} />
+          </button>
+        )}
       </div>
 
       <h3 className="mb-1 line-clamp-2 min-h-[2.4rem] text-xs font-semibold text-gray-900 transition-colors group-hover:text-[#E4342F]">
