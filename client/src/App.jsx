@@ -21,8 +21,6 @@ import { BookRepairPage } from './pages/repair/BookRepairPage'
 import { RepairHistoryPage } from './pages/repair/RepairHistoryPage'
 import { RepairTrackingPage } from './pages/repair/RepairTrackingPage'
 import { OrderPage } from './pages/order/OrderPage'
-
-
 import Payment from './pages/Payment/Payment'
 import Profile from './pages/user/Profile'
 
