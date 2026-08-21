@@ -25,6 +25,7 @@ import { MyOrders } from './pages/order/MyOrders'
 import Payment from './pages/Payment/Payment'
 import Profile from './pages/user/Profile'
 import PlaceOrder from './pages/PlaceOrder/PlaceOrder'
+import NotificationsPage from './pages/notifications/NotificationsPage'
 
 
 function App() {
@@ -42,6 +43,7 @@ function App() {
           <Route path="/wishlist" element={<WishlistPage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/orders" element={<MyOrders />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
 
 
 
