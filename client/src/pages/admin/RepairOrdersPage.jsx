@@ -190,7 +190,7 @@ export function RepairOrdersPage() {
           <span>Actions</span>
         </div>
         {items.map((item) => {
-          const status = REPAIR_STATUS_META[item.status]
+          const status = REPAIR_STATUS_META[item.status] || { label: item.status || 'Pending', className: 'bg-neutral-100 text-neutral-700' }
 
           return (
             <div key={item.id} className="grid grid-cols-[1fr_1.2fr_1.5fr_1fr_1fr_0.7fr] items-center border-b border-neutral-200 px-6 py-4 text-sm last:border-b-0">

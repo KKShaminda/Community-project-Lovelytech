@@ -42,6 +42,8 @@ export const createRepairRequest = async (payload) => {
   });
 };
 
+export const createRepair = createRepairRequest;
+
 export const getRepairs = async () => {
   return request(API_URL, { method: 'GET' });
 };
