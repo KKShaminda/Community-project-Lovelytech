@@ -84,7 +84,8 @@ export function Navbar() {
   }
 
   const role = (authState.user?.role || '').toLowerCase()
-  const hideNavItemsForRole = authState.isLoggedIn && (role === 'admin' || role === 'receptionist')
+  const isStaffRole = role === 'admin' || role === 'receptionist'
+  const hideNavItemsForRole = authState.isLoggedIn && isStaffRole
   const accountPath =
     role === 'admin'
       ? '/admin/dashboard'
@@ -222,42 +223,46 @@ export function Navbar() {
                       className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-[#ff2020] transition-colors"
                     >
                       <User className="h-4 w-4 text-gray-500" />
-                      <span>My Profile & Dashboard</span>
+                      <span>{isStaffRole ? 'Dashboard' : 'My Profile & Dashboard'}</span>
                     </Link>
 
-                    <Link
-                      to="/orders"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-[#ff2020] transition-colors"
-                    >
-                      <Package className="h-4 w-4 text-gray-500" />
-                      <span>My Orders</span>
-                    </Link>
+                    {!isStaffRole && (
+                      <>
+                        <Link
+                          to="/orders"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-[#ff2020] transition-colors"
+                        >
+                          <Package className="h-4 w-4 text-gray-500" />
+                          <span>My Orders</span>
+                        </Link>
 
-                    <Link
-                      to="/cart"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-[#ff2020] transition-colors"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <ShoppingCart className="h-4 w-4 text-gray-500" />
-                        <span>Cart</span>
-                      </div>
-                      {cartCount > 0 && (
-                        <span className="rounded-full bg-[#ff2020] px-2 py-0.5 text-xs font-bold text-white">
-                          {cartCount}
-                        </span>
-                      )}
-                    </Link>
+                        <Link
+                          to="/cart"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-[#ff2020] transition-colors"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <ShoppingCart className="h-4 w-4 text-gray-500" />
+                            <span>Cart</span>
+                          </div>
+                          {cartCount > 0 && (
+                            <span className="rounded-full bg-[#ff2020] px-2 py-0.5 text-xs font-bold text-white">
+                              {cartCount}
+                            </span>
+                          )}
+                        </Link>
 
-                    <Link
-                      to="/repair"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-[#ff2020] transition-colors"
-                    >
-                      <Wrench className="h-4 w-4 text-gray-500" />
-                      <span>Repair Services</span>
-                    </Link>
+                        <Link
+                          to="/repair"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-[#ff2020] transition-colors"
+                        >
+                          <Wrench className="h-4 w-4 text-gray-500" />
+                          <span>Repair Services</span>
+                        </Link>
+                      </>
+                    )}
                   </div>
 
                   {/* Logout Button */}
@@ -338,7 +343,7 @@ export function Navbar() {
                   className="flex items-center gap-2 py-2 text-base font-semibold text-gray-800 hover:text-[#ff2020]"
                 >
                   <CircleUserRound size={18} />
-                  <span>My Profile & Dashboard</span>
+                  <span>{isStaffRole ? 'Dashboard' : 'My Profile & Dashboard'}</span>
                 </Link>
                 <button
                   type="button"
