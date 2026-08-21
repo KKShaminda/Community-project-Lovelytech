@@ -487,11 +487,14 @@ export const seedInitialData = async () => {
       console.log("Initial seed data inserted for Repairs.".bgGreen.black);
     }
 
-    const orderCount = await Order.countDocuments();
-    if (orderCount === 0) {
-      await Order.insertMany(initialOrders);
-      console.log("Initial seed data inserted for Orders.".bgGreen.black);
-    }
+    // Clean up mock/sample orders that do not have actual customer delivery address info
+    await Order.deleteMany({
+      $or: [
+        { deliveryAddress: { $exists: false } },
+        { deliveryAddress: null }
+      ]
+    });
+    console.log("Mock/sample orders cleaned up from database.".bgYellow.black);
   } catch (error) {
     console.error("Error seeding initial data:", error.message);
   }

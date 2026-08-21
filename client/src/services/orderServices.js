@@ -16,12 +16,15 @@ const parseResponse = async (response) => {
 };
 
 const request = async (url, options = {}) => {
+  const isFormData = options.body instanceof FormData;
+  const headers = { ...(options.headers || {}) };
+  if (!isFormData) {
+    headers['Content-Type'] = 'application/json';
+  }
+
   const response = await fetch(url, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-    },
+    headers,
     credentials: 'include',
   });
 
@@ -36,9 +39,10 @@ const request = async (url, options = {}) => {
 };
 
 export const createOrder = async (payload) => {
+  const isFormData = payload instanceof FormData;
   return request(API_URL, {
     method: 'POST',
-    body: JSON.stringify(payload),
+    body: isFormData ? payload : JSON.stringify(payload),
   });
 };
 

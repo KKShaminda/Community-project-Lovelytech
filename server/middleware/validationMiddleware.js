@@ -28,7 +28,24 @@ export const validateRepairInput = (req, res, next) => {
 };
 
 export const validateOrderInput = (req, res, next) => {
-  const { products } = req.body;
+  let { products, deliveryAddress, tags } = req.body;
+
+  if (typeof products === 'string') {
+    try {
+      req.body.products = JSON.parse(products);
+      products = req.body.products;
+    } catch (e) {}
+  }
+  if (typeof deliveryAddress === 'string') {
+    try {
+      req.body.deliveryAddress = JSON.parse(deliveryAddress);
+    } catch (e) {}
+  }
+  if (typeof tags === 'string') {
+    try {
+      req.body.tags = JSON.parse(tags);
+    } catch (e) {}
+  }
 
   if (!products || !Array.isArray(products) || products.length === 0) {
     res.status(400);

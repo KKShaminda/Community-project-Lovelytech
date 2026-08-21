@@ -1,5 +1,6 @@
 import Order from "../models/Order.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { uploadImage } from "../middlewares/imageUploader.js";
 
 // Helper function to generate Order ID (e.g. ORD-15487956)
 const generateOrderId = () => {
@@ -22,7 +23,7 @@ const formatPlacedAt = () => {
 // @route   POST /api/orders
 // @access  Public
 export const createOrder = asyncHandler(async (req, res) => {
-  const { products, tags, shipping, status, placedAt, orderId } = req.body;
+  const { products, tags, shipping, status, placedAt, orderId, deliveryAddress, paymentMethod, cardNumberLastFour } = req.body;
 
   const newOrderId = orderId || generateOrderId();
   const datePlaced = placedAt || formatPlacedAt();
@@ -34,6 +35,14 @@ export const createOrder = asyncHandler(async (req, res) => {
       const parts = p.name.split(' ');
       return parts.length > 1 ? parts[parts.length - 1] : p.name;
     });
+  }
+
+  let slipUrl = "";
+  let slipName = "";
+  if (req.file) {
+    const slipRecord = uploadImage(req.file, req, "slips");
+    slipUrl = slipRecord.url;
+    slipName = slipRecord.filename;
   }
 
   const newOrder = await Order.create({
@@ -49,6 +58,12 @@ export const createOrder = asyncHandler(async (req, res) => {
       price: Number(p.price),
       image: p.image || "",
     })),
+    deliveryAddress,
+    paymentMethod,
+    cardNumberLastFour,
+    paymentSlipUrl: slipUrl,
+    paymentSlipName: slipName,
+    paymentSlipStatus: slipUrl ? "Pending" : undefined,
   });
 
   res.status(201).json({
@@ -132,12 +147,13 @@ export const updateOrder = asyncHandler(async (req, res) => {
     throw new Error("Order not found");
   }
 
-  const { status, shipping, products, tags } = req.body;
+  const { status, shipping, products, tags, paymentSlipStatus } = req.body;
 
   if (status !== undefined) order.status = status;
   if (shipping !== undefined) order.shipping = Number(shipping);
   if (tags !== undefined) order.tags = tags;
   if (products !== undefined) order.products = products;
+  if (paymentSlipStatus !== undefined) order.paymentSlipStatus = paymentSlipStatus;
 
   const updatedOrder = await order.save();
 

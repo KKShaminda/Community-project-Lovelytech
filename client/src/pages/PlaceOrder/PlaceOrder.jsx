@@ -1,32 +1,6 @@
 import { ChevronRight, CircleCheckBig, CreditCard, MapPin, Package, ShoppingCart, Truck } from 'lucide-react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import Layout from '../../components/layout/Layout'
-
-const orderItems = [
-	{
-		name: 'Premium Wireless Bluetooth Headphones',
-		color: 'Black',
-		size: 'Standard',
-		qty: 1,
-		price: 2400,
-		image: '',
-	},
-	{
-		name: 'RGB Mechanical Gaming Keyboard',
-		color: 'Metallic',
-		size: 'Standard',
-		qty: 1,
-		price: 6650,
-		image: '',
-	},
-	{
-		name: '20,000mAh Portable Power Bank - Fast Charger',
-		color: 'Metallic',
-		size: 'Standard',
-		qty: 2,
-		price: 24800,
-		image: '',
-	},
-]
 
 function Currency({ value, highlight = false, negative = false }) {
 	return (
@@ -70,10 +44,58 @@ function Step({ label, active, done }) {
 }
 
 function PlaceOrder() {
-	const subTotal = 33850
-	const shipping = 0
-	const discount = 3385
-	const total = subTotal + shipping - discount
+	const location = useLocation()
+	const navigate = useNavigate()
+
+	const orderDetails = location.state?.orderDetails
+
+	// Fallback mock items
+	const fallbackItems = [
+		{
+			name: 'Premium Wireless Bluetooth Headphones',
+			color: 'Black',
+			size: 'Standard',
+			qty: 1,
+			price: 2400,
+			image: '',
+		},
+		{
+			name: 'RGB Mechanical Gaming Keyboard',
+			color: 'Metallic',
+			size: 'Standard',
+			qty: 1,
+			price: 6650,
+			image: '',
+		},
+		{
+			name: '20,000mAh Portable Power Bank - Fast Charger',
+			color: 'Metallic',
+			size: 'Standard',
+			qty: 2,
+			price: 24800,
+			image: '',
+		},
+	]
+
+	const items = orderDetails ? orderDetails.products : fallbackItems
+	const subTotal = orderDetails
+		? items.reduce((acc, item) => acc + (item.price || 0) * (item.qty || item.quantity || 1), 0)
+		: 33850
+	const shipping = orderDetails ? (orderDetails.shipping || 0) : 0
+	const total = orderDetails ? (orderDetails.totalAmount || (subTotal + shipping)) : 30465
+	const discount = Math.max(0, subTotal + shipping - total)
+
+	const deliveryAddress = orderDetails?.deliveryAddress || {
+		firstName: "Pasindu",
+		lastName: "Perera",
+		streetAddress: "124/B, Nallurawa",
+		city: "Panadura",
+		postalCode: "12500",
+		country: "Sri Lanka",
+	}
+
+	const paymentMethod = orderDetails?.paymentMethod || "debit"
+	const cardLastFour = orderDetails?.cardNumberLastFour || "889"
 
 	return (
 		<Layout>
@@ -108,7 +130,7 @@ function PlaceOrder() {
 								</div>
 
 								<div className="mt-5 space-y-5">
-									{orderItems.map((item) => (
+									{items.map((item) => (
 										<div key={item.name} className="flex items-start gap-4">
 											<ProductThumb item={item} />
 
@@ -117,14 +139,14 @@ function PlaceOrder() {
 													<div>
 														<h3 className="text-sm font-medium text-slate-800 sm:text-[0.95rem]">{item.name}</h3>
 														<div className="mt-1 flex flex-wrap gap-x-5 gap-y-1 text-[11px] text-slate-400">
-															<span>Color: {item.color}</span>
-															<span>Size: {item.size}</span>
-															<span>Qty: {item.qty}</span>
+															{item.color && <span>Color: {item.color}</span>}
+															{item.size && <span>Size: {item.size}</span>}
+															<span>Qty: {item.qty || item.quantity || 1}</span>
 														</div>
 													</div>
 
 													<div className="shrink-0 text-sm font-medium text-[#ff2020]">
-														<Currency value={item.price} highlight />
+														<Currency value={item.price * (item.qty || item.quantity || 1)} highlight />
 													</div>
 												</div>
 											</div>
@@ -173,22 +195,20 @@ function PlaceOrder() {
 										<div>
 											<p className="text-xs font-medium uppercase tracking-wide text-slate-400">Address</p>
 											<p className="mt-2 text-xs leading-5 text-slate-500">
-												Pasindu Perera
+												{deliveryAddress.firstName} {deliveryAddress.lastName}
 												<br />
-												124/B, Nallurawa,
+												{deliveryAddress.streetAddress},
 												<br />
-												Panadura,
+												{deliveryAddress.city},
 												<br />
-												Sri Lanka, 12500
+												{deliveryAddress.country}, {deliveryAddress.postalCode}
 											</p>
 										</div>
 
 										<div>
 											<p className="text-xs font-medium uppercase tracking-wide text-slate-400">Estimated Delivery</p>
 											<p className="mt-2 text-xs leading-5 text-slate-500">
-												12 December,
-												<br />
-												2026
+												Within 3-5 working days
 											</p>
 										</div>
 									</div>
@@ -212,11 +232,15 @@ function PlaceOrder() {
 
 									<div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 										<div className="space-y-2 text-xs text-slate-500">
-											<p>Your card ending in 889 has been debited by Rs. 30,465</p>
-											<p>Debit Card</p>
+											{paymentMethod === "koko" ? (
+												<p>Debited Rs. {total.toLocaleString()} via Koko Payment</p>
+											) : (
+												<p>Your card ending in {cardLastFour} has been debited by Rs. {total.toLocaleString()}</p>
+											)}
+											<p className="capitalize">{paymentMethod} Card</p>
 										</div>
 
-										<div className="inline-flex items-center gap-2 rounded-full bg-[#ff2020] px-4 py-2 text-sm font-semibold text-white shadow-sm">
+										<div className="inline-flex items-center gap-2 rounded-full bg-[#3bb54a] px-4 py-2 text-sm font-semibold text-white shadow-sm">
 											<CircleCheckBig className="h-4 w-4" />
 											Successful
 										</div>
@@ -228,12 +252,14 @@ function PlaceOrder() {
 						<div className="mt-6 grid gap-4 sm:grid-cols-2">
 							<button
 								type="button"
+								onClick={() => navigate('/orders')}
 								className="h-12 rounded-xl bg-black text-sm font-semibold text-white transition hover:bg-black/90"
 							>
 								← Back to My Orders
 							</button>
 							<button
 								type="button"
+								onClick={() => navigate('/products')}
 								className="h-12 rounded-xl bg-black text-sm font-semibold text-white transition hover:bg-black/90"
 							>
 								Continue Shopping
