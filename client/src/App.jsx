@@ -25,9 +25,7 @@ import { MyOrders } from './pages/order/MyOrders'
 import Payment from './pages/Payment/Payment'
 import Profile from './pages/user/Profile'
 import PlaceOrder from './pages/PlaceOrder/PlaceOrder'
-import { OrderPage } from './pages/order/OrderPage'
-import Payment from './pages/Payment/Payment'
-import Profile from './pages/user/Profile'
+
 
 function App() {
   return (
