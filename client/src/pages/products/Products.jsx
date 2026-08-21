@@ -14,6 +14,7 @@ import {
   getCategoryFallbackImage,
 } from '../../data/productsData'
 import { getWishlistIds, toggleWishlistProduct } from '../../utils/wishlistStorage'
+import { isAuthenticated } from '../../services/authServices'
 
 const ITEMS_PER_PAGE = 9
 const DEFAULT_PRICE_MAX = 600000
@@ -46,18 +47,28 @@ export function Products() {
   const [availability, setAvailability] = useState({ inStock: true, outOfStock: true })
   const [priceRange, setPriceRange] = useState(DEFAULT_PRICE_MAX)
   const [wishlistIds, setWishlistIds] = useState(() => getWishlistIds())
+  const [isLoggedIn, setIsLoggedIn] = useState(() => isAuthenticated())
   const [page, setPage] = useState(1)
 
-  // Listen to wishlist updates across the app
+  // Listen to auth and wishlist updates across the app
   useEffect(() => {
     const handleWishlistUpdate = () => {
       setWishlistIds(getWishlistIds())
     }
+    const handleAuthUpdate = () => {
+      setIsLoggedIn(isAuthenticated())
+    }
     window.addEventListener('wishlist-updated', handleWishlistUpdate)
+    window.addEventListener('auth-updated', handleAuthUpdate)
     window.addEventListener('storage', handleWishlistUpdate)
+    window.addEventListener('storage', handleAuthUpdate)
+    window.addEventListener('focus', handleAuthUpdate)
     return () => {
       window.removeEventListener('wishlist-updated', handleWishlistUpdate)
+      window.removeEventListener('auth-updated', handleAuthUpdate)
       window.removeEventListener('storage', handleWishlistUpdate)
+      window.removeEventListener('storage', handleAuthUpdate)
+      window.removeEventListener('focus', handleAuthUpdate)
     }
   }, [])
 
@@ -170,6 +181,7 @@ export function Products() {
                 sortBy={sortBy}
                 onSortChange={setSortBy}
                 wishlistCount={wishlistIds.size}
+                showWishlist={isLoggedIn}
               />
             </div>
           </div>
@@ -209,6 +221,7 @@ export function Products() {
                     products={displayedProducts}
                     wishlistIds={wishlistIds}
                     onToggleWishlist={toggleWishlist}
+                    showWishlist={isLoggedIn}
                   />
                   <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
                 </>

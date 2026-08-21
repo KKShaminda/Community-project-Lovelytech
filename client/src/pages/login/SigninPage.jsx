@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { signIn } from "../../services/authServices";
 
 const getDashboardPath = (role) => {
@@ -19,11 +19,12 @@ const getDashboardPath = (role) => {
 
 export function SigninPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const location = useLocation();
+  const [email, setEmail] = useState(() => location.state?.email || "");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(() => location.state?.message || "");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -136,7 +137,7 @@ export function SigninPage() {
             </label>
 
             {message ? (
-              <p className={`text-sm ${message.includes("successful") ? "text-green-600" : "text-red-500"}`}>
+              <p className={`text-sm ${message.toLowerCase().includes("success") ? "text-green-600 font-medium" : "text-red-500"}`}>
                 {message}
               </p>
             ) : null}
@@ -151,9 +152,9 @@ export function SigninPage() {
 
             <p className="text-center text-sm text-gray-500">
               Don't have an account?{" "}
-              <a href="/signup" className="font-medium text-[#E4342F] hover:underline">
+              <Link to="/signup" className="font-medium text-[#E4342F] hover:underline">
                 Sign up here
-              </a>
+              </Link>
             </p>
           </form>
         </div>
