@@ -37,11 +37,20 @@ const request = async (url, options = {}) => {
     ...(options.headers || {}),
   };
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-    credentials: "include",
-  });
+  let response;
+
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+      credentials: "include",
+    });
+  } catch (error) {
+    throw new Error(
+      `Unable to reach the authentication service at ${API_URL}. Make sure the backend is running on http://localhost:5000.`
+    );
+  }
+
   const data = await parseResponse(response);
 
   if (!response.ok) {
