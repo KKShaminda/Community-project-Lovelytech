@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import './App.css'
 import { HomePage } from './pages/home/HomePage'
 import { AboutUs } from './pages/home/AboutUs'
@@ -25,9 +25,7 @@ import { MyOrders } from './pages/order/MyOrders'
 import Payment from './pages/Payment/Payment'
 import Profile from './pages/user/Profile'
 import PlaceOrder from './pages/PlaceOrder/PlaceOrder'
-import { OrderPage } from './pages/order/OrderPage'
-import Payment from './pages/Payment/Payment'
-import Profile from './pages/user/Profile'
+
 
 function App() {
   return (
@@ -36,14 +34,8 @@ function App() {
         <Routes>
           {/* Public Pages */}
           <Route path="/" element={<HomePage />} />
-
-          {/* About Us Page */}
           <Route path="/about-us" element={<AboutUs />} />
-
-          {/* Services Page */}
           <Route path="/services" element={<ServicesPage />} />
-
-          {/* Contact Us Page */}
           <Route path="/contact-us" element={<ContactUsPage />} />
           <Route path="/products" element={<Products />} />
           <Route path="/products/:id" element={<ProductDetailsPage />} />
@@ -68,18 +60,25 @@ function App() {
           <Route path="/signup" element={<SignupPage />} />
 
           {/* Role-based Dashboard Routes */}
+          <Route path="/user" element={<Navigate to="/user/dashboard" replace />} />
           <Route path="/user/dashboard" element={<UserDashboard />} />
           <Route path="/user/profile" element={<Profile />} />
+          
+          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/inventory" element={<InventoryManagementPage />} />
           <Route path="/admin/repair-orders" element={<RepairOrdersPage />} />
           <Route path="/admin/sales-log" element={<SalesLogPage />} />
           <Route path="/admin/customers" element={<CustomersPage />} />
+
+          {/* Receptionist Routes */}
+          <Route path="/receptionist" element={<Navigate to="/receptionist/dashboard" replace />} />
           <Route path="/receptionist/dashboard" element={<ReceptionistDashboard />} />
-
-
-        </Routes>
-      </Router>
+          <Route path="/receptionist/inventory" element={<InventoryManagementPage />} />
+          <Route path="/receptionist/repair-orders" element={<RepairOrdersPage />} />
+          <Route path="/receptionist/sales-log" element={<SalesLogPage />} />
+        </Routes >
+      </Router >
     </>
   )
 }

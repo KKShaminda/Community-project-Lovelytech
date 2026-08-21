@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 
 import { AdminShell } from '../../components/admin/AdminShell'
-import { SALES_LOGS, SALES_STATUS_META, formatLKR } from '../../data/adminPagesData'
+import { SALES_STATUS_META, formatLKR } from '../../data/adminPagesData'
+import { getSales, createSale, updateSale, deleteSale } from '../../services/saleServices'
 
 const defaultForm = {
   customer: '',
@@ -11,10 +12,34 @@ const defaultForm = {
 }
 
 export function SalesLogPage() {
-  const [items, setItems] = useState(SALES_LOGS)
+  const [items, setItems] = useState([])
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState(defaultForm)
+
+  const fetchItems = async () => {
+    try {
+      const res = await getSales()
+      const data = res?.sales || res
+      if (Array.isArray(data)) {
+        const mapped = data.map((item) => ({
+          id: item._id || item.id,
+          customer: item.customerName || "Unknown",
+          date: (item.createdAt || new Date().toISOString()).slice(0, 10),
+          total: Number(item.total || 0),
+          payment: item.paymentMethod || "Cash",
+          status: item.status || "complete",
+        }))
+        setItems(mapped)
+      }
+    } catch (err) {
+      console.error("Error fetching sales logs:", err)
+    }
+  }
+
+  useEffect(() => {
+    fetchItems()
+  }, [])
 
   const stats = useMemo(() => {
     const dailySales = items.reduce((sum, item) => sum + item.total, 0)
@@ -45,24 +70,44 @@ export function SalesLogPage() {
     setModalOpen(true)
   }
 
-  const saveItem = (event) => {
+  const saveItem = async (event) => {
     event.preventDefault()
-    const next = {
-      id: editingId || `#LT-${Math.floor(Date.now() / 1000)}`,
-      customer: form.customer,
-      date: new Date().toISOString().slice(0, 10),
-      total: Number(form.total),
-      payment: form.payment,
+    
+    const payload = {
+      customerName: form.customer,
+      paymentMethod: form.payment,
       status: form.status,
+      total: Number(form.total),
+      items: [
+        {
+          name: "Sale Transaction",
+          price: Number(form.total),
+          quantity: 1,
+        }
+      ]
     }
 
-    setItems((current) => (editingId ? current.map((item) => (item.id === editingId ? next : item)) : [next, ...current]))
-    setModalOpen(false)
+    try {
+      if (editingId) {
+        await updateSale(editingId, payload)
+      } else {
+        await createSale(payload)
+      }
+      setModalOpen(false)
+      fetchItems()
+    } catch (err) {
+      alert("Failed to save sale: " + err.message)
+    }
   }
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (!window.confirm('Delete this sales record?')) return
-    setItems((current) => current.filter((item) => item.id !== id))
+    try {
+      await deleteSale(id)
+      fetchItems()
+    } catch (err) {
+      alert("Failed to delete sale: " + err.message)
+    }
   }
 
   return (
