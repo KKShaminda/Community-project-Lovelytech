@@ -20,6 +20,9 @@ import { RepairPage } from './pages/repair/RepairPage'
 import { BookRepairPage } from './pages/repair/BookRepairPage'
 import { RepairHistoryPage } from './pages/repair/RepairHistoryPage'
 import { RepairTrackingPage } from './pages/repair/RepairTrackingPage'
+import Payment from './pages/Payment/Payment'
+import Profile from './pages/user/Profile'
+import PlaceOrder from './pages/PlaceOrder/PlaceOrder'
 import { OrderPage } from './pages/order/OrderPage'
 import Payment from './pages/Payment/Payment'
 import Profile from './pages/user/Profile'
@@ -50,6 +53,8 @@ function App() {
            <Route path="/repair/book" element={<BookRepairPage />} />
            <Route path="/repair/history" element={<RepairHistoryPage />} />
           <Route path="/repair/track" element={<RepairTrackingPage />} />
+          <Route path="/payment" element={<Payment />} />
+          <Route path="/place-order" element={<PlaceOrder />} />
 
           
          
