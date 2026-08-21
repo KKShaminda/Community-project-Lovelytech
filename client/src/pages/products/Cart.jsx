@@ -96,7 +96,7 @@ export function CartPage() {
   }
 
   const handleCheckout = () => {
-    navigate('/orders')
+    navigate('/payment')
   }
 
   return (
@@ -386,7 +386,7 @@ export function CartPage() {
                       <button
                         type="button"
                         onClick={handleCheckout}
-                        className="w-full rounded-xl bg-[#E4342F] py-3.5 text-center text-sm font-bold text-white shadow-[0_6px_18px_rgba(228,52,47,0.3)] transition hover:bg-[#c92923] hover:shadow-[0_8px_22px_rgba(228,52,47,0.4)] active:scale-[0.99]"
+                        className="w-full cursor-pointer rounded-xl bg-[#E4342F] py-3.5 text-center text-sm font-bold text-white shadow-[0_6px_18px_rgba(228,52,47,0.3)] transition hover:bg-[#c92923] hover:shadow-[0_8px_22px_rgba(228,52,47,0.4)] active:scale-[0.99]"
                       >
                         Proceed to Checkout
                       </button>

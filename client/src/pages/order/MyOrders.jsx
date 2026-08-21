@@ -21,6 +21,8 @@ const STATUS_COPY = {
   Confirmed: { title: 'Confirmed', hint: 'Payment verified & processing' },
   Proceeded: { title: 'Proceeded', hint: 'Handed over to courier service' },
   Delivered: { title: 'Delivered', hint: 'Package successfully delivered' },
+  Cancelled: { title: 'Cancelled', hint: 'This order was cancelled' },
+  Canceled: { title: 'Cancelled', hint: 'This order was cancelled' },
 }
 
 const STATUS_PILL_STYLES = {
@@ -28,116 +30,11 @@ const STATUS_PILL_STYLES = {
   Confirmed: 'bg-[#dbeafe] text-[#2563eb]',
   Proceeded: 'bg-[#ffedd5] text-[#c2410c]',
   Delivered: 'bg-[#dcfce7] text-[#16a34a]',
+  Cancelled: 'bg-red-100 text-red-650 font-semibold border border-red-200',
+  Canceled: 'bg-red-100 text-red-650 font-semibold border border-red-200',
 }
 
-const INITIAL_ORDERS = [
-  {
-    id: 'ORD - 15487956',
-    placedAt: '@18.45 pm 10/12/2026',
-    status: 'Placed',
-    tags: ['Headphone', 'Keyboard', 'Power Bank'],
-    shipping: 0,
-    price: 30465,
-    products: [
-      {
-        id: 'p1',
-        name: 'Premium Wireless Bluetooth Headphones',
-        qty: 1,
-        price: 12500,
-        image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=400&q=80',
-      },
-      {
-        id: 'p2',
-        name: 'RGB Mechanical Gaming Keyboard',
-        qty: 1,
-        price: 8950,
-        image: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=400&q=80',
-      },
-      {
-        id: 'p3',
-        name: '20,000mAh Portable Power Bank - Fast Charger',
-        qty: 1,
-        price: 9015,
-        image: 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=400&q=80',
-      },
-    ],
-  },
-  {
-    id: 'ORD - 16485923',
-    placedAt: '@9.32 am 9/12/2026',
-    status: 'Confirmed',
-    tags: ['Handfree'],
-    shipping: 0,
-    price: 1500,
-    products: [
-      {
-        id: 'p4',
-        name: 'Handsfree Earbuds with Charging Case',
-        qty: 1,
-        price: 1500,
-        image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=400&q=80',
-      },
-    ],
-  },
-  {
-    id: 'ORD - 12649532',
-    placedAt: '@13.22 pm 8/7/2026',
-    status: 'Delivered',
-    tags: ['Keyboard'],
-    shipping: 0,
-    price: 6350,
-    products: [
-      {
-        id: 'p5',
-        name: 'RGB Mechanical Gaming Keyboard',
-        qty: 1,
-        price: 6350,
-        image: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=400&q=80',
-      },
-    ],
-  },
-  {
-    id: 'ORD - 28597460',
-    placedAt: '@11.58 am 01/08/2025',
-    status: 'Delivered',
-    tags: ['Power Bank'],
-    shipping: 0,
-    price: 11800,
-    products: [
-      {
-        id: 'p6',
-        name: '20,000mAh Portable Power Bank - Fast Charger',
-        qty: 2,
-        price: 5900,
-        image: 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=400&q=80',
-      },
-    ],
-  },
-  {
-    id: 'ORD - 34976128',
-    placedAt: '@21.14 pm 11/11/2025',
-    status: 'Delivered',
-    tags: ['Smart Watch', 'Mouse'],
-    shipping: 0,
-    price: 5450,
-    products: [
-      {
-        id: 'p7',
-        name: 'Smart Watch Series 6 AMOLED',
-        qty: 1,
-        price: 3950,
-        image: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=400&q=80',
-      },
-      {
-        id: 'p8',
-        name: 'Wireless Ergonomic Gaming Mouse',
-        qty: 1,
-        price: 1500,
-        image: 'https://images.unsplash.com/photo-1527814050087-3793815479db?auto=format&fit=crop&w=400&q=80',
-      },
-    ],
-  },
-]
+const INITIAL_ORDERS = []
 
 function getOrderTotal(order) {
   if (order.price) return order.price
@@ -165,7 +62,9 @@ function OrderDetailsModal({ order, onClose }) {
   if (!order) return null
 
   const subTotal = getOrderTotal(order)
-  const currentIndex = STATUS_FLOW.indexOf(order.status)
+  const isCancelled = order.status === "Cancelled" || order.status === "Canceled"
+  const activeFlow = isCancelled ? ["Placed", "Cancelled"] : STATUS_FLOW
+  const currentIndex = activeFlow.indexOf(isCancelled ? "Cancelled" : order.status)
 
   return (
     <div
@@ -220,9 +119,9 @@ function OrderDetailsModal({ order, onClose }) {
               Order Tracking Timeline
             </h3>
             <ol className="relative space-y-5 rounded-2xl border border-gray-100 bg-gray-50/50 p-4">
-              {STATUS_FLOW.map((step, index) => {
+              {activeFlow.map((step, index) => {
                 const done = index <= currentIndex
-                const isLast = index === STATUS_FLOW.length - 1
+                const isLast = index === activeFlow.length - 1
 
                 return (
                   <li key={step} className="relative flex gap-3.5">

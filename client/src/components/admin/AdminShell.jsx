@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import Layout from "../layout/Layout";
 import { getCurrentUser } from "../../services/authServices";
-import { LayoutDashboard, ClipboardList, Clipboard, Receipt, Users, Settings } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Clipboard, Receipt, Users, FileCheck, ShoppingBag } from "lucide-react";
 
 function SidebarItem({ label, to, active = false, icon: Icon }) {
   return (
@@ -38,8 +38,9 @@ export function AdminShell({ activeSection = "dashboard", children }) {
                 <SidebarItem label="Inventory" to="/admin/inventory" active={activeSection === "inventory"} icon={ClipboardList} />
                 <SidebarItem label="Repair Orders" to="/admin/repair-orders" active={activeSection === "repair-orders"} icon={Clipboard} />
                 <SidebarItem label="Sales Log" to="/admin/sales-log" active={activeSection === "sales-log"} icon={Receipt} />
+                <SidebarItem label="Payment Approval" to="/admin/payment-approval" active={activeSection === "payment-approval"} icon={FileCheck} />
+                <SidebarItem label="Orders" to="/admin/orders" active={activeSection === "orders"} icon={ShoppingBag} />
                 <SidebarItem label="Customers" to="/admin/customers" active={activeSection === "customers"} icon={Users} />
-                <SidebarItem label="Settings" to="/admin/dashboard" icon={Settings} />
               </>
             )}
           </div>

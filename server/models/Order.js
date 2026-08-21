@@ -22,7 +22,7 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Placed", "Confirmed", "Proceeded", "Delivered"],
+      enum: ["Placed", "Confirmed", "Proceeded", "Delivered", "Cancelled", "Canceled"],
       default: "Placed",
     },
     tags: [
@@ -38,6 +38,31 @@ const orderSchema = new mongoose.Schema(
     totalAmount: {
       type: Number,
       default: 0,
+    },
+    deliveryAddress: {
+      firstName: { type: String },
+      lastName: { type: String },
+      streetAddress: { type: String },
+      city: { type: String },
+      postalCode: { type: String },
+      country: { type: String },
+    },
+    paymentMethod: {
+      type: String,
+    },
+    cardNumberLastFour: {
+      type: String,
+    },
+    paymentSlipUrl: {
+      type: String,
+    },
+    paymentSlipName: {
+      type: String,
+    },
+    paymentSlipStatus: {
+      type: String,
+      enum: ["Pending", "Approved", "Rejected"],
+      default: "Pending",
     },
   },
   {
