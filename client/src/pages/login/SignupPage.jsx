@@ -7,8 +7,9 @@ const getDashboardPath = (role) => {
 
 	if (normalizedRole === "admin") return "/admin/dashboard";
 	if (normalizedRole === "receptionist") return "/receptionist/dashboard";
-	return "/user/dashboard";
+	return "/products";
 };
+
 
 export function SignupPage() {
 	const navigate = useNavigate();

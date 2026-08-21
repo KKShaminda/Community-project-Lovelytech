@@ -1,105 +1,23 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { ChevronDown, Heart, Search, ShoppingCart, ArrowRight } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import Layout from '../../components/layout/Layout'
-import { productsData, formatPrice } from '../../data/productsData'
+import { formatPrice, resolveImageUrl, getCategoryFallbackImage, FALLBACK_PRODUCT_IMAGE } from '../../data/productsData'
 
-const initialWishlistItems = [
-  {
-    id: 1,
-    name: '20,000mAh Portable Power Bank - Fast Charge',
-    price: 12400,
-    rating: 5,
-    sold: 203,
-    category: 'iPads & Tablets',
-    image:
-      'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=900&q=80',
-    stockStatus: 'In Stock',
-  },
-  {
-    id: 2,
-    name: '7-in-1 USB-C Hub Multi-Port Adapter',
-    price: 3400,
-    rating: 4,
-    sold: 102,
-    category: 'Speakers & Audios',
-    image:
-      'https://images.unsplash.com/photo-1583394838336-acd977736f90?auto=format&fit=crop&w=900&q=80',
-    stockStatus: 'In Stock',
-  },
-  {
-    id: 3,
-    name: 'Google Pixel 7 Pro (128 GB) - Used Mobile',
-    price: 78400,
-    rating: 5,
-    sold: 8,
-    category: 'Mobile Phones',
-    image:
-      'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=900&q=80',
-    stockStatus: 'In Stock',
-  },
-  {
-    id: 4,
-    name: 'RGB Mechanical Gaming Keyboard',
-    price: 6650,
-    rating: 4,
-    sold: 445,
-    category: 'Laptops',
-    image:
-      'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=900&q=80',
-    stockStatus: 'In Stock',
-  },
-  {
-    id: 5,
-    name: 'Water Proof Bluetooth Speaker - 360° Sounds',
-    price: 4300,
-    rating: 5,
-    sold: 312,
-    category: 'Speakers & Audios',
-    image:
-      'https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=900&q=80',
-    stockStatus: 'In Stock',
-  },
-  {
-    id: 6,
-    name: 'Ergonomic Wireless Mouse - Rechargeable',
-    price: 2800,
-    rating: 4,
-    sold: 178,
-    category: 'Mobile Phones',
-    image:
-      'https://images.unsplash.com/photo-1527814050087-3793815479db?auto=format&fit=crop&w=900&q=80',
-    stockStatus: 'In Stock',
-  },
-  {
-    id: 7,
-    name: 'Smart Fitness Watch - Health Tracker',
-    price: 3200,
-    rating: 5,
-    sold: 89,
-    category: 'Laptops',
-    image:
-      'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=900&q=80',
-    stockStatus: 'In Stock',
-  },
-  {
-    id: 8,
-    name: 'Premium Wireless Bluetooth Headphones',
-    price: 2400,
-    rating: 4,
-    sold: 142,
-    category: 'Mobile Phones',
-    image:
-      'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=900&q=80',
-    stockStatus: 'In Stock',
-  },
-]
 
-function StarRating({ value }) {
+import {
+  getWishlistProducts,
+  toggleWishlistProduct,
+  getWishlistIds,
+} from '../../utils/wishlistStorage'
+import { addToCart } from '../../utils/cartStorage'
+
+
+function StarRating({ value = 5 }) {
   return (
     <div className="flex items-center gap-1 text-[#f2b400]">
       {Array.from({ length: 5 }, (_, index) => (
-        <span key={index} className={index < value ? 'text-[#f2b400]' : 'text-[#d1d5db]'}>
+        <span key={index} className={index < Math.round(value) ? 'text-[#f2b400]' : 'text-[#d1d5db]'}>
           ★
         </span>
       ))}
@@ -109,25 +27,45 @@ function StarRating({ value }) {
 
 export function WishlistPage() {
   const navigate = useNavigate()
-  const [items, setItems] = useState(initialWishlistItems)
+  const [items, setItems] = useState(() => getWishlistProducts())
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All')
   const [addedIds, setAddedIds] = useState({})
 
+  // Listen to wishlist updates
+  useEffect(() => {
+    const syncWishlist = () => {
+      setItems(getWishlistProducts())
+    }
+    window.addEventListener('wishlist-updated', syncWishlist)
+    window.addEventListener('storage', syncWishlist)
+    return () => {
+      window.removeEventListener('wishlist-updated', syncWishlist)
+      window.removeEventListener('storage', syncWishlist)
+    }
+  }, [])
+
   const handleRemove = (id, e) => {
     e.preventDefault()
     e.stopPropagation()
-    setItems((prev) => prev.filter((item) => item.id !== id))
+    toggleWishlistProduct(id)
+    setItems(getWishlistProducts())
   }
 
   const handleAddToCart = (id, e) => {
     e.preventDefault()
     e.stopPropagation()
+    const product = items.find((item) => String(item.id) === String(id) || String(item._id) === String(id))
+    if (product) {
+      addToCart(product, 1)
+    }
     setAddedIds((prev) => ({ ...prev, [id]: true }))
     setTimeout(() => {
       setAddedIds((prev) => ({ ...prev, [id]: false }))
     }, 1500)
   }
+
+
 
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
@@ -191,11 +129,10 @@ export function WishlistPage() {
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
                   type="button"
-                  className={`rounded-[14px] px-4 py-2.5 text-sm font-semibold transition ${
-                    selectedCategory === cat
+                  className={`rounded-[14px] px-4 py-2.5 text-sm font-semibold transition ${selectedCategory === cat
                       ? 'border border-[#E4342F] bg-[#E4342F] text-white shadow-sm'
                       : 'border border-[#E4342F]/30 bg-white text-[#E4342F] hover:border-[#E4342F]'
-                  }`}
+                    }`}
                 >
                   {cat}
                 </button>
@@ -236,10 +173,16 @@ export function WishlistPage() {
                 >
                   <div className="relative mb-3 overflow-hidden rounded-[16px] bg-[#f2f2f2]">
                     <img
-                      src={item.image}
+                      src={resolveImageUrl(item.image, item.category)}
                       alt={item.name}
                       className="h-48 w-full object-cover transition duration-300 group-hover:scale-105"
                       loading="lazy"
+                      onError={(event) => {
+                        const fallback = getCategoryFallbackImage(item.category)
+                        if (event.currentTarget.src !== fallback) {
+                          event.currentTarget.src = fallback
+                        }
+                      }}
                     />
                     <button
                       type="button"
@@ -251,6 +194,7 @@ export function WishlistPage() {
                       <Heart className="h-4 w-4 fill-current" />
                     </button>
                   </div>
+
 
                   <h3 className="mb-2 min-h-[48px] text-[15px] font-semibold leading-5 text-[#1f1f1f] transition group-hover:text-[#E4342F]">
                     <Link
@@ -272,11 +216,10 @@ export function WishlistPage() {
                   <button
                     type="button"
                     onClick={(e) => handleAddToCart(item.id, e)}
-                    className={`flex w-full items-center justify-center gap-2 rounded-[12px] px-4 py-2.5 text-sm font-semibold text-white transition ${
-                      addedIds[item.id]
+                    className={`flex w-full items-center justify-center gap-2 rounded-[12px] px-4 py-2.5 text-sm font-semibold text-white transition ${addedIds[item.id]
                         ? 'bg-emerald-600'
                         : 'bg-[#E4342F] hover:bg-[#d12a2a]'
-                    }`}
+                      }`}
                   >
                     <ShoppingCart className="h-4 w-4" />
                     {addedIds[item.id] ? 'Added to Cart!' : 'Add to Cart'}
