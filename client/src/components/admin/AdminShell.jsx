@@ -39,7 +39,6 @@ export function AdminShell({ activeSection = "dashboard", children }) {
                 <SidebarItem label="Repair Orders" to="/admin/repair-orders" active={activeSection === "repair-orders"} icon={Clipboard} />
                 <SidebarItem label="Sales Log" to="/admin/sales-log" active={activeSection === "sales-log"} icon={Receipt} />
                 <SidebarItem label="Customers" to="/admin/customers" active={activeSection === "customers"} icon={Users} />
-                <SidebarItem label="Settings" to="/admin/dashboard" icon={Settings} />
               </>
             )}
           </div>

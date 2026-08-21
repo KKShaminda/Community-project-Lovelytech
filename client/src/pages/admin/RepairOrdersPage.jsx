@@ -46,12 +46,12 @@ export function RepairOrdersPage() {
       if (Array.isArray(data) && data.length > 0) {
         const mapped = data.map((item) => ({
           id: item.trackingId || item._id,
-          customer: item.customer || "Unknown",
+          customer: item.customer || item.customerName || "Unknown",
           device: item.device || `${item.brand || ""} ${item.model || ""}`.trim() || "Device",
           issue: item.issue || "",
           technician: item.technician || "Unassigned",
           status: item.status || "pending",
-          amount: Number(item.amount || item.estimate || 0),
+          amount: Number(item.amount || item.estimate || item.estimatedCost || 0),
           createdAt: item.createdAt || new Date().toISOString().slice(0, 10),
         }))
         setItems(mapped)
