@@ -10,7 +10,7 @@ import productRoutes from "./routes/productRoutes.js";
 const app = express();
 
 // Load environment variables
-dotenv.config();
+dotenv.config({ path: "./env" });
 
 // Connect to database
 connectDB();

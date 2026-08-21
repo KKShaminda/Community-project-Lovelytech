@@ -22,9 +22,12 @@ import { BookRepairPage } from './pages/repair/BookRepairPage'
 import { RepairHistoryPage } from './pages/repair/RepairHistoryPage'
 import { RepairTrackingPage } from './pages/repair/RepairTrackingPage'
 import { MyOrders } from './pages/order/MyOrders'
-
-
-
+import Payment from './pages/Payment/Payment'
+import Profile from './pages/user/Profile'
+import PlaceOrder from './pages/PlaceOrder/PlaceOrder'
+import { OrderPage } from './pages/order/OrderPage'
+import Payment from './pages/Payment/Payment'
+import Profile from './pages/user/Profile'
 
 function App() {
   return (
@@ -55,12 +58,10 @@ function App() {
           <Route path="/repair/book" element={<BookRepairPage />} />
           <Route path="/repair/history" element={<RepairHistoryPage />} />
           <Route path="/repair/track" element={<RepairTrackingPage />} />
+          <Route path="/payment" element={<Payment />} />
+          <Route path="/place-order" element={<PlaceOrder />} />
 
-
-
-
-
-
+          <Route path="/payment" element={<Payment />} />
 
           {/* Authentication Routes */}
           <Route path="/login" element={<SigninPage />} />
@@ -68,6 +69,7 @@ function App() {
 
           {/* Role-based Dashboard Routes */}
           <Route path="/user/dashboard" element={<UserDashboard />} />
+          <Route path="/user/profile" element={<Profile />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/inventory" element={<InventoryManagementPage />} />
           <Route path="/admin/repair-orders" element={<RepairOrdersPage />} />
