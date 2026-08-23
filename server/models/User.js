@@ -50,7 +50,8 @@ const userSchema = new mongoose.Schema(
                 city: { type: String, required: true },
                 district: { type: String, required: true },
                 postalCode: { type: String },
-                country: { type: String, default: "Sri Lanka" }
+                country: { type: String, default: "Sri Lanka" },
+                isDefault: { type: Boolean, default: false }
             }
         ],
 

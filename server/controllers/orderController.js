@@ -28,15 +28,44 @@ const formatPlacedAt = () => {
 // @route   POST /api/orders
 // @access  Public
 export const createOrder = asyncHandler(async (req, res) => {
-  const { products, tags, shipping, status, placedAt, orderId, deliveryAddress, paymentMethod, cardNumberLastFour } = req.body;
+  const {
+    products,
+    tags,
+    shipping,
+    status,
+    placedAt,
+    orderId,
+    deliveryAddress,
+    paymentMethod,
+    cardNumberLastFour,
+    userId,
+    customerName,
+    customerEmail,
+    customerPhone,
+    address,
+  } = req.body;
+
+  const safeParse = (value, fallback) => {
+    if (value === undefined || value === null) return fallback;
+    if (typeof value !== "string") return value;
+    try {
+      return JSON.parse(value);
+    } catch {
+      return fallback;
+    }
+  };
+
+  const normalizedProducts = safeParse(products, []);
+  const normalizedTags = safeParse(tags, []);
+  const normalizedDeliveryAddress = safeParse(deliveryAddress, deliveryAddress);
 
   const newOrderId = orderId || generateOrderId();
   const datePlaced = placedAt || formatPlacedAt();
   
   // Extract tags from product names if not provided
-  let orderTags = tags;
+  let orderTags = normalizedTags;
   if (!orderTags || !Array.isArray(orderTags) || orderTags.length === 0) {
-    orderTags = products?.map(p => {
+    orderTags = normalizedProducts?.map(p => {
       const parts = p.name.split(' ');
       return parts.length > 1 ? parts[parts.length - 1] : p.name;
     }) || [];
@@ -62,14 +91,14 @@ export const createOrder = asyncHandler(async (req, res) => {
     customerEmail: customerEmail || req.user?.email || "",
     customerPhone: customerPhone || req.user?.phone || "",
     address: address || "",
-    products: (products || []).map(p => ({
+    products: (normalizedProducts || []).map(p => ({
       id: p.id || `p_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       name: p.name,
       qty: Number(p.qty || 1),
       price: Number(p.price),
       image: p.image || "",
     })),
-    deliveryAddress,
+    deliveryAddress: normalizedDeliveryAddress,
     paymentMethod,
     cardNumberLastFour,
     paymentSlipUrl: slipUrl,
