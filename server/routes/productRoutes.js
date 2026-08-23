@@ -8,9 +8,6 @@ import {
   deleteProduct,
 } from "../controllers/productController.js";
 import { upload } from "../middlewares/imageUploader.js";
-import { createRequire } from 'module';
-
-const require = createRequire(import.meta.url);
 
 const router = express.Router();
 
@@ -23,4 +20,3 @@ router.put("/:id", upload.array("images", 5), updateProduct);
 router.delete("/:id", deleteProduct);
 
 export default router;
-
