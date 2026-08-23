@@ -27,6 +27,7 @@ import {
 import { getProductById } from '../../services/productServices'
 import { isProductWishlisted, toggleWishlistProduct } from '../../utils/wishlistStorage'
 import { addToCart } from '../../utils/cartStorage'
+import { isAuthenticated } from '../../services/authServices'
 
 
 function RatingStars({ rating = 5 }) {
@@ -52,6 +53,22 @@ export function ProductDetailsPage() {
   const [quantity, setQuantity] = useState(1)
   const [liked, setLiked] = useState(() => isProductWishlisted(id))
   const [addedToCart, setAddedToCart] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(() => isAuthenticated())
+
+  // Sync auth state
+  useEffect(() => {
+    const handleAuthUpdate = () => {
+      setIsLoggedIn(isAuthenticated())
+    }
+    window.addEventListener('auth-updated', handleAuthUpdate)
+    window.addEventListener('storage', handleAuthUpdate)
+    window.addEventListener('focus', handleAuthUpdate)
+    return () => {
+      window.removeEventListener('auth-updated', handleAuthUpdate)
+      window.removeEventListener('storage', handleAuthUpdate)
+      window.removeEventListener('focus', handleAuthUpdate)
+    }
+  }, [])
 
   // Sync liked state when ID changes
   useEffect(() => {
@@ -184,13 +201,15 @@ export function ProductDetailsPage() {
               </span>
             </div>
 
-            <Link
-              to="/wishlist"
-              className="flex items-center gap-1.5 rounded-lg border border-[#E4342F]/30 bg-white px-3 py-1.5 text-xs font-semibold text-[#E4342F] shadow-sm transition hover:bg-[#E4342F] hover:text-white"
-            >
-              <Heart className="h-3.5 w-3.5 fill-current" />
-              View Wishlist
-            </Link>
+            {isLoggedIn && (
+              <Link
+                to="/wishlist"
+                className="flex items-center gap-1.5 rounded-lg border border-[#E4342F]/30 bg-white px-3 py-1.5 text-xs font-semibold text-[#E4342F] shadow-sm transition hover:bg-[#E4342F] hover:text-white"
+              >
+                <Heart className="h-3.5 w-3.5 fill-current" />
+                View Wishlist
+              </Link>
+            )}
           </div>
 
           {/* Main Product Showcase Section */}
@@ -235,22 +254,24 @@ export function ProductDetailsPage() {
                   {product.name}
                 </h1>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    const nextStatus = toggleWishlistProduct(product.id || product._id || id)
-                    setLiked(nextStatus)
-                  }}
-                  className={`mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition-transform hover:scale-105 ${
-                    liked
-                      ? 'border-[#E4342F] bg-[#E4342F] text-white shadow-md'
-                      : 'border-[#E4342F] bg-white text-[#E4342F]'
-                  }`}
-                  aria-label={liked ? 'Remove from wishlist' : 'Add to wishlist'}
-                  title={liked ? 'Saved in Wishlist' : 'Add to Wishlist'}
-                >
-                  <Heart className={`h-5 w-5 ${liked ? 'fill-current' : ''}`} />
-                </button>
+                {isLoggedIn && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextStatus = toggleWishlistProduct(product.id || product._id || id)
+                      setLiked(nextStatus)
+                    }}
+                    className={`mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition-transform hover:scale-105 ${
+                      liked
+                        ? 'border-[#E4342F] bg-[#E4342F] text-white shadow-md'
+                        : 'border-[#E4342F] bg-white text-[#E4342F]'
+                    }`}
+                    aria-label={liked ? 'Remove from wishlist' : 'Add to wishlist'}
+                    title={liked ? 'Saved in Wishlist' : 'Add to Wishlist'}
+                  >
+                    <Heart className={`h-5 w-5 ${liked ? 'fill-current' : ''}`} />
+                  </button>
+                )}
 
               </div>
 
@@ -464,17 +485,19 @@ export function ProductDetailsPage() {
                       className="h-44 w-full object-cover transition duration-300 group-hover:scale-105"
                       loading="lazy"
                     />
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        navigate(`/products/${item.id}`)
-                      }}
-                      className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#E4342F] shadow-sm transition hover:bg-[#E4342F] hover:text-white"
-                      aria-label="View product"
-                    >
-                      <Heart className="h-4 w-4 fill-current" />
-                    </button>
+                    {isLoggedIn && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          navigate(`/products/${item.id}`)
+                        }}
+                        className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#E4342F] shadow-sm transition hover:bg-[#E4342F] hover:text-white"
+                        aria-label="View product"
+                      >
+                        <Heart className="h-4 w-4 fill-current" />
+                      </button>
+                    )}
                   </div>
 
                   <h3 className="mb-2 min-h-[44px] text-[14px] font-semibold leading-5 text-[#1f1f1f] transition group-hover:text-[#E4342F]">

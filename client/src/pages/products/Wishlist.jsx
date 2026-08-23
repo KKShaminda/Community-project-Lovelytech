@@ -11,6 +11,7 @@ import {
   getWishlistIds,
 } from '../../utils/wishlistStorage'
 import { addToCart } from '../../utils/cartStorage'
+import { isAuthenticated } from '../../services/authServices'
 
 
 function StarRating({ value = 5 }) {
@@ -31,17 +32,27 @@ export function WishlistPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All')
   const [addedIds, setAddedIds] = useState({})
+  const [isLoggedIn, setIsLoggedIn] = useState(() => isAuthenticated())
 
-  // Listen to wishlist updates
+  // Listen to wishlist and auth updates
   useEffect(() => {
     const syncWishlist = () => {
       setItems(getWishlistProducts())
     }
+    const syncAuth = () => {
+      setIsLoggedIn(isAuthenticated())
+    }
     window.addEventListener('wishlist-updated', syncWishlist)
+    window.addEventListener('auth-updated', syncAuth)
     window.addEventListener('storage', syncWishlist)
+    window.addEventListener('storage', syncAuth)
+    window.addEventListener('focus', syncAuth)
     return () => {
       window.removeEventListener('wishlist-updated', syncWishlist)
+      window.removeEventListener('auth-updated', syncAuth)
       window.removeEventListener('storage', syncWishlist)
+      window.removeEventListener('storage', syncAuth)
+      window.removeEventListener('focus', syncAuth)
     }
   }, [])
 
@@ -82,6 +93,38 @@ export function WishlistPage() {
     const set = new Set(items.map((i) => i.category).filter(Boolean))
     return ['All', ...Array.from(set)]
   }, [items])
+
+  if (!isLoggedIn) {
+    return (
+      <Layout>
+        <main className="min-h-screen bg-[#f4f3f2] px-4 py-12 md:px-6 lg:px-8">
+          <div className="mx-auto max-w-md rounded-2xl bg-white p-8 text-center shadow-sm">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#fceeee] text-[#E4342F]">
+              <Heart className="h-8 w-8" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900">Sign in to View Wishlist</h2>
+            <p className="mt-2 text-sm text-gray-500">
+              Please sign in to your account to save, view, and manage your wishlist products.
+            </p>
+            <div className="mt-6 flex flex-col gap-3">
+              <Link
+                to="/login"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#E4342F] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#c92923]"
+              >
+                Sign In
+              </Link>
+              <Link
+                to="/products"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-6 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"
+              >
+                Explore Products
+              </Link>
+            </div>
+          </div>
+        </main>
+      </Layout>
+    )
+  }
 
   return (
     <Layout>

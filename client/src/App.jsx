@@ -26,6 +26,8 @@ import Payment from './pages/Payment/Payment'
 import Profile from './pages/user/Profile'
 import PlaceOrder from './pages/PlaceOrder/PlaceOrder'
 import NotificationsPage from './pages/notifications/NotificationsPage'
+import { PaymentApprovalPage } from './pages/admin/PaymentApprovalPage'
+import { AdminOrdersPage } from './pages/admin/AdminOrdersPage'
 
 
 function App() {
@@ -55,8 +57,6 @@ function App() {
           <Route path="/payment" element={<Payment />} />
           <Route path="/place-order" element={<PlaceOrder />} />
 
-          <Route path="/payment" element={<Payment />} />
-
           {/* Authentication Routes */}
           <Route path="/login" element={<SigninPage />} />
           <Route path="/signup" element={<SignupPage />} />
@@ -72,6 +72,8 @@ function App() {
           <Route path="/admin/repair-orders" element={<RepairOrdersPage />} />
           <Route path="/admin/sales-log" element={<SalesLogPage />} />
           <Route path="/admin/customers" element={<CustomersPage />} />
+          <Route path="/admin/payment-approval" element={<PaymentApprovalPage />} />
+          <Route path="/admin/orders" element={<AdminOrdersPage />} />
 
           {/* Receptionist Routes */}
           <Route path="/receptionist" element={<Navigate to="/receptionist/dashboard" replace />} />
