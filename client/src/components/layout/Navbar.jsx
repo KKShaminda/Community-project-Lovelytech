@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { getCurrentUser, isAuthenticated, logoutUser } from '../../services/authServices'
 import { getCartCount } from '../../utils/cartStorage'
+import { NotificationBell } from '../common/NotificationBell'
 
 export function Navbar() {
   const location = useLocation()
@@ -154,9 +155,8 @@ export function Navbar() {
                 <Link
                   key={item.label}
                   to={item.href}
-                  className={`relative text-sm font-semibold transition-colors duration-200 ${
-                    active ? 'text-[#ff2020]' : 'text-gray-800 hover:text-[#ff2020]'
-                  }`}
+                  className={`relative text-sm font-semibold transition-colors duration-200 ${active ? 'text-[#ff2020]' : 'text-gray-800 hover:text-[#ff2020]'
+                    }`}
                 >
                   {item.label}
                   {item.href === '/cart' && cartCount > 0 && (
@@ -173,14 +173,8 @@ export function Navbar() {
         {/* Right Action: Account & Mobile Menu Toggle */}
         <div className="flex items-center gap-3 sm:gap-4">
           {authState.isLoggedIn ? (
-            <div className="relative flex items-center gap-2" ref={userMenuRef}>
-              <Link
-                to={accountPath}
-                aria-label="Notifications"
-                className="rounded-full border border-[#ff2020] p-2.5 text-[#ff2020] transition-colors duration-200 hover:bg-[#ff2020] hover:text-white"
-              >
-                <Bell className="h-5 w-5" />
-              </Link>
+            <>
+              <NotificationBell />
 
               {/* User Avatar & Dropdown Trigger */}
               <button
@@ -279,7 +273,7 @@ export function Navbar() {
                   </div>
                 </div>
               )}
-            </div>
+            </>
           ) : (
             <Link
               to="/login"
@@ -323,9 +317,8 @@ export function Navbar() {
                   key={item.label}
                   to={item.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center justify-between py-2 text-base font-semibold ${
-                    isActive(item.href) ? 'text-[#ff2020]' : 'text-gray-800'
-                  }`}
+                  className={`flex items-center justify-between py-2 text-base font-semibold ${isActive(item.href) ? 'text-[#ff2020]' : 'text-gray-800'
+                    }`}
                 >
                   <span>{item.label}</span>
                   {item.href === '/cart' && cartCount > 0 && (

@@ -1,6 +1,10 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
+import {
+  createNotificationForUser,
+  createNotificationsForRole,
+} from "./notificationController.js";
 
 // Generate JWT Token
 const generateToken = (userId) => {
@@ -23,21 +27,12 @@ export const register = async (req, res) => {
       });
     }
 
-    /* Check if passwords match
-    if (password !== confirmPassword) {
-      return res.status(400).json({
-        success: false,
-        message: "Passwords do not match",
-      });
-    }*/
-
     // Create new user
     const user = await User.create({
       fullname,
       email,
       phone,
       password,
-      //confirmPassword,
       role: role || "Buyer", // Default to Buyer if not specified
     });
 
@@ -53,6 +48,25 @@ export const register = async (req, res) => {
       message: "User registered successfully",
       token,
       user: userResponse,
+    });
+
+    // Non-blocking notifications
+    // 1. Welcome notification to user
+    createNotificationForUser(user._id, {
+      type: "account",
+      title: "Welcome to Lovely Tech!",
+      message: `Welcome, ${user.fullname}! Your Lovely Tech account has been created.`,
+      referenceId: user._id.toString(),
+      referenceType: "User",
+    });
+
+    // 2. Notify Admin of new registration
+    createNotificationsForRole("admin", {
+      type: "account",
+      title: "New User Registered",
+      message: `${user.fullname} (${user.email}) joined as ${user.role || "User"}.`,
+      referenceId: user._id.toString(),
+      referenceType: "User",
     });
   } catch (error) {
     res.status(500).json({
@@ -520,6 +534,13 @@ export const suspendUser = async (req, res) => {
       user,
     });
 
+    createNotificationForUser(user._id, {
+      type: "account",
+      title: "Account Suspended",
+      message: "Your Lovely Tech account has been suspended. Please contact customer support for assistance.",
+      referenceId: user._id.toString(),
+      referenceType: "User",
+    });
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -557,6 +578,14 @@ export const unsuspendUser = async (req, res) => {
       success: true,
       message: "User unsuspended successfully",
       user,
+    });
+
+    createNotificationForUser(user._id, {
+      type: "account",
+      title: "Account Re-activated",
+      message: "Your account suspension has been lifted. Welcome back to Lovely Tech!",
+      referenceId: user._id.toString(),
+      referenceType: "User",
     });
 
   } catch (error) {

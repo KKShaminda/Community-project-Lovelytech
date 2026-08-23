@@ -244,15 +244,17 @@ export function Profile() {
 		<Layout>
 			<div className="min-h-screen bg-[#f8f8f8] text-slate-900">
 			<section className="mx-auto w-full max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
-				<div className="mb-6 flex items-start gap-3">
-					<div className="mt-1 flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 bg-white text-[#ff2020]">
-						<UserRound className="h-5 w-5" />
-					</div>
-					<div>
-						<h1 className="text-2xl font-semibold text-[#ff2020] sm:text-3xl">My Account</h1>
-						<p className="mt-1 text-sm text-slate-500">
-							Manage your personal information, security settings, and addresses.
-						</p>
+				<div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+					<div className="flex items-start gap-3">
+						<div className="mt-1 flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 bg-white text-[#ff2020]">
+							<UserRound className="h-5 w-5" />
+						</div>
+						<div>
+							<h1 className="text-2xl font-semibold text-[#ff2020] sm:text-3xl">My Account</h1>
+							<p className="mt-1 text-sm text-slate-500">
+								Manage your personal information, security settings, and addresses.
+							</p>
+						</div>
 					</div>
 				</div>
 

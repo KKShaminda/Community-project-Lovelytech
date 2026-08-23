@@ -1,5 +1,9 @@
 import Repair from "../models/Repair.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import {
+  createNotificationForEmail,
+  createNotificationsForRole,
+} from "./notificationController.js";
 
 // Helper function to generate tracking ID (e.g. PR124596)
 const generateTrackingId = () => {
@@ -119,6 +123,27 @@ export const createRepair = asyncHandler(async (req, res) => {
     trackingId: newRepair.trackingId,
     id: newRepair._id,
   });
+
+  // Non-blocking notifications
+  // 1. Notify Staff (Admin & Receptionist)
+  createNotificationsForRole(["admin", "Receptionist"], {
+    type: "repair",
+    title: "New Repair Booking",
+    message: `New repair ticket (${newRepair.trackingId}) received for ${newRepair.device} from ${newRepair.customer}.`,
+    referenceId: newRepair.trackingId,
+    referenceType: "Repair",
+  });
+
+  // 2. Notify Customer
+  if (newRepair.email) {
+    createNotificationForEmail(newRepair.email, {
+      type: "repair",
+      title: "Repair Request Received",
+      message: `Your repair request for ${newRepair.device} (Tracking ID: ${newRepair.trackingId}) was submitted successfully.`,
+      referenceId: newRepair.trackingId,
+      referenceType: "Repair",
+    });
+  }
 });
 
 // @desc    Get all repair requests
@@ -192,7 +217,10 @@ export const updateRepair = asyncHandler(async (req, res) => {
     address,
   } = req.body;
 
-  if (status && status !== repair.status) {
+  const prevStatus = repair.status;
+  const statusChanged = status && status !== prevStatus;
+
+  if (statusChanged) {
     repair.status = status;
     repair.trackingSteps = getDefaultTrackingSteps(status);
     
@@ -228,6 +256,28 @@ export const updateRepair = asyncHandler(async (req, res) => {
     success: true,
     data: updatedRepair,
   });
+
+  // Notify customer if status changed
+  if (statusChanged && updatedRepair.email) {
+    const statusTextMap = {
+      diagnosing: "is currently being diagnosed by our technicians",
+      "awaiting-approval": "is awaiting your approval for repair estimates",
+      repairing: "is now actively under repair",
+      ready: "is ready for collection / pickup",
+      completed: "has been marked as completed. Thank you!",
+      cancelled: "has been cancelled",
+    };
+
+    const statusDetail = statusTextMap[status] || `status has been updated to '${status}'`;
+
+    createNotificationForEmail(updatedRepair.email, {
+      type: "repair",
+      title: `Repair Status: ${status}`,
+      message: `Your device ${updatedRepair.device} (${updatedRepair.trackingId}) ${statusDetail}.`,
+      referenceId: updatedRepair.trackingId,
+      referenceType: "Repair",
+    });
+  }
 });
 
 // @desc    Delete repair request
