@@ -1,18 +1,16 @@
 import { useState, useMemo, useEffect } from 'react'
-import { ChevronDown, Heart, Search, ShoppingCart, ArrowRight } from 'lucide-react'
+import { Heart, Search, ShoppingCart, ArrowRight, RefreshCw, AlertCircle } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import Layout from '../../components/layout/Layout'
-import { formatPrice, resolveImageUrl, getCategoryFallbackImage, FALLBACK_PRODUCT_IMAGE } from '../../data/productsData'
-
-
+import { formatPrice, resolveImageUrl, getCategoryFallbackImage } from '../../data/productsData'
 import {
-  getWishlistProducts,
-  toggleWishlistProduct,
+  removeWishlistProduct,
   getWishlistIds,
+  saveWishlistIds,
 } from '../../utils/wishlistStorage'
 import { addToCart } from '../../utils/cartStorage'
 import { isAuthenticated } from '../../services/authServices'
-
+import { getWishlist } from '../../services/wishlistServices'
 
 function StarRating({ value = 5 }) {
   return (
@@ -28,39 +26,78 @@ function StarRating({ value = 5 }) {
 
 export function WishlistPage() {
   const navigate = useNavigate()
-  const [items, setItems] = useState(() => getWishlistProducts())
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All')
   const [addedIds, setAddedIds] = useState({})
   const [isLoggedIn, setIsLoggedIn] = useState(() => isAuthenticated())
 
-  // Listen to wishlist and auth updates
+  // Fetch live wishlist directly from backend
+  const fetchWishlistData = async () => {
+    if (!isAuthenticated()) {
+      setLoading(false)
+      return
+    }
+
+    setLoading(true)
+    setError('')
+
+    try {
+      const response = await getWishlist()
+      const rawList = response?.wishlist || []
+
+      const normalized = rawList.map((p) => ({
+        ...p,
+        id: p._id || p.id,
+        image: resolveImageUrl(
+          p.images?.[0]?.url || p.images?.[0]?.path || p.images?.[0] || p.image,
+          p.category
+        ),
+      }))
+
+      setItems(normalized)
+
+      // Sync IDs in local storage
+      const serverIds = new Set(normalized.map((item) => String(item.id)))
+      saveWishlistIds(serverIds)
+    } catch (err) {
+      console.error('Failed to load wishlist:', err)
+      setError(err.message || 'Failed to fetch your wishlist from server.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
-    const syncWishlist = () => {
-      setItems(getWishlistProducts())
-    }
+    fetchWishlistData()
+  }, [isLoggedIn])
+
+  // Listen to auth changes
+  useEffect(() => {
     const syncAuth = () => {
-      setIsLoggedIn(isAuthenticated())
+      const auth = isAuthenticated()
+      setIsLoggedIn(auth)
     }
-    window.addEventListener('wishlist-updated', syncWishlist)
+
     window.addEventListener('auth-updated', syncAuth)
-    window.addEventListener('storage', syncWishlist)
     window.addEventListener('storage', syncAuth)
     window.addEventListener('focus', syncAuth)
     return () => {
-      window.removeEventListener('wishlist-updated', syncWishlist)
       window.removeEventListener('auth-updated', syncAuth)
-      window.removeEventListener('storage', syncWishlist)
       window.removeEventListener('storage', syncAuth)
       window.removeEventListener('focus', syncAuth)
     }
   }, [])
 
-  const handleRemove = (id, e) => {
+  const handleRemove = async (id, e) => {
     e.preventDefault()
     e.stopPropagation()
-    toggleWishlistProduct(id)
-    setItems(getWishlistProducts())
+
+    // Optimistic UI update
+    setItems((prev) => prev.filter((item) => String(item.id) !== String(id) && String(item._id) !== String(id)))
+    await removeWishlistProduct(id)
   }
 
   const handleAddToCart = (id, e) => {
@@ -75,8 +112,6 @@ export function WishlistPage() {
       setAddedIds((prev) => ({ ...prev, [id]: false }))
     }, 1500)
   }
-
-
 
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
@@ -104,7 +139,7 @@ export function WishlistPage() {
             </div>
             <h2 className="text-2xl font-bold text-gray-900">Sign in to View Wishlist</h2>
             <p className="mt-2 text-sm text-gray-500">
-              Please sign in to your account to save, view, and manage your wishlist products.
+              Please sign in to your account to save, view, and manage your wishlist products on LovelyTech.
             </p>
             <div className="mt-6 flex flex-col gap-3">
               <Link
@@ -172,10 +207,11 @@ export function WishlistPage() {
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
                   type="button"
-                  className={`rounded-[14px] px-4 py-2.5 text-sm font-semibold transition ${selectedCategory === cat
+                  className={`rounded-[14px] px-4 py-2.5 text-sm font-semibold transition ${
+                    selectedCategory === cat
                       ? 'border border-[#E4342F] bg-[#E4342F] text-white shadow-sm'
                       : 'border border-[#E4342F]/30 bg-white text-[#E4342F] hover:border-[#E4342F]'
-                    }`}
+                  }`}
                 >
                   {cat}
                 </button>
@@ -183,8 +219,27 @@ export function WishlistPage() {
             </div>
           </div>
 
-          {/* Empty State */}
-          {filteredItems.length === 0 ? (
+          {/* Empty State / Loading / Error */}
+          {loading ? (
+            <div className="my-12 py-16 text-center">
+              <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-[#E4342F] border-t-transparent mb-3" />
+              <p className="text-sm font-semibold text-gray-600">Loading your wishlist from server...</p>
+            </div>
+          ) : error ? (
+            <div className="my-12 rounded-[20px] border border-red-200 bg-red-50 p-8 text-center">
+              <AlertCircle className="mx-auto h-10 w-10 text-[#E4342F] mb-2" />
+              <h3 className="text-lg font-bold text-gray-900">Failed to Load Wishlist</h3>
+              <p className="mt-1 text-sm text-red-600">{error}</p>
+              <button
+                type="button"
+                onClick={fetchWishlistData}
+                className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#E4342F] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#c92923]"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Retry
+              </button>
+            </div>
+          ) : filteredItems.length === 0 ? (
             <div className="my-12 rounded-[20px] border border-dashed border-[#e3cecb] bg-white py-16 text-center">
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#fceeee] text-[#E4342F]">
                 <Heart className="h-8 w-8" />
@@ -193,7 +248,7 @@ export function WishlistPage() {
               <p className="mt-1 text-sm text-gray-500">
                 {items.length === 0
                   ? "You haven't saved any products yet."
-                  : 'No items match your search or filter.'}
+                  : 'No items match your search or category filter.'}
               </p>
               <div className="mt-6">
                 <Link
@@ -216,7 +271,7 @@ export function WishlistPage() {
                 >
                   <div className="relative mb-3 overflow-hidden rounded-[16px] bg-[#f2f2f2]">
                     <img
-                      src={resolveImageUrl(item.image, item.category)}
+                      src={item.image}
                       alt={item.name}
                       className="h-48 w-full object-cover transition duration-300 group-hover:scale-105"
                       loading="lazy"
@@ -238,7 +293,6 @@ export function WishlistPage() {
                     </button>
                   </div>
 
-
                   <h3 className="mb-2 min-h-[48px] text-[15px] font-semibold leading-5 text-[#1f1f1f] transition group-hover:text-[#E4342F]">
                     <Link
                       to={`/products/${item.id}`}
@@ -251,7 +305,7 @@ export function WishlistPage() {
 
                   <div className="mb-2 flex items-center gap-2 text-[11px]">
                     <StarRating value={item.rating} />
-                    <span className="text-[#666]">{item.sold} Sold</span>
+                    <span className="text-[#666]">{item.sold || 0} Sold</span>
                   </div>
 
                   <p className="mb-3 text-[17px] font-bold text-[#E4342F]">{formatPrice(item.price)}</p>
@@ -259,10 +313,11 @@ export function WishlistPage() {
                   <button
                     type="button"
                     onClick={(e) => handleAddToCart(item.id, e)}
-                    className={`flex w-full items-center justify-center gap-2 rounded-[12px] px-4 py-2.5 text-sm font-semibold text-white transition ${addedIds[item.id]
+                    className={`flex w-full items-center justify-center gap-2 rounded-[12px] px-4 py-2.5 text-sm font-semibold text-white transition ${
+                      addedIds[item.id]
                         ? 'bg-emerald-600'
                         : 'bg-[#E4342F] hover:bg-[#d12a2a]'
-                      }`}
+                    }`}
                   >
                     <ShoppingCart className="h-4 w-4" />
                     {addedIds[item.id] ? 'Added to Cart!' : 'Add to Cart'}
@@ -278,4 +333,3 @@ export function WishlistPage() {
 }
 
 export default WishlistPage
-

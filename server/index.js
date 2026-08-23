@@ -1,11 +1,14 @@
 import express from "express";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 import "colors";
 import connectDB from "./config/db.js";
 import cors from "cors";
 
 import userRoutes from "./routes/userRoute.js";
 import productRoutes from "./routes/productRoutes.js";
+import wishlistRoutes from "./routes/wishlistRoutes.js";
 import saleRoutes from "./routes/saleRoutes.js";
 import repairRoutes from "./routes/repairRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
@@ -13,6 +16,9 @@ import notificationRoutes from "./routes/notificationRoutes.js";
 
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 import { seedInitialData } from "./utils/seedData.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
@@ -27,11 +33,15 @@ connectDB().then(() => {
 // Middleware
 app.use(express.json());
 app.use(cors({ origin: true, credentials: true }));
-app.use('/uploads', express.static('uploads'));
+
+// Serve static uploaded files
+const uploadsPath = path.resolve(__dirname, "uploads");
+app.use("/uploads", express.static(uploadsPath));
 
 // Routes
 app.use("/api/users", userRoutes);
 app.use("/api/products", productRoutes);
+app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/sales", saleRoutes);
 app.use("/api/repairs", repairRoutes);
 app.use("/api/orders", orderRoutes);

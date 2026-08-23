@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Product from "../models/Product.js";
 import { uploadImage, deleteImageFile } from "../middlewares/imageUploader.js";
 import { createNotificationsForRole } from "./notificationController.js";
@@ -63,43 +64,49 @@ const buildFilter = (query = {}) => {
   return filter;
 };
 
-const SORT_OPTIONS = {
-  None: { createdAt: -1 },
-  "none": { createdAt: -1 },
-  "Price: Low to High": { price: 1 },
-  "price-asc": { price: 1 },
-  "Price: High to Low": { price: -1 },
-  "price-desc": { price: -1 },
-  "Best Selling": { sold: -1 },
-  "sold-desc": { sold: -1 },
-  "Top Rated": { rating: -1 },
-  "rating-desc": { rating: -1 },
-  Newest: { createdAt: -1 },
+// Maps sort query param to Mongoose sort object
+const buildSort = (sort) => {
+  switch (sort) {
+    case "price-asc":
+      return { price: 1 };
+    case "price-desc":
+      return { price: -1 };
+    case "sold-desc":
+      return { sold: -1 };
+    case "rating-desc":
+      return { rating: -1 };
+    case "newest":
+      return { createdAt: -1 };
+    default:
+      return { createdAt: -1 };
+  }
 };
 
 // GET /api/products
-// Supports: ?category=&minPrice=&maxPrice=&minRating=&inStock=&search=&sort=&page=&limit=
+// Supports: category, minPrice, maxPrice, minRating, inStock, search, sort, page, limit
 export const getProducts = async (req, res) => {
   try {
-    const page = Math.max(Number(req.query.page) || 1, 1);
-    const limit = Math.max(Number(req.query.limit) || 9, 1);
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.max(1, parseInt(req.query.limit, 10) || 9);
     const skip = (page - 1) * limit;
 
     const filter = buildFilter(req.query);
-    const sort = SORT_OPTIONS[req.query.sort] || SORT_OPTIONS.None;
+    const sort = buildSort(req.query.sort);
 
-    const [products, total] = await Promise.all([
+    const [products, totalItems] = await Promise.all([
       Product.find(filter).sort(sort).skip(skip).limit(limit).lean(),
       Product.countDocuments(filter),
     ]);
 
+    const totalPages = Math.ceil(totalItems / limit) || 1;
+
     res.json({
-      products: products || [],
+      products,
       pagination: {
         page,
         limit,
-        totalItems: total || 0,
-        totalPages: Math.ceil((total || 0) / limit) || 1,
+        totalItems,
+        totalPages,
       },
     });
   } catch (err) {
@@ -109,33 +116,32 @@ export const getProducts = async (req, res) => {
 };
 
 // GET /api/products/facets
-// Returns category counts + rating counts + min/max price for the sidebar filters
+// Returns dynamic counts per category and rating, and the current price range min/max
 export const getProductFacets = async (req, res) => {
   try {
-    const baseFilter = buildFilter(req.query);
+    const baseFilter = { isActive: { $ne: false } };
 
+    // Run category facet counts
     const categoryCounts = await Promise.all(
       CATEGORIES.map(async (cat) => {
         const count = await Product.countDocuments({ ...baseFilter, category: cat });
-        return { category: cat, count: count || 0 };
+        return { category: cat, count };
       })
     );
 
-    const ratingBuckets = [5, 4, 3];
+    // Run rating facet counts
     const ratingCounts = await Promise.all(
-      ratingBuckets.map(async (star) => {
-        const count = await Product.countDocuments({
-          ...baseFilter,
-          rating: { $gte: star, $lt: star + 1 === 6 ? 6 : star + 1 },
-        });
-        return { rating: star, count: count || 0 };
+      [5, 4, 3].map(async (r) => {
+        const count = await Product.countDocuments({ ...baseFilter, rating: { $gte: r } });
+        return { rating: r, count };
       })
     );
 
+    // Min and Max price in catalog
     let priceRange = { min: 0, max: 600000 };
     try {
       const priceStats = await Product.aggregate([
-        { $match: { isActive: { $ne: false } } },
+        { $match: baseFilter },
         {
           $group: {
             _id: null,
@@ -168,10 +174,27 @@ export const getProductFacets = async (req, res) => {
 // GET /api/products/:id
 export const getProductById = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
-    if (!product) return res.status(404).json({ message: "Product not found" });
-    res.json(product);
+    const { id } = req.params;
+    if (!id || id === "undefined" || id === "null") {
+      return res.status(400).json({ message: "Invalid product ID" });
+    }
+
+    let product = null;
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      product = await Product.findById(id).lean();
+    }
+
+    if (!product) {
+      product = await Product.findOne({ $or: [{ name: id }] }).lean();
+    }
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    res.status(200).json(product);
   } catch (err) {
+    console.error("Error in getProductById:", err.message);
     res.status(500).json({ message: "Failed to fetch product", error: err.message });
   }
 };
@@ -183,75 +206,117 @@ export const createProduct = async (req, res) => {
     const files = req.files || [];
     const images = files.map((file) => uploadImage(file, req, "products"));
 
-    const product = await Product.create({ ...req.body, images });
+    const productData = {
+      ...req.body,
+      images,
+      price: Number(req.body.price),
+      originalPrice: req.body.originalPrice ? Number(req.body.originalPrice) : undefined,
+      stock: req.body.stock !== undefined ? Number(req.body.stock) : 0,
+      rating: req.body.rating !== undefined ? Number(req.body.rating) : 5,
+      sold: req.body.sold !== undefined ? Number(req.body.sold) : 0,
+    };
+
+    const product = new Product(productData);
+    await product.save();
+
+    // Trigger low stock notification
+    if (product.stock > 0 && product.stock <= 5) {
+      await createNotificationsForRole("admin", {
+        title: "Low Stock Alert",
+        message: `Product "${product.name}" is running low on stock (${product.stock} left).`,
+        type: "inventory",
+        link: "/admin/products",
+      });
+    }
+
     res.status(201).json(product);
   } catch (err) {
+    console.error("Error in createProduct:", err.message);
     res.status(400).json({ message: "Failed to create product", error: err.message });
   }
 };
 
 // PUT /api/products/:id
-// Text fields update normally. New files (if any) are appended to the existing
-// images. Send removeImages: [filename, ...] in the body to delete specific
-// images from the file system and the product.
+// Expects multipart/form-data — text fields + new images, or JSON
 export const updateProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: "Product not found" });
 
-    const { removeImages, ...fields } = req.body;
-
-    if (removeImages) {
-      const idsToRemove = Array.isArray(removeImages) ? removeImages : [removeImages];
-      product.images = product.images.filter((img) => {
-        const shouldRemove =
-          idsToRemove.includes(img.filename) ||
-          idsToRemove.includes(img.path) ||
-          idsToRemove.includes(img.url);
-
-        if (shouldRemove) deleteImageFile(img.path);
-        return !shouldRemove;
-      });
+    // Handle image removals requested by client
+    if (req.body.removeImages) {
+      const toRemove = Array.isArray(req.body.removeImages)
+        ? req.body.removeImages
+        : [req.body.removeImages];
+      for (const imgPath of toRemove) {
+        deleteImageFile(imgPath);
+        product.images = product.images.filter((img) => img.path !== imgPath);
+      }
     }
 
+    // Handle new uploaded images
     if (req.files && req.files.length > 0) {
       const newImages = req.files.map((file) => uploadImage(file, req, "products"));
-      product.images.push(...newImages);
+      product.images = [...(product.images || []), ...newImages];
     }
 
-    const prevStock = product.stock;
-    Object.assign(product, fields);
+    // Update text / numeric fields
+    const allowedFields = [
+      "name",
+      "price",
+      "originalPrice",
+      "category",
+      "brand",
+      "color",
+      "stock",
+      "description",
+      "rating",
+      "sold",
+      "availability",
+      "features",
+      "specifications",
+      "isActive",
+    ];
+
+    allowedFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        if (field === "price" || field === "originalPrice" || field === "stock" || field === "rating" || field === "sold") {
+          product[field] = Number(req.body[field]);
+        } else if (field === "features" || field === "specifications") {
+          try {
+            product[field] = typeof req.body[field] === "string" ? JSON.parse(req.body[field]) : req.body[field];
+          } catch {
+            product[field] = req.body[field];
+          }
+        } else {
+          product[field] = req.body[field];
+        }
+      }
+    });
 
     await product.save();
     res.json(product);
-
-    // If stock became <= 5, notify admin/receptionist
-    if (product.stock <= 5 && (prevStock === undefined || prevStock > 5 || fields.stock !== undefined)) {
-      createNotificationsForRole(["admin", "Receptionist"], {
-        type: "inventory",
-        title: "Low Stock Alert",
-        message: `Product '${product.name}' has low stock (${product.stock} units remaining).`,
-        referenceId: product._id.toString(),
-        referenceType: "Product",
-      });
-    }
   } catch (err) {
+    console.error("Error in updateProduct:", err.message);
     res.status(400).json({ message: "Failed to update product", error: err.message });
   }
 };
 
 // DELETE /api/products/:id
-// Removes the product's image files from disk before deleting the document.
 export const deleteProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: "Product not found" });
 
-    product.images.forEach((img) => deleteImageFile(img.path));
+    // Clean up images on disk
+    if (product.images && product.images.length > 0) {
+      product.images.forEach((img) => deleteImageFile(img.path));
+    }
 
-    await product.deleteOne();
-    res.json({ message: "Product deleted" });
+    await Product.findByIdAndDelete(req.params.id);
+    res.json({ message: "Product deleted successfully" });
   } catch (err) {
+    console.error("Error in deleteProduct:", err.message);
     res.status(500).json({ message: "Failed to delete product", error: err.message });
   }
 };

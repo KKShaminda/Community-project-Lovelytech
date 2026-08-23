@@ -1,64 +1,18 @@
-import { productsData } from '../data/productsData'
-
 const CART_STORAGE_KEY = 'lovelytech_cart_items'
-
-// Default cart items matching the demo design
-const DEFAULT_CART_ITEMS = [
-  {
-    id: 1,
-    name: 'Premium Wireless Bluetooth Headphones',
-    price: 2400,
-    originalPrice: 8950,
-    category: 'Speaker & Audios',
-    color: 'Black',
-    size: 'Standard',
-    quantity: 1,
-    stock: 19,
-    availability: 'In Stock',
-    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=900&q=80',
-  },
-  {
-    id: 5,
-    name: 'RGB Mechanical Gaming Keyboard',
-    price: 6650,
-    originalPrice: 7800,
-    category: 'Desktop & Accessories',
-    color: 'Black',
-    size: 'Standard',
-    quantity: 1,
-    stock: 18,
-    availability: 'In Stock',
-    image: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=900&q=80',
-  },
-  {
-    id: 3,
-    name: '20,000mAh Portable Power Bank - Fast Charger',
-    price: 12400,
-    originalPrice: 14500,
-    category: 'Speaker & Audios',
-    color: 'Metallic',
-    size: 'Standard',
-    quantity: 2,
-    stock: 25,
-    availability: 'In Stock',
-    image: 'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=900&q=80',
-  },
-]
 
 export const getCartItems = () => {
   try {
     const stored = localStorage.getItem(CART_STORAGE_KEY)
     if (!stored) {
-      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(DEFAULT_CART_ITEMS))
-      return DEFAULT_CART_ITEMS
+      return []
     }
     const parsed = JSON.parse(stored)
     if (Array.isArray(parsed)) {
       return parsed
     }
-    return DEFAULT_CART_ITEMS
+    return []
   } catch {
-    return DEFAULT_CART_ITEMS
+    return []
   }
 }
 
@@ -99,7 +53,7 @@ export const addToCart = (product, quantity = 1, options = {}) => {
       id: productId,
       name: product.name || 'Product',
       price: Number(product.price) || 0,
-      originalPrice: Number(product.originalPrice) || Math.round((Number(product.price) || 0) * 1.2),
+      originalPrice: Number(product.originalPrice) || Math.round((Number(product.price) || 0) * 1.15),
       category: product.category || 'Accessories',
       color: options.color || product.color || 'Standard',
       size: options.size || product.size || 'Standard',
