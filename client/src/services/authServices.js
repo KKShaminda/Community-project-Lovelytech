@@ -211,3 +211,29 @@ export const rememberEmail = (email) => {
 export const getRememberedEmail = () => {
   return localStorage.getItem("rememberEmail");
 };
+
+export const getUserAddresses = async () => {
+  return request(`${API_URL}/addresses`, { method: "GET" });
+};
+
+export const addUserAddress = async (address) => {
+  return request(`${API_URL}/addresses`, {
+    method: "POST",
+    body: JSON.stringify(address),
+  });
+};
+
+export const updateUserAddress = async (addressId, address) => {
+  return request(`${API_URL}/addresses/${addressId}`, {
+    method: "PUT",
+    body: JSON.stringify(address),
+  });
+};
+
+export const deleteUserAddress = async (addressId) => {
+  return request(`${API_URL}/addresses/${addressId}`, { method: "DELETE" });
+};
+
+export const setDefaultUserAddress = async (addressId) => {
+  return request(`${API_URL}/addresses/${addressId}/default`, { method: "PATCH" });
+};

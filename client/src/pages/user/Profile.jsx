@@ -1,10 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Eye, EyeOff, LockKeyhole, MapPin, PencilLine, Plus, ShieldCheck, UserRound, Upload } from 'lucide-react'
+import { Eye, EyeOff, LockKeyhole, MapPin, PencilLine, Plus, ShieldCheck, UserRound, Upload, Trash2 } from 'lucide-react'
 import Layout from '../../components/layout/Layout'
+import {
+	addUserAddress,
+	deleteUserAddress,
+	getUserAddresses,
+	getUserProfile,
+	isAuthenticated,
+	setDefaultUserAddress,
+	updateUserAddress,
+	updateUserProfile,
+} from '../../services/authServices'
+import { useNavigate } from 'react-router-dom'
 
 const securityRules = ['8+ characters', 'Upper case letter', 'Special character']
 
-function Field({ label, type = 'text', value, onChange, placeholder, rightIcon }) {
+function Field({ label, type = 'text', value, onChange, placeholder, rightIcon, disabled = false }) {
 	return (
 		<label className="block">
 			<span className="mb-1.5 block text-xs font-medium text-[#8f8f8f] sm:text-sm">{label}</span>
@@ -14,6 +25,7 @@ function Field({ label, type = 'text', value, onChange, placeholder, rightIcon }
 					value={value}
 					onChange={onChange}
 					placeholder={placeholder}
+					disabled={disabled}
 					className="w-full rounded-xl border border-[#ffb4b4] bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-[#ff2020] focus:ring-2 focus:ring-[#ff2020]/10"
 				/>
 				{rightIcon ? (
@@ -26,35 +38,35 @@ function Field({ label, type = 'text', value, onChange, placeholder, rightIcon }
 	)
 }
 
-function AddressCard({ title, defaultLabel }) {
+function AddressCard({ address, onEdit, onRemove, onSetDefault }) {
 	return (
 		<div className="rounded-2xl border border-[#ffb4b4] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
 			<div className="flex items-start justify-between gap-4">
 				<div>
-					<h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+					<h3 className="text-sm font-semibold text-slate-900">{address.street}</h3>
 					<p className="mt-2 max-w-[12rem] text-xs leading-5 text-slate-500 sm:max-w-xs">
-						<span className="block">Your street address</span>
-						<span className="block">City, state, postal code</span>
-						<span className="block">Country</span>
+						<span className="block">{address.city}, {address.district} {address.postalCode}</span>
+						<span className="block">{address.country}</span>
 					</p>
 				</div>
 
-				{defaultLabel ? (
+				{address.isDefault ? (
 					<span className="rounded-full bg-[#ff2020] px-3 py-1 text-[10px] font-semibold text-white">
-						{defaultLabel}
+						Default
 					</span>
 				) : null}
 			</div>
 
 			<div className="mt-5 flex flex-wrap gap-2 text-[11px] font-medium">
-				<button type="button" className="rounded-full border border-[#ffb4b4] px-3 py-1 text-[#ff2020] transition hover:bg-[#fff0f0]">
+				<button type="button" onClick={() => onEdit(address)} className="rounded-full border border-[#ffb4b4] px-3 py-1 text-[#ff2020] transition hover:bg-[#fff0f0]">
 					Edit
 				</button>
-				<button type="button" className="rounded-full border border-[#ffb4b4] px-3 py-1 text-[#ff2020] transition hover:bg-[#fff0f0]">
+				<button type="button" onClick={() => onRemove(address._id)} className="inline-flex items-center gap-1 rounded-full border border-[#ffb4b4] px-3 py-1 text-[#ff2020] transition hover:bg-[#fff0f0]">
+					<Trash2 className="h-3 w-3" />
 					Remove
 				</button>
-				{!defaultLabel ? (
-					<button type="button" className="rounded-full border border-[#ffb4b4] px-3 py-1 text-[#ff2020] transition hover:bg-[#fff0f0]">
+				{!address.isDefault ? (
+					<button type="button" onClick={() => onSetDefault(address._id)} className="rounded-full border border-[#ffb4b4] px-3 py-1 text-[#ff2020] transition hover:bg-[#fff0f0]">
 						Set as default
 					</button>
 				) : null}
@@ -64,8 +76,16 @@ function AddressCard({ title, defaultLabel }) {
 }
 
 export function Profile() {
+	const navigate = useNavigate()
 	const fileInputRef = useRef(null)
 	const [avatarPreview, setAvatarPreview] = useState('')
+	const [addresses, setAddresses] = useState([])
+	const [editingProfile, setEditingProfile] = useState(false)
+	const [editingAddressId, setEditingAddressId] = useState(null)
+	const [showAddressForm, setShowAddressForm] = useState(false)
+	const [statusMessage, setStatusMessage] = useState('')
+	const [errorMessage, setErrorMessage] = useState('')
+	const [addressForm, setAddressForm] = useState({ street: '', city: '', district: '', postalCode: '', country: 'Sri Lanka' })
 	const [showCurrentPassword, setShowCurrentPassword] = useState(false)
 	const [showNewPassword, setShowNewPassword] = useState(false)
 	const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -78,6 +98,32 @@ export function Profile() {
 		newPassword: '',
 		confirmPassword: '',
 	})
+
+	useEffect(() => {
+		if (!isAuthenticated()) {
+			navigate('/login')
+			return
+		}
+
+		const loadProfile = async () => {
+			try {
+				const [profileResponse, addressResponse] = await Promise.all([getUserProfile(), getUserAddresses()])
+				const user = profileResponse.user || {}
+				setFormValues((previous) => ({
+					...previous,
+					fullName: user.fullname || user.name || '',
+					email: user.email || '',
+					phone: user.phone || '',
+					country: user.addresses?.find((address) => address.isDefault)?.country || '',
+				}))
+				setAddresses(addressResponse.addresses || user.addresses || [])
+			} catch (error) {
+				setErrorMessage(error.message)
+			}
+		}
+
+		loadProfile()
+	}, [navigate])
 
 	useEffect(() => {
 		return () => {
@@ -117,6 +163,64 @@ export function Profile() {
 
 	const openFilePicker = () => {
 		fileInputRef.current?.click()
+	}
+
+	const saveProfile = async () => {
+		try {
+			const response = await updateUserProfile({
+				fullname: formValues.fullName,
+				email: formValues.email,
+				phone: formValues.phone,
+			})
+			const user = response.user || {}
+			setFormValues((previous) => ({ ...previous, fullName: user.fullname || previous.fullName, email: user.email || previous.email, phone: user.phone || previous.phone }))
+			setEditingProfile(false)
+			setStatusMessage('Profile updated successfully.')
+			setErrorMessage('')
+		} catch (error) {
+			setErrorMessage(error.message)
+		}
+	}
+
+	const openAddressForm = (address = null) => {
+		setEditingAddressId(address?._id || null)
+		setAddressForm(address ? { street: address.street, city: address.city, district: address.district, postalCode: address.postalCode || '', country: address.country || 'Sri Lanka' } : { street: '', city: '', district: '', postalCode: '', country: 'Sri Lanka' })
+		setShowAddressForm(true)
+	}
+
+	const saveAddress = async () => {
+		try {
+			const response = editingAddressId
+				? await updateUserAddress(editingAddressId, addressForm)
+				: await addUserAddress(addressForm)
+			setAddresses(response.addresses || [])
+			setShowAddressForm(false)
+			setStatusMessage(editingAddressId ? 'Address updated successfully.' : 'Address added successfully.')
+			setErrorMessage('')
+		} catch (error) {
+			setErrorMessage(error.message)
+		}
+	}
+
+	const removeAddress = async (addressId) => {
+		if (!window.confirm('Remove this address?')) return
+		try {
+			const response = await deleteUserAddress(addressId)
+			setAddresses(response.addresses || [])
+			setStatusMessage('Address removed successfully.')
+		} catch (error) {
+			setErrorMessage(error.message)
+		}
+	}
+
+	const setDefaultAddress = async (addressId) => {
+		try {
+			const response = await setDefaultUserAddress(addressId)
+			setAddresses(response.addresses || [])
+			setStatusMessage('Default address updated.')
+		} catch (error) {
+			setErrorMessage(error.message)
+		}
 	}
 
 	const passwordInputProps = (field, showPassword, setShowPassword) => ({
@@ -191,10 +295,11 @@ export function Profile() {
 
 							<button
 								type="button"
+								onClick={editingProfile ? saveProfile : () => setEditingProfile(true)}
 								className="inline-flex items-center justify-center gap-2 self-start rounded-xl bg-[#ff2020] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#e11b1b]"
 							>
 								<PencilLine className="h-4 w-4" />
-								Edit Profile
+								{editingProfile ? 'Save Profile' : 'Edit Profile'}
 							</button>
 						</div>
 
@@ -203,6 +308,7 @@ export function Profile() {
 								label="Full Name"
 								value={formValues.fullName}
 								onChange={handleFieldChange('fullName')}
+								disabled={!editingProfile}
 								placeholder="Enter full name"
 							/>
 							<Field
@@ -210,18 +316,21 @@ export function Profile() {
 								type="email"
 								value={formValues.email}
 								onChange={handleFieldChange('email')}
+								disabled={!editingProfile}
 								placeholder="Enter email address"
 							/>
 							<Field
 								label="Phone Number"
 								value={formValues.phone}
 								onChange={handleFieldChange('phone')}
+								disabled={!editingProfile}
 								placeholder="Enter phone number"
 							/>
 							<Field
 								label="Country"
 								value={formValues.country}
 								onChange={handleFieldChange('country')}
+								disabled={!editingProfile}
 								placeholder="Enter country"
 							/>
 						</div>
@@ -287,6 +396,7 @@ export function Profile() {
 
 							<button
 								type="button"
+								onClick={() => openAddressForm()}
 								className="inline-flex items-center gap-2 self-start rounded-xl bg-[#ff2020] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#e11b1b]"
 							>
 								<Plus className="h-4 w-4" />
@@ -294,9 +404,28 @@ export function Profile() {
 							</button>
 						</div>
 
+						{showAddressForm && (
+							<div className="mt-6 rounded-2xl border border-[#ffb4b4] bg-[#fffafa] p-4">
+								<h3 className="text-sm font-semibold text-slate-900">{editingAddressId ? 'Edit Address' : 'Add New Address'}</h3>
+								<div className="mt-4 grid gap-3 sm:grid-cols-2">
+									{Object.entries(addressForm).map(([field, value]) => (
+										<input key={field} value={value} placeholder={field === 'postalCode' ? 'Postal code' : field.charAt(0).toUpperCase() + field.slice(1)} onChange={(event) => setAddressForm((previous) => ({ ...previous, [field]: event.target.value }))} className="rounded-xl border border-[#ffb4b4] px-3 py-2 text-sm outline-none focus:border-[#ff2020]" />
+									))}
+								</div>
+								<div className="mt-4 flex gap-2">
+									<button type="button" onClick={saveAddress} className="rounded-xl bg-[#ff2020] px-4 py-2 text-sm font-semibold text-white">Save Address</button>
+									<button type="button" onClick={() => setShowAddressForm(false)} className="rounded-xl border border-[#ffb4b4] px-4 py-2 text-sm font-semibold text-[#ff2020]">Cancel</button>
+								</div>
+							</div>
+						)}
+
+						{statusMessage && <p className="mt-4 text-sm font-medium text-emerald-600">{statusMessage}</p>}
+						{errorMessage && <p className="mt-4 text-sm font-medium text-red-600">{errorMessage}</p>}
+
 						<div className="mt-6 grid gap-4 lg:grid-cols-2">
-							<AddressCard title="Home Address" defaultLabel="Default" />
-							<AddressCard title="Home Address" />
+							{addresses.length > 0 ? addresses.map((address) => (
+								<AddressCard key={address._id} address={address} onEdit={openAddressForm} onRemove={removeAddress} onSetDefault={setDefaultAddress} />
+							)) : <p className="text-sm text-slate-500">No saved addresses yet.</p>}
 						</div>
 					</div>
 				</div>

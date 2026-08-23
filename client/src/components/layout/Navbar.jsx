@@ -92,6 +92,7 @@ export function Navbar() {
       : role === 'receptionist'
         ? '/receptionist/dashboard'
         : '/user/dashboard'
+  const profilePath = role === 'admin' || role === 'receptionist' ? accountPath : '/user/profile'
 
   // Dynamic Navigation Items based on authentication state
   const publicNavItems = [
@@ -218,7 +219,7 @@ export function Navbar() {
                   {/* Dropdown Links */}
                   <div className="py-2 space-y-1">
                     <Link
-                      to={accountPath}
+                      to={profilePath}
                       onClick={() => setUserMenuOpen(false)}
                       className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-[#ff2020] transition-colors"
                     >
@@ -338,7 +339,7 @@ export function Navbar() {
             {authState.isLoggedIn ? (
               <div className="border-t border-gray-100 pt-3 space-y-2">
                 <Link
-                  to={accountPath}
+                  to={profilePath}
                   onClick={() => setMobileMenuOpen(false)}
                   className="flex items-center gap-2 py-2 text-base font-semibold text-gray-800 hover:text-[#ff2020]"
                 >

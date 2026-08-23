@@ -286,6 +286,34 @@ export const updatePhone = async (req, res) => {
   }
 };
 
+// Update the logged-in user's profile details
+export const updateProfile = async (req, res) => {
+  try {
+    const { fullname, email, phone } = req.body;
+    const updates = {};
+
+    if (fullname !== undefined) updates.fullname = fullname.trim();
+    if (email !== undefined) updates.email = email.trim().toLowerCase();
+    if (phone !== undefined) updates.phone = phone.trim();
+
+    const user = await User.findByIdAndUpdate(req.user._id, updates, {
+      new: true,
+      runValidators: true,
+    }).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    res.status(200).json({ success: true, message: "Profile updated successfully", user });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.code === 11000 ? "Email or phone number is already in use" : error.message,
+    });
+  }
+};
+
 //get all users (admin)
 export const getAllUsers = async (req, res) => {
   try {
@@ -347,7 +375,14 @@ export const addAddress = async (req, res) => {
       });
     }
 
-    user.addresses.push({ street, city, district, postalCode, country });
+    user.addresses.push({
+      street,
+      city,
+      district,
+      postalCode,
+      country,
+      isDefault: user.addresses.length === 0,
+    });
 
     await user.save();
 
@@ -429,9 +464,14 @@ export const deleteAddress = async (req, res) => {
       });
     }
 
+    const wasDefault = user.addresses.id(addressId)?.isDefault;
     user.addresses = user.addresses.filter(
       (addr) => addr._id?.toString() !== addressId
     );
+
+    if (wasDefault && user.addresses.length > 0) {
+      user.addresses[0].isDefault = true;
+    }
 
     await user.save();
 
@@ -555,5 +595,25 @@ export const getAddresses = async (req, res) => {
       message: "Error fetching addresses",
       error: error.message,
     });
+  }
+};
+
+// Set one saved address as the logged-in user's default address
+export const setDefaultAddress = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    const address = user?.addresses.id(req.params.addressId);
+
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    if (!address) return res.status(404).json({ success: false, message: "Address not found" });
+
+    user.addresses.forEach((savedAddress) => {
+      savedAddress.isDefault = savedAddress._id.equals(address._id);
+    });
+    await user.save();
+
+    res.status(200).json({ success: true, message: "Default address updated", addresses: user.addresses });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error setting default address", error: error.message });
   }
 };
