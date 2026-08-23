@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Sale from "../models/Sale.js";
 import Product from "../models/Product.js";
+import { createNotificationsForRole } from "./notificationController.js";
 
 const parseMaybeJson = (value) => {
     if (value === undefined || value === null) return value;
@@ -129,6 +130,34 @@ export const createSale = async (req, res) => {
 
         await session.commitTransaction();
         res.status(201).json(saleDoc);
+
+        // Non-blocking notifications
+        createNotificationsForRole(["admin", "Receptionist"], {
+            type: "payment",
+            title: "New Sale Completed",
+            message: `Payment of LKR ${Number(saleDoc.total || 0).toLocaleString()} completed for ${saleDoc.customerName} via ${saleDoc.paymentMethod}.`,
+            referenceId: saleDoc._id.toString(),
+            referenceType: "Sale",
+        });
+
+        // Check for low stock items after sale
+        if (status === "complete") {
+            for (const it of items) {
+                if (it.product) {
+                    Product.findById(it.product).then((prod) => {
+                        if (prod && prod.stock <= 5) {
+                            createNotificationsForRole(["admin", "Receptionist"], {
+                                type: "inventory",
+                                title: "Low Stock Alert",
+                                message: `Product '${prod.name}' is running low on stock (${prod.stock} units remaining).`,
+                                referenceId: prod._id.toString(),
+                                referenceType: "Product",
+                            });
+                        }
+                    }).catch(() => {});
+                }
+            }
+        }
     } catch (error) {
         await session.abortTransaction();
         res.status(400).json({ message: "Failed to create sale", error: error.message });

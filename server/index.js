@@ -9,6 +9,7 @@ import productRoutes from "./routes/productRoutes.js";
 import saleRoutes from "./routes/saleRoutes.js";
 import repairRoutes from "./routes/repairRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 import { seedInitialData } from "./utils/seedData.js";
@@ -34,6 +35,7 @@ app.use("/api/products", productRoutes);
 app.use("/api/sales", saleRoutes);
 app.use("/api/repairs", repairRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // Test route  
 app.get("/", (req, res) => {

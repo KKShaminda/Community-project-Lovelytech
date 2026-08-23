@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Eye, EyeOff, LockKeyhole, MapPin, PencilLine, Plus, ShieldCheck, UserRound, Upload } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Eye, EyeOff, LockKeyhole, MapPin, PencilLine, Plus, ShieldCheck, UserRound, Upload, LogOut } from 'lucide-react'
 import Layout from '../../components/layout/Layout'
+import { logoutUser } from '../../services/authServices'
 
 const securityRules = ['8+ characters', 'Upper case letter', 'Special character']
 
@@ -64,6 +66,7 @@ function AddressCard({ title, defaultLabel }) {
 }
 
 export function Profile() {
+	const navigate = useNavigate()
 	const fileInputRef = useRef(null)
 	const [avatarPreview, setAvatarPreview] = useState('')
 	const [showCurrentPassword, setShowCurrentPassword] = useState(false)
@@ -78,6 +81,16 @@ export function Profile() {
 		newPassword: '',
 		confirmPassword: '',
 	})
+
+	const handleLogout = async () => {
+		try {
+			await logoutUser()
+		} catch (err) {
+			console.error('Logout error:', err)
+		} finally {
+			navigate('/login')
+		}
+	}
 
 	useEffect(() => {
 		return () => {
@@ -140,16 +153,27 @@ export function Profile() {
 		<Layout>
 			<div className="min-h-screen bg-[#f8f8f8] text-slate-900">
 			<section className="mx-auto w-full max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
-				<div className="mb-6 flex items-start gap-3">
-					<div className="mt-1 flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 bg-white text-[#ff2020]">
-						<UserRound className="h-5 w-5" />
+				<div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+					<div className="flex items-start gap-3">
+						<div className="mt-1 flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 bg-white text-[#ff2020]">
+							<UserRound className="h-5 w-5" />
+						</div>
+						<div>
+							<h1 className="text-2xl font-semibold text-[#ff2020] sm:text-3xl">My Account</h1>
+							<p className="mt-1 text-sm text-slate-500">
+								Manage your personal information, security settings, and addresses.
+							</p>
+						</div>
 					</div>
-					<div>
-						<h1 className="text-2xl font-semibold text-[#ff2020] sm:text-3xl">My Account</h1>
-						<p className="mt-1 text-sm text-slate-500">
-							Manage your personal information, security settings, and addresses.
-						</p>
-					</div>
+
+					<button
+						type="button"
+						onClick={handleLogout}
+						className="inline-flex items-center gap-2 self-start rounded-2xl border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-[#ff2020] shadow-xs transition hover:bg-[#ff2020] hover:text-white"
+					>
+						<LogOut className="h-4 w-4" />
+						Logout
+					</button>
 				</div>
 
 				<div className="space-y-4 pb-8">

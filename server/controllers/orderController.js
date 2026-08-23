@@ -1,5 +1,10 @@
 import Order from "../models/Order.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import {
+  createNotificationForUser,
+  createNotificationForEmail,
+  createNotificationsForRole,
+} from "./notificationController.js";
 import { uploadImage } from "../middlewares/imageUploader.js";
 
 // Helper function to generate Order ID (e.g. ORD-15487956)
@@ -31,12 +36,13 @@ export const createOrder = asyncHandler(async (req, res) => {
   // Extract tags from product names if not provided
   let orderTags = tags;
   if (!orderTags || !Array.isArray(orderTags) || orderTags.length === 0) {
-    orderTags = products.map(p => {
+    orderTags = products?.map(p => {
       const parts = p.name.split(' ');
       return parts.length > 1 ? parts[parts.length - 1] : p.name;
-    });
+    }) || [];
   }
 
+  const effectiveUserId = req.user?._id || userId || null;
   let slipUrl = "";
   let slipName = "";
   if (req.file) {
@@ -51,7 +57,12 @@ export const createOrder = asyncHandler(async (req, res) => {
     status: status || "Placed",
     tags: orderTags,
     shipping: Number(shipping || 0),
-    products: products.map(p => ({
+    userId: effectiveUserId,
+    customerName: customerName || req.user?.fullname || "",
+    customerEmail: customerEmail || req.user?.email || "",
+    customerPhone: customerPhone || req.user?.phone || "",
+    address: address || "",
+    products: (products || []).map(p => ({
       id: p.id || `p_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       name: p.name,
       qty: Number(p.qty || 1),
@@ -72,6 +83,33 @@ export const createOrder = asyncHandler(async (req, res) => {
     orderId: newOrder.orderId,
     id: newOrder._id,
   });
+
+  // Non-blocking notification triggers
+  const totalDisplay = Number(newOrder.totalAmount || 0).toLocaleString();
+  
+  // 1. Notify Staff (Admin & Receptionist)
+  createNotificationsForRole(["admin", "Receptionist"], {
+    type: "order",
+    title: "New Order Received",
+    message: `New order ${newOrder.orderId} placed for LKR ${totalDisplay}.`,
+    referenceId: newOrder.orderId,
+    referenceType: "Order",
+  });
+
+  // 2. Notify Customer
+  const customerNotif = {
+    type: "order",
+    title: "Order Placed Successfully",
+    message: `Your order ${newOrder.orderId} has been received and is awaiting confirmation.`,
+    referenceId: newOrder.orderId,
+    referenceType: "Order",
+  };
+
+  if (effectiveUserId) {
+    createNotificationForUser(effectiveUserId, customerNotif);
+  } else if (newOrder.customerEmail) {
+    createNotificationForEmail(newOrder.customerEmail, customerNotif);
+  }
 });
 
 // @desc    Get all orders
@@ -147,6 +185,7 @@ export const updateOrder = asyncHandler(async (req, res) => {
     throw new Error("Order not found");
   }
 
+  const prevStatus = order.status;
   const { status, shipping, products, tags, paymentSlipStatus } = req.body;
 
   if (status !== undefined) order.status = status;
@@ -161,6 +200,29 @@ export const updateOrder = asyncHandler(async (req, res) => {
     success: true,
     data: updatedOrder,
   });
+
+  // Notify customer if status changed
+  if (status && status !== prevStatus) {
+    const statusMessages = {
+      Confirmed: `Your order ${order.orderId} has been confirmed and is being processed.`,
+      Proceeded: `Your order ${order.orderId} has been dispatched and handed over to courier.`,
+      Delivered: `Your order ${order.orderId} has been successfully delivered!`,
+    };
+
+    const notif = {
+      type: "order",
+      title: `Order Status: ${status}`,
+      message: statusMessages[status] || `Your order ${order.orderId} status has been updated to '${status}'.`,
+      referenceId: order.orderId,
+      referenceType: "Order",
+    };
+
+    if (order.userId) {
+      createNotificationForUser(order.userId, notif);
+    } else if (order.customerEmail) {
+      createNotificationForEmail(order.customerEmail, notif);
+    }
+  }
 });
 
 // @desc    Delete order

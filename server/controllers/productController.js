@@ -1,5 +1,6 @@
 import Product from "../models/Product.js";
 import { uploadImage, deleteImageFile } from "../middlewares/imageUploader.js";
+import { createNotificationsForRole } from "./notificationController.js";
 
 const CATEGORIES = [
   "Mobile Phones",
@@ -218,10 +219,22 @@ export const updateProduct = async (req, res) => {
       product.images.push(...newImages);
     }
 
+    const prevStock = product.stock;
     Object.assign(product, fields);
 
     await product.save();
     res.json(product);
+
+    // If stock became <= 5, notify admin/receptionist
+    if (product.stock <= 5 && (prevStock === undefined || prevStock > 5 || fields.stock !== undefined)) {
+      createNotificationsForRole(["admin", "Receptionist"], {
+        type: "inventory",
+        title: "Low Stock Alert",
+        message: `Product '${product.name}' has low stock (${product.stock} units remaining).`,
+        referenceId: product._id.toString(),
+        referenceType: "Product",
+      });
+    }
   } catch (err) {
     res.status(400).json({ message: "Failed to update product", error: err.message });
   }
