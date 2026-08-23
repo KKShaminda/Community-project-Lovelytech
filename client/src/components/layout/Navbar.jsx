@@ -13,7 +13,6 @@ import {
   ChevronDown,
 } from 'lucide-react'
 import { getCurrentUser, isAuthenticated, logoutUser } from '../../services/authServices'
-import { CircleUserRound, Menu, X } from 'lucide-react'
 import { getCartCount } from '../../utils/cartStorage'
 import { NotificationBell } from '../common/NotificationBell'
 
@@ -268,7 +267,7 @@ export function Navbar() {
                   </div>
                 </div>
               )}
-            </div>
+            </>
           ) : (
             <Link
               to="/login"
