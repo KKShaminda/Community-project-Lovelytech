@@ -1,5 +1,6 @@
 import Product from "../models/Product.js";
 import { uploadImage, deleteImageFile } from "../middlewares/imageUploader.js";
+import { createNotificationsForRole } from "./notificationController.js";
 
 const CATEGORIES = [
   "Mobile Phones",
@@ -10,7 +11,7 @@ const CATEGORIES = [
 ];
 
 // Builds the Mongo filter object shared by the list + facet-count queries
-const buildFilter = (query) => {
+const buildFilter = (query = {}) => {
   const {
     category, // comma-separated list e.g. "Mobile Phones,Laptops"
     minPrice,
@@ -20,19 +21,26 @@ const buildFilter = (query) => {
     search,
   } = query;
 
-  const filter = { isActive: true };
+  const filter = { isActive: { $ne: false } };
 
   if (category) {
-    filter.category = { $in: category.split(",") };
+    const cats = category.split(",").map((c) => c.trim()).filter(Boolean);
+    if (cats.length > 0) {
+      filter.category = { $in: cats };
+    }
   }
 
-  if (minPrice || maxPrice) {
-    filter.price = {};
-    if (minPrice) filter.price.$gte = Number(minPrice);
-    if (maxPrice) filter.price.$lte = Number(maxPrice);
+  if (minPrice !== undefined && minPrice !== null && minPrice !== "" && !isNaN(Number(minPrice))) {
+    filter.price = filter.price || {};
+    filter.price.$gte = Number(minPrice);
   }
 
-  if (minRating) {
+  if (maxPrice !== undefined && maxPrice !== null && maxPrice !== "" && !isNaN(Number(maxPrice))) {
+    filter.price = filter.price || {};
+    filter.price.$lte = Number(maxPrice);
+  }
+
+  if (minRating !== undefined && minRating !== null && minRating !== "" && !isNaN(Number(minRating))) {
     filter.rating = { $gte: Number(minRating) };
   }
 
@@ -42,8 +50,14 @@ const buildFilter = (query) => {
     filter.stock = { $lte: 0 };
   }
 
-  if (search) {
-    filter.$text = { $search: search };
+  if (search && typeof search === "string" && search.trim()) {
+    const escaped = search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    filter.$or = [
+      { name: { $regex: escaped, $options: "i" } },
+      { description: { $regex: escaped, $options: "i" } },
+      { category: { $regex: escaped, $options: "i" } },
+      { brand: { $regex: escaped, $options: "i" } },
+    ];
   }
 
   return filter;
@@ -51,10 +65,15 @@ const buildFilter = (query) => {
 
 const SORT_OPTIONS = {
   None: { createdAt: -1 },
+  "none": { createdAt: -1 },
   "Price: Low to High": { price: 1 },
+  "price-asc": { price: 1 },
   "Price: High to Low": { price: -1 },
+  "price-desc": { price: -1 },
   "Best Selling": { sold: -1 },
+  "sold-desc": { sold: -1 },
   "Top Rated": { rating: -1 },
+  "rating-desc": { rating: -1 },
   Newest: { createdAt: -1 },
 };
 
@@ -70,27 +89,27 @@ export const getProducts = async (req, res) => {
     const sort = SORT_OPTIONS[req.query.sort] || SORT_OPTIONS.None;
 
     const [products, total] = await Promise.all([
-      Product.find(filter).sort(sort).skip(skip).limit(limit),
+      Product.find(filter).sort(sort).skip(skip).limit(limit).lean(),
       Product.countDocuments(filter),
     ]);
 
     res.json({
-      products,
+      products: products || [],
       pagination: {
         page,
         limit,
-        totalItems: total,
-        totalPages: Math.ceil(total / limit) || 1,
+        totalItems: total || 0,
+        totalPages: Math.ceil((total || 0) / limit) || 1,
       },
     });
   } catch (err) {
+    console.error("Error in getProducts:", err.message);
     res.status(500).json({ message: "Failed to fetch products", error: err.message });
   }
 };
 
 // GET /api/products/facets
-// Returns category counts + rating counts + min/max price for the sidebar filters,
-// respecting whatever filters are already applied (except the facet's own dimension).
+// Returns category counts + rating counts + min/max price for the sidebar filters
 export const getProductFacets = async (req, res) => {
   try {
     const baseFilter = buildFilter(req.query);
@@ -98,7 +117,7 @@ export const getProductFacets = async (req, res) => {
     const categoryCounts = await Promise.all(
       CATEGORIES.map(async (cat) => {
         const count = await Product.countDocuments({ ...baseFilter, category: cat });
-        return { category: cat, count };
+        return { category: cat, count: count || 0 };
       })
     );
 
@@ -109,27 +128,39 @@ export const getProductFacets = async (req, res) => {
           ...baseFilter,
           rating: { $gte: star, $lt: star + 1 === 6 ? 6 : star + 1 },
         });
-        return { rating: star, count };
+        return { rating: star, count: count || 0 };
       })
     );
 
-    const priceStats = await Product.aggregate([
-      { $match: { isActive: true } },
-      {
-        $group: {
-          _id: null,
-          min: { $min: "$price" },
-          max: { $max: "$price" },
+    let priceRange = { min: 0, max: 600000 };
+    try {
+      const priceStats = await Product.aggregate([
+        { $match: { isActive: { $ne: false } } },
+        {
+          $group: {
+            _id: null,
+            min: { $min: "$price" },
+            max: { $max: "$price" },
+          },
         },
-      },
-    ]);
+      ]);
+      if (priceStats && priceStats[0]) {
+        priceRange = {
+          min: priceStats[0].min || 0,
+          max: priceStats[0].max || 600000,
+        };
+      }
+    } catch {
+      // Keep default priceRange
+    }
 
     res.json({
       categories: categoryCounts,
       ratings: ratingCounts,
-      priceRange: priceStats[0] || { min: 0, max: 0 },
+      priceRange,
     });
   } catch (err) {
+    console.error("Error in getProductFacets:", err.message);
     res.status(500).json({ message: "Failed to fetch facets", error: err.message });
   }
 };
@@ -188,10 +219,22 @@ export const updateProduct = async (req, res) => {
       product.images.push(...newImages);
     }
 
+    const prevStock = product.stock;
     Object.assign(product, fields);
 
     await product.save();
     res.json(product);
+
+    // If stock became <= 5, notify admin/receptionist
+    if (product.stock <= 5 && (prevStock === undefined || prevStock > 5 || fields.stock !== undefined)) {
+      createNotificationsForRole(["admin", "Receptionist"], {
+        type: "inventory",
+        title: "Low Stock Alert",
+        message: `Product '${product.name}' has low stock (${product.stock} units remaining).`,
+        referenceId: product._id.toString(),
+        referenceType: "Product",
+      });
+    }
   } catch (err) {
     res.status(400).json({ message: "Failed to update product", error: err.message });
   }

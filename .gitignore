@@ -4,5 +4,9 @@
 # Node modules
 node_modules/
 
+
+.env
+
 # Uploaded images
 server/uploads/
+config.bat

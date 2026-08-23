@@ -1,14 +1,6 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { signUp } from "../../services/authServices";
-
-const getDashboardPath = (role) => {
-	const normalizedRole = (role || "").toLowerCase();
-
-	if (normalizedRole === "admin") return "/admin/dashboard";
-	if (normalizedRole === "receptionist") return "/receptionist/dashboard";
-	return "/user/dashboard";
-};
 
 export function SignupPage() {
 	const navigate = useNavigate();
@@ -52,9 +44,13 @@ export function SignupPage() {
 				password,
 				role: "User",
 			});
-			const role = data?.user?.role || data?.role || "User";
 			setMessage(data?.message || "Account created successfully");
-			navigate(getDashboardPath(role));
+			navigate("/login", {
+				state: {
+					message: "Account created successfully! Please sign in.",
+					email: email.trim().toLowerCase(),
+				},
+			});
 		} catch (err) {
 			setMessage(err.message || "Registration failed");
 		} finally {
@@ -119,7 +115,7 @@ export function SignupPage() {
 							{loading ? "Creating account..." : "Sign up"}
 						</button>
 
-						<p className="text-center text-sm text-gray-500">Already have an account? <a href="/login" className="font-medium text-[#E4342F]">Sign in here</a></p>
+						<p className="text-center text-sm text-gray-500">Already have an account? <Link to="/login" className="font-medium text-[#E4342F]">Sign in here</Link></p>
 					</form>
 				</div>
 			</div>

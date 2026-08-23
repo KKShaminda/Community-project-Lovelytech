@@ -10,8 +10,8 @@ const API_URL = `${normalizedBaseUrl}${apiPrefix}`;
 
 console.log("🔗 Auth API URL:", API_URL);
 
-const getAuthHeaders = () => {
-  const token = localStorage.getItem("token");
+export const getAuthHeaders = () => {
+  const token = localStorage.getItem("token") || sessionStorage.getItem("token");
   return {
     "Content-Type": "application/json",
     ...(token && { Authorization: `Bearer ${token}` }),
@@ -37,11 +37,20 @@ const request = async (url, options = {}) => {
     ...(options.headers || {}),
   };
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-    credentials: "include",
-  });
+  let response;
+
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+      credentials: "include",
+    });
+  } catch (error) {
+    throw new Error(
+      `Unable to reach the authentication service at ${API_URL}. Make sure the backend is running on http://localhost:5000.`
+    );
+  }
+
   const data = await parseResponse(response);
 
   if (!response.ok) {
@@ -66,6 +75,10 @@ export const loginUser = async (credentials, rememberMe = true) => {
     }
     if (data.user) {
       storage.setItem("user", JSON.stringify(data.user));
+    }
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("auth-updated"));
     }
 
     return data;
@@ -98,7 +111,7 @@ export const logoutUser = async () => {
     const data = await request(`${API_URL}/logout`, {
       method: "POST",
       headers: getAuthHeaders(),
-    });
+    }).catch(() => ({ success: true }));
 
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -107,15 +120,23 @@ export const logoutUser = async () => {
     sessionStorage.removeItem("token");
     sessionStorage.removeItem("user");
 
-    return data;
-  } catch (error) {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("auth-updated"));
+    }
+
+    return data || { success: true };
+  } catch {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("rememberEmail");
     sessionStorage.removeItem("token");
     sessionStorage.removeItem("user");
-    throw new Error(error.message || "Logout failed");
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("auth-updated"));
+    }
+    return { success: true };
   }
 };
 
@@ -151,6 +172,9 @@ export const updateUserProfile = async (profileData) => {
 
     if (data.user) {
       localStorage.setItem("user", JSON.stringify(data.user));
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("auth-updated"));
+      }
     }
 
     return data;

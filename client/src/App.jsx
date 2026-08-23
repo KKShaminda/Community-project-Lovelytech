@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import './App.css'
 import { HomePage } from './pages/home/HomePage'
 import { AboutUs } from './pages/home/AboutUs'
@@ -8,50 +8,81 @@ import { SigninPage } from './pages/login/SigninPage'
 import { SignupPage } from './pages/login/SignupPage'
 import { UserDashboard } from './pages/dashboard/UserDashboard'
 import { AdminDashboard } from './pages/dashboard/AdminDashboard'
+import { InventoryManagementPage } from './pages/admin/InventoryManagementPage'
+import { RepairOrdersPage } from './pages/admin/RepairOrdersPage'
+import { SalesLogPage } from './pages/admin/SalesLogPage'
+import { CustomersPage } from './pages/admin/CustomersPage'
 import { ReceptionistDashboard } from './pages/dashboard/ReceptionistDashboard'
 import { Products } from './pages/products/Products'
+import { WishlistPage } from './pages/products/Wishlist'
+import { CartPage } from './pages/products/Cart'
+import { ProductDetailsPage } from './pages/products/ProductDetailsPage'
 import { RepairPage } from './pages/repair/RepairPage'
 import { BookRepairPage } from './pages/repair/BookRepairPage'
 import { RepairHistoryPage } from './pages/repair/RepairHistoryPage'
 import { RepairTrackingPage } from './pages/repair/RepairTrackingPage'
+import { MyOrders } from './pages/order/MyOrders'
+import Payment from './pages/Payment/Payment'
+import Profile from './pages/user/Profile'
+import PlaceOrder from './pages/PlaceOrder/PlaceOrder'
+import NotificationsPage from './pages/notifications/NotificationsPage'
+import { PaymentApprovalPage } from './pages/admin/PaymentApprovalPage'
+import { AdminOrdersPage } from './pages/admin/AdminOrdersPage'
+
 
 function App() {
   return (
     <>
       <Router>
         <Routes>
-
           {/* Public Pages */}
           <Route path="/" element={<HomePage />} />
-
-          {/* About Us Page */}
           <Route path="/about-us" element={<AboutUs />} />
-
-          {/* Services Page */}
           <Route path="/services" element={<ServicesPage />} />
-
-          {/* Contact Us Page */}
           <Route path="/contact-us" element={<ContactUsPage />} />
           <Route path="/products" element={<Products />} />
+          <Route path="/products/:id" element={<ProductDetailsPage />} />
+          <Route path="/wishlist" element={<WishlistPage />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/orders" element={<MyOrders />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
+
+
 
           {/* Repair Services Pages */}
           <Route path="/repair" element={<RepairPage />} />
-           <Route path="/repair/book" element={<BookRepairPage />} />
-           <Route path="/repair/history" element={<RepairHistoryPage />} />
+          <Route path="/repair/book" element={<BookRepairPage />} />
+          <Route path="/repair/history" element={<RepairHistoryPage />} />
           <Route path="/repair/track" element={<RepairTrackingPage />} />
+          <Route path="/payment" element={<Payment />} />
+          <Route path="/place-order" element={<PlaceOrder />} />
 
           {/* Authentication Routes */}
           <Route path="/login" element={<SigninPage />} />
           <Route path="/signup" element={<SignupPage />} />
 
           {/* Role-based Dashboard Routes */}
+          <Route path="/user" element={<Navigate to="/user/dashboard" replace />} />
           <Route path="/user/dashboard" element={<UserDashboard />} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          <Route path="/receptionist/dashboard" element={<ReceptionistDashboard />} />
-
+          <Route path="/user/profile" element={<Profile />} />
           
-        </Routes>
-      </Router>
+          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/inventory" element={<InventoryManagementPage />} />
+          <Route path="/admin/repair-orders" element={<RepairOrdersPage />} />
+          <Route path="/admin/sales-log" element={<SalesLogPage />} />
+          <Route path="/admin/customers" element={<CustomersPage />} />
+          <Route path="/admin/payment-approval" element={<PaymentApprovalPage />} />
+          <Route path="/admin/orders" element={<AdminOrdersPage />} />
+
+          {/* Receptionist Routes */}
+          <Route path="/receptionist" element={<Navigate to="/receptionist/dashboard" replace />} />
+          <Route path="/receptionist/dashboard" element={<ReceptionistDashboard />} />
+          <Route path="/receptionist/inventory" element={<InventoryManagementPage />} />
+          <Route path="/receptionist/repair-orders" element={<RepairOrdersPage />} />
+          <Route path="/receptionist/sales-log" element={<SalesLogPage />} />
+        </Routes >
+      </Router >
     </>
   )
 }
