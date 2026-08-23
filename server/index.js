@@ -1,5 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 import "colors";
 import connectDB from "./config/db.js";
 import cors from "cors";
@@ -14,6 +16,9 @@ import notificationRoutes from "./routes/notificationRoutes.js";
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 import { seedInitialData } from "./utils/seedData.js";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 
 // Load environment variables
@@ -27,7 +32,10 @@ connectDB().then(() => {
 // Middleware
 app.use(express.json());
 app.use(cors({ origin: true, credentials: true }));
-app.use('/uploads', express.static('uploads'));
+
+// Serve static upload files
+const uploadsPath = path.resolve(__dirname, "uploads");
+app.use("/uploads", express.static(uploadsPath));
 
 // Routes
 app.use("/api/users", userRoutes);
