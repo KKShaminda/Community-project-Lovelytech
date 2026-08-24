@@ -44,6 +44,11 @@ const userSchema = new mongoose.Schema(
             default: null
         },
 
+        country: {
+            type: String,
+            default: "Sri Lanka"
+        },
+
         addresses: [
             {
                 street: { type: String, required: true },
