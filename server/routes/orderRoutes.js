@@ -2,24 +2,24 @@ import express from "express";
 import {
   createOrder,
   getOrders,
+  getMyOrders,
   getOrderById,
   updateOrder,
   deleteOrder,
+  getAllOrders,
+  updateOrderStatus,
 } from "../controllers/orderController.js";
-import { validateOrderInput } from "../middleware/validationMiddleware.js";
+import { requiredSignIn, isAdminOrReceptionist } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-// Order routes
-router
-  .route("/")
-  .get(getOrders)
-  .post(validateOrderInput, createOrder);
-
-router
-  .route("/:id")
-  .get(getOrderById)
-  .put(updateOrder)
-  .delete(deleteOrder);
+router.get("/my-orders", requiredSignIn, getMyOrders);
+router.get("/", getOrders);
+router.post("/", createOrder);
+router.get("/all", requiredSignIn, isAdminOrReceptionist, getAllOrders);
+router.get("/:id", getOrderById);
+router.put("/:id", updateOrder);
+router.delete("/:id", deleteOrder);
+router.patch("/:id/status", requiredSignIn, isAdminOrReceptionist, updateOrderStatus);
 
 export default router;
