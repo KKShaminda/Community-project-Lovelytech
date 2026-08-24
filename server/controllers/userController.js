@@ -221,6 +221,96 @@ export const viewProfile = async (req, res) => {
   }
 };
 
+// Update user profile details
+export const updateProfile = async (req, res) => {
+  try {
+    const { fullname, email, phone, country } = req.body;
+
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized access",
+      });
+    }
+
+    if (!fullname || !fullname.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Full name is required",
+      });
+    }
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid email is required",
+      });
+    }
+
+    if (!phone || !/^[0-9]{10}$/.test(phone)) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone number must be 10 digits",
+      });
+    }
+
+    const existingEmail = await User.findOne({
+      email: email.toLowerCase(),
+      _id: { $ne: req.user._id },
+    });
+
+    if (existingEmail) {
+      return res.status(400).json({
+        success: false,
+        message: "Email already in use",
+      });
+    }
+
+    const existingPhone = await User.findOne({
+      phone,
+      _id: { $ne: req.user._id },
+    });
+
+    if (existingPhone) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone number already in use",
+      });
+    }
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    user.fullname = fullname.trim();
+    user.email = email.toLowerCase();
+    user.phone = phone;
+    if (country !== undefined) user.country = country;
+
+    await user.save();
+
+    const userResponse = user.toObject();
+    delete userResponse.password;
+
+    res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      user: userResponse,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error updating profile",
+      error: error.message,
+    });
+  }
+};
+
 //logout user
 export const logout = async (req, res) => {
   try {
