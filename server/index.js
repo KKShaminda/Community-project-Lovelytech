@@ -6,6 +6,7 @@ import cors from "cors";
 
 import userRoutes from "./routes/userRoute.js";
 import productRoutes from "./routes/productRoutes.js";
+import orderRoutes from "./routes/orderRoutes.js";
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use('/uploads', express.static('uploads'));
 // Routes
 app.use("/api/users", userRoutes);
 app.use("/api/products", productRoutes);
+app.use("/api/orders", orderRoutes);
 
 // Test route  
 app.get("/", (req, res) => {
