@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
+import { deleteImageFile, uploadImage } from "../middlewares/imageUploader.js";
 import {
   createNotificationForUser,
   createNotificationsForRole,
@@ -644,5 +645,78 @@ export const setDefaultAddress = async (req, res) => {
     res.status(200).json({ success: true, message: "Default address updated", addresses: user.addresses });
   } catch (error) {
     res.status(500).json({ success: false, message: "Error setting default address", error: error.message });
+  }
+};
+
+// Update the logged-in user's profile picture
+export const updateProfilePicture = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "Profile picture is required" });
+    }
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    const previousProfilePicture = user.profilePicture;
+    const uploadedImage = uploadImage(req.file, req, req.uploadFolder || "profiles");
+    user.profilePicture = uploadedImage.path;
+    await user.save();
+
+    if (previousProfilePicture && previousProfilePicture !== user.profilePicture) {
+      deleteImageFile(previousProfilePicture);
+    }
+
+    const sanitizedUser = await User.findById(req.user._id).select("-password");
+
+    res.status(200).json({
+      success: true,
+      message: "Profile picture updated successfully",
+      user: sanitizedUser,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error updating profile picture",
+      error: error.message,
+    });
+  }
+};
+
+// Delete the logged-in user's profile picture
+export const deleteProfilePicture = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    if (!user.profilePicture) {
+      return res.status(400).json({ success: false, message: "No profile picture to delete" });
+    }
+
+    const previousProfilePicture = user.profilePicture;
+    user.profilePicture = null;
+    await user.save();
+
+    deleteImageFile(previousProfilePicture);
+
+    const sanitizedUser = await User.findById(req.user._id).select("-password");
+
+    res.status(200).json({
+      success: true,
+      message: "Profile picture removed successfully",
+      user: sanitizedUser,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error deleting profile picture",
+      error: error.message,
+    });
   }
 };

@@ -18,6 +18,12 @@ export const getAuthHeaders = () => {
   };
 };
 
+const getActiveAuthStorage = () => {
+  if (localStorage.getItem("token")) return localStorage;
+  if (sessionStorage.getItem("token")) return sessionStorage;
+  return localStorage;
+};
+
 const parseResponse = async (response) => {
   const text = await response.text();
   if (!text) {
@@ -36,6 +42,10 @@ const request = async (url, options = {}) => {
     ...getAuthHeaders(),
     ...(options.headers || {}),
   };
+
+  if (options.body instanceof FormData) {
+    delete headers["Content-Type"];
+  }
 
   let response;
 
@@ -142,11 +152,15 @@ export const logoutUser = async () => {
 
 export const signOut = logoutUser;
 
-export const changePassword = async (currentPassword, newPassword) => {
+export const changePassword = async (currentPassword, newPassword, confirmNewPassword = newPassword) => {
   try {
     return await request(`${API_URL}/change-password`, {
       method: "PUT",
-      body: JSON.stringify({ currentPassword, newPassword }),
+      body: JSON.stringify({
+        currentPassword,
+        newPassword,
+        confirmNewPassword,
+      }),
     });
   } catch (error) {
     throw new Error(error.message || "Failed to change password");
@@ -171,7 +185,7 @@ export const updateUserProfile = async (profileData) => {
     });
 
     if (data.user) {
-      localStorage.setItem("user", JSON.stringify(data.user));
+      getActiveAuthStorage().setItem("user", JSON.stringify(data.user));
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("auth-updated"));
       }
@@ -180,6 +194,48 @@ export const updateUserProfile = async (profileData) => {
     return data;
   } catch (error) {
     throw new Error(error.message || "Failed to update profile");
+  }
+};
+
+export const updateUserProfilePicture = async (profilePictureFile) => {
+  try {
+    const formData = new FormData();
+    formData.append("profilePicture", profilePictureFile);
+
+    const data = await request(`${API_URL}/update-profile-picture`, {
+      method: "PUT",
+      body: formData,
+    });
+
+    if (data.user) {
+      getActiveAuthStorage().setItem("user", JSON.stringify(data.user));
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("auth-updated"));
+      }
+    }
+
+    return data;
+  } catch (error) {
+    throw new Error(error.message || "Failed to update profile picture");
+  }
+};
+
+export const deleteUserProfilePicture = async () => {
+  try {
+    const data = await request(`${API_URL}/delete-profile-picture`, {
+      method: "DELETE",
+    });
+
+    if (data.user) {
+      getActiveAuthStorage().setItem("user", JSON.stringify(data.user));
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("auth-updated"));
+      }
+    }
+
+    return data;
+  } catch (error) {
+    throw new Error(error.message || "Failed to delete profile picture");
   }
 };
 
