@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Eye, EyeOff, LockKeyhole, MapPin, PencilLine, Plus, ShieldCheck, UserRound, Upload, Trash2 } from 'lucide-react'
+import { Check, Eye, EyeOff, Loader2, LockKeyhole, MapPin, PencilLine, Plus, ShieldCheck, UserRound, Upload, Trash2, X } from 'lucide-react'
 import Layout from '../../components/layout/Layout'
+import Alert from '../../components/common/Alert'
 import {
 	addUserAddress,
 	changePassword,
@@ -16,7 +17,6 @@ import {
 } from '../../services/authServices'
 import { useNavigate } from 'react-router-dom'
 
-const securityRules = ['8+ characters', 'Upper case letter', 'Special character']
 const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000').replace(/\/+$/, '').replace(/\/api$/i, '')
 
 const resolveProfileImageUrl = (value = '') => {
@@ -36,7 +36,7 @@ function Field({ label, type = 'text', value, onChange, placeholder, rightIcon, 
 					onChange={onChange}
 					placeholder={placeholder}
 					disabled={disabled}
-					className="w-full rounded-xl border border-[#ffb4b4] bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-[#ff2020] focus:ring-2 focus:ring-[#ff2020]/10"
+					className="w-full rounded-xl border border-[#ffb4b4] bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition focus:border-[#ff2020] focus:ring-2 focus:ring-[#ff2020]/10 disabled:bg-slate-50 disabled:text-slate-600 disabled:cursor-not-allowed"
 				/>
 				{rightIcon ? (
 					<span className="absolute inset-y-0 right-3 flex items-center text-slate-400">
@@ -94,10 +94,25 @@ export function Profile() {
 	const [isProfileImageMenuOpen, setIsProfileImageMenuOpen] = useState(false)
 	const [addresses, setAddresses] = useState([])
 	const [editingProfile, setEditingProfile] = useState(false)
+	const [isSavingProfile, setIsSavingProfile] = useState(false)
+	const [savedProfileValues, setSavedProfileValues] = useState({
+		fullName: '',
+		email: '',
+		phone: '',
+		country: '',
+	})
 	const [editingAddressId, setEditingAddressId] = useState(null)
 	const [showAddressForm, setShowAddressForm] = useState(false)
-	const [statusMessage, setStatusMessage] = useState('')
-	const [errorMessage, setErrorMessage] = useState('')
+	
+	// Section-specific alerts
+	const [profileStatusMessage, setProfileStatusMessage] = useState('')
+	const [profileErrorMessage, setProfileErrorMessage] = useState('')
+	const [passwordStatusMessage, setPasswordStatusMessage] = useState('')
+	const [passwordErrorMessage, setPasswordErrorMessage] = useState('')
+	const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
+	const [addressStatusMessage, setAddressStatusMessage] = useState('')
+	const [addressErrorMessage, setAddressErrorMessage] = useState('')
+
 	const [addressForm, setAddressForm] = useState({ street: '', city: '', district: '', postalCode: '', country: 'Sri Lanka' })
 	const [showCurrentPassword, setShowCurrentPassword] = useState(false)
 	const [showNewPassword, setShowNewPassword] = useState(false)
@@ -112,6 +127,27 @@ export function Profile() {
 		confirmPassword: '',
 	})
 
+	const passwordSecurityRequirements = useMemo(() => {
+		const pwd = formValues.newPassword || ''
+		return [
+			{
+				id: 'min-length',
+				label: '8+ characters',
+				met: pwd.length >= 8,
+			},
+			{
+				id: 'uppercase',
+				label: 'Upper case letter',
+				met: /[A-Z]/.test(pwd),
+			},
+			{
+				id: 'special-char',
+				label: 'Special character',
+				met: /[^A-Za-z0-9]/.test(pwd),
+			},
+		]
+	}, [formValues.newPassword])
+
 	useEffect(() => {
 		if (!isAuthenticated()) {
 			navigate('/login')
@@ -123,13 +159,17 @@ export function Profile() {
 				const [profileResponse, addressResponse] = await Promise.all([getUserProfile(), getUserAddresses()])
 				const user = profileResponse.user || {}
 				setProfileImageUrl(resolveProfileImageUrl(user.profilePicture || ''))
-				setFormValues((previous) => ({
-					...previous,
+				const profileData = {
 					fullName: user.fullname || user.name || '',
 					email: user.email || '',
 					phone: user.phone || '',
 					country: user.addresses?.find((address) => address.isDefault)?.country || '',
+				}
+				setFormValues((previous) => ({
+					...previous,
+					...profileData,
 				}))
+				setSavedProfileValues(profileData)
 				setAddresses(addressResponse.addresses || user.addresses || [])
 			} catch (error) {
 				setErrorMessage(error.message)
@@ -189,10 +229,10 @@ export function Profile() {
 			const response = await updateUserProfilePicture(file)
 			const uploadedPath = response?.user?.profilePicture || ''
 			setProfileImageUrl(resolveProfileImageUrl(uploadedPath))
-			setStatusMessage('Profile picture updated successfully.')
-			setErrorMessage('')
+			setProfileStatusMessage('Profile picture updated successfully.')
+			setProfileErrorMessage('')
 		} catch (error) {
-			setErrorMessage(error.message)
+			setProfileErrorMessage(error.message)
 		} finally {
 			event.target.value = ''
 		}
@@ -206,7 +246,7 @@ export function Profile() {
 	const removeProfileImage = async () => {
 		if (!profileImageUrl) {
 			setIsProfileImageMenuOpen(false)
-			setErrorMessage('No profile image to delete.')
+			setProfileErrorMessage('No profile image to delete.')
 			return
 		}
 
@@ -223,16 +263,41 @@ export function Profile() {
 				}
 				return ''
 			})
-			setStatusMessage('Profile picture deleted successfully.')
-			setErrorMessage('')
+			setProfileStatusMessage('Profile picture deleted successfully.')
+			setProfileErrorMessage('')
 		} catch (error) {
-			setErrorMessage(error.message)
+			setProfileErrorMessage(error.message)
 		} finally {
 			setIsProfileImageMenuOpen(false)
 		}
 	}
 
+	const handleStartEditProfile = () => {
+		setSavedProfileValues({
+			fullName: formValues.fullName,
+			email: formValues.email,
+			phone: formValues.phone,
+			country: formValues.country,
+		})
+		setEditingProfile(true)
+		setProfileStatusMessage('')
+		setProfileErrorMessage('')
+	}
+
+	const handleCancelProfileEdit = () => {
+		setFormValues((previous) => ({
+			...previous,
+			fullName: savedProfileValues.fullName,
+			email: savedProfileValues.email,
+			phone: savedProfileValues.phone,
+			country: savedProfileValues.country,
+		}))
+		setEditingProfile(false)
+		setProfileErrorMessage('')
+	}
+
 	const saveProfile = async () => {
+		setIsSavingProfile(true)
 		try {
 			const response = await updateUserProfile({
 				fullname: formValues.fullName,
@@ -241,26 +306,57 @@ export function Profile() {
 			})
 			const user = response.user || {}
 			setProfileImageUrl(resolveProfileImageUrl(user.profilePicture || profileImageUrl))
-			setFormValues((previous) => ({ ...previous, fullName: user.fullname || previous.fullName, email: user.email || previous.email, phone: user.phone || previous.phone }))
+			const updatedData = {
+				fullName: user.fullname || user.name || formValues.fullName,
+				email: user.email || formValues.email,
+				phone: user.phone || formValues.phone,
+				country: formValues.country,
+			}
+			setFormValues((previous) => ({
+				...previous,
+				...updatedData,
+			}))
+			setSavedProfileValues(updatedData)
 			setEditingProfile(false)
-			setStatusMessage('Profile updated successfully.')
-			setErrorMessage('')
+			setProfileStatusMessage('Profile updated successfully.')
+			setProfileErrorMessage('')
 		} catch (error) {
-			setErrorMessage(error.message)
+			setProfileErrorMessage(error.message)
+		} finally {
+			setIsSavingProfile(false)
 		}
 	}
 
 	const savePassword = async () => {
+		setPasswordStatusMessage('')
+		setPasswordErrorMessage('')
+
 		if (!formValues.currentPassword || !formValues.newPassword || !formValues.confirmPassword) {
-			setErrorMessage('Please fill in all password fields.')
+			setPasswordErrorMessage('Please fill in all password fields.')
 			return
 		}
 
 		if (formValues.newPassword !== formValues.confirmPassword) {
-			setErrorMessage('New passwords do not match.')
+			setPasswordErrorMessage('New passwords do not match.')
 			return
 		}
 
+		if (formValues.newPassword.length < 8) {
+			setPasswordErrorMessage('New password must be at least 8 characters long.')
+			return
+		}
+
+		if (!/[A-Z]/.test(formValues.newPassword)) {
+			setPasswordErrorMessage('New password must contain at least one uppercase letter.')
+			return
+		}
+
+		if (!/[^A-Za-z0-9]/.test(formValues.newPassword)) {
+			setPasswordErrorMessage('New password must contain at least one special character.')
+			return
+		}
+
+		setIsUpdatingPassword(true)
 		try {
 			await changePassword(formValues.currentPassword, formValues.newPassword, formValues.confirmPassword)
 			setFormValues((previous) => ({
@@ -269,10 +365,12 @@ export function Profile() {
 				newPassword: '',
 				confirmPassword: '',
 			}))
-			setStatusMessage('Password updated successfully.')
-			setErrorMessage('')
+			setPasswordStatusMessage('Password updated successfully!')
+			setPasswordErrorMessage('')
 		} catch (error) {
-			setErrorMessage(error.message)
+			setPasswordErrorMessage(error.message || 'Failed to update password.')
+		} finally {
+			setIsUpdatingPassword(false)
 		}
 	}
 
@@ -280,6 +378,8 @@ export function Profile() {
 		setEditingAddressId(address?._id || null)
 		setAddressForm(address ? { street: address.street, city: address.city, district: address.district, postalCode: address.postalCode || '', country: address.country || 'Sri Lanka' } : { street: '', city: '', district: '', postalCode: '', country: 'Sri Lanka' })
 		setShowAddressForm(true)
+		setAddressStatusMessage('')
+		setAddressErrorMessage('')
 	}
 
 	const saveAddress = async () => {
@@ -289,10 +389,10 @@ export function Profile() {
 				: await addUserAddress(addressForm)
 			setAddresses(response.addresses || [])
 			setShowAddressForm(false)
-			setStatusMessage(editingAddressId ? 'Address updated successfully.' : 'Address added successfully.')
-			setErrorMessage('')
+			setAddressStatusMessage(editingAddressId ? 'Address updated successfully.' : 'Address added successfully.')
+			setAddressErrorMessage('')
 		} catch (error) {
-			setErrorMessage(error.message)
+			setAddressErrorMessage(error.message)
 		}
 	}
 
@@ -301,9 +401,10 @@ export function Profile() {
 		try {
 			const response = await deleteUserAddress(addressId)
 			setAddresses(response.addresses || [])
-			setStatusMessage('Address removed successfully.')
+			setAddressStatusMessage('Address removed successfully.')
+			setAddressErrorMessage('')
 		} catch (error) {
-			setErrorMessage(error.message)
+			setAddressErrorMessage(error.message)
 		}
 	}
 
@@ -311,9 +412,10 @@ export function Profile() {
 		try {
 			const response = await setDefaultUserAddress(addressId)
 			setAddresses(response.addresses || [])
-			setStatusMessage('Default address updated.')
+			setAddressStatusMessage('Default address updated.')
+			setAddressErrorMessage('')
 		} catch (error) {
-			setErrorMessage(error.message)
+			setAddressErrorMessage(error.message)
 		}
 	}
 
@@ -412,14 +514,16 @@ export function Profile() {
 								</div>
 							</div>
 
-							<button
-								type="button"
-								onClick={editingProfile ? saveProfile : () => setEditingProfile(true)}
-								className="inline-flex items-center justify-center gap-2 self-start rounded-xl bg-[#ff2020] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#e11b1b]"
-							>
-								<PencilLine className="h-4 w-4" />
-								{editingProfile ? 'Save Profile' : 'Edit Profile'}
-							</button>
+							{!editingProfile ? (
+								<button
+									type="button"
+									onClick={handleStartEditProfile}
+									className="inline-flex items-center justify-center gap-2 self-start rounded-xl bg-[#ff2020] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#e11b1b]"
+								>
+									<PencilLine className="h-4 w-4" />
+									Edit Profile
+								</button>
+							) : null}
 						</div>
 
 						<div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -453,6 +557,55 @@ export function Profile() {
 								placeholder="Enter country"
 							/>
 						</div>
+
+						{profileStatusMessage && (
+							<Alert
+								type="success"
+								message={profileStatusMessage}
+								onClose={() => setProfileStatusMessage('')}
+								className="mt-5"
+							/>
+						)}
+						{profileErrorMessage && (
+							<Alert
+								type="error"
+								message={profileErrorMessage}
+								onClose={() => setProfileErrorMessage('')}
+								className="mt-5"
+							/>
+						)}
+
+						{editingProfile && (
+							<div className="mt-6 flex flex-wrap items-center justify-end gap-3 border-t border-[#ffe4e4] pt-5">
+								<button
+									type="button"
+									onClick={handleCancelProfileEdit}
+									disabled={isSavingProfile}
+									className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#ffb4b4] bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-[#fff0f0] hover:text-[#ff2020] disabled:opacity-50"
+								>
+									<X className="h-4 w-4" />
+									Cancel
+								</button>
+								<button
+									type="button"
+									onClick={saveProfile}
+									disabled={isSavingProfile}
+									className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#ff2020] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#e11b1b] disabled:opacity-50"
+								>
+									{isSavingProfile ? (
+										<>
+											<Loader2 className="h-4 w-4 animate-spin" />
+											Saving...
+										</>
+									) : (
+										<>
+											<Check className="h-4 w-4" />
+											Save
+										</>
+									)}
+								</button>
+							</div>
+						)}
 					</div>
 
 					<div className="rounded-3xl border border-[#ff2020] bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.08)] sm:p-6">
@@ -466,6 +619,24 @@ export function Profile() {
 									Use a strong password to keep your account secure.
 								</p>
 
+								{passwordStatusMessage && (
+									<Alert
+										type="success"
+										message={passwordStatusMessage}
+										onClose={() => setPasswordStatusMessage('')}
+										className="mt-4"
+									/>
+								)}
+
+								{passwordErrorMessage && (
+									<Alert
+										type="error"
+										message={passwordErrorMessage}
+										onClose={() => setPasswordErrorMessage('')}
+										className="mt-4"
+									/>
+								)}
+
 								<div className="mt-5 space-y-4">
 									<Field {...passwordInputProps('currentPassword', showCurrentPassword, setShowCurrentPassword)} label="Current Password" />
 									<div className="grid gap-4 md:grid-cols-2">
@@ -477,9 +648,17 @@ export function Profile() {
 								<button
 									type="button"
 									onClick={savePassword}
-									className="mt-4 inline-flex items-center justify-center rounded-xl bg-[#ff2020] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#e11b1b]"
+									disabled={isUpdatingPassword}
+									className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-[#ff2020] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#e11b1b] disabled:opacity-50 cursor-pointer"
 								>
-									Update Password
+									{isUpdatingPassword ? (
+										<>
+											<Loader2 className="h-4 w-4 animate-spin" />
+											Updating Password...
+										</>
+									) : (
+										'Update Password'
+									)}
 								</button>
 							</div>
 
@@ -489,12 +668,20 @@ export function Profile() {
 									<h3 className="text-base font-semibold">Security Requirements</h3>
 								</div>
 								<ul className="mt-4 space-y-3 text-sm text-slate-600">
-									{securityRules.map((rule) => (
-										<li key={rule} className="flex items-center gap-2">
-											<span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[#ff2020]/30 text-[10px] font-bold text-[#ff2020]">
-												•
+									{passwordSecurityRequirements.map((req) => (
+										<li key={req.id} className="flex items-center gap-2.5 transition-all duration-200">
+											<span
+												className={`inline-flex h-5 w-5 items-center justify-center rounded-full border text-[10px] font-bold transition-all duration-200 ${
+													req.met
+														? 'border-emerald-500 bg-emerald-500 text-white shadow-sm'
+														: 'border-[#ff2020]/30 text-[#ff2020]'
+												}`}
+											>
+												{req.met ? <Check className="h-3 w-3 text-white stroke-[3]" /> : '•'}
 											</span>
-											<span>{rule}</span>
+											<span className={`transition-colors duration-200 ${req.met ? 'font-semibold text-emerald-700' : 'text-slate-600'}`}>
+												{req.label}
+											</span>
 										</li>
 									))}
 								</ul>
@@ -524,6 +711,24 @@ export function Profile() {
 							</button>
 						</div>
 
+						{addressStatusMessage && (
+							<Alert
+								type="success"
+								message={addressStatusMessage}
+								onClose={() => setAddressStatusMessage('')}
+								className="mt-4"
+							/>
+						)}
+
+						{addressErrorMessage && (
+							<Alert
+								type="error"
+								message={addressErrorMessage}
+								onClose={() => setAddressErrorMessage('')}
+								className="mt-4"
+							/>
+						)}
+
 						{showAddressForm && (
 							<div className="mt-6 rounded-2xl border border-[#ffb4b4] bg-[#fffafa] p-4">
 								<h3 className="text-sm font-semibold text-slate-900">{editingAddressId ? 'Edit Address' : 'Add New Address'}</h3>
@@ -538,9 +743,6 @@ export function Profile() {
 								</div>
 							</div>
 						)}
-
-						{statusMessage && <p className="mt-4 text-sm font-medium text-emerald-600">{statusMessage}</p>}
-						{errorMessage && <p className="mt-4 text-sm font-medium text-red-600">{errorMessage}</p>}
 
 						<div className="mt-6 grid gap-4 lg:grid-cols-2">
 							{addresses.length > 0 ? addresses.map((address) => (

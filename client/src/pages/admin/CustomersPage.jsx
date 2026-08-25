@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { AdminShell } from '../../components/admin/AdminShell'
+import Alert from '../../components/common/Alert'
 import { getAllUsers, suspendUser, unsuspendUser } from '../../services/userServices'
 
 const formatDate = (value) =>
@@ -176,7 +177,12 @@ export function CustomersPage() {
         </div>
 
         {error ? (
-          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+          <Alert
+            type="error"
+            message={error}
+            onClose={() => setError('')}
+            className="mt-4"
+          />
         ) : null}
 
         <div className="mt-4 overflow-hidden rounded-xl border border-neutral-300 bg-white">

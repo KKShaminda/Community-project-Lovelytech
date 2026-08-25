@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { AdminShell } from "../../components/admin/AdminShell";
+import Alert from "../../components/common/Alert";
 import { getOrders, updateOrder } from "../../services/orderServices";
 import { ClipboardList, Check, X, Eye, FileText } from "lucide-react";
 
@@ -76,9 +77,12 @@ export function PaymentApprovalPage() {
       </div>
 
       {errorMsg && (
-        <div className="mb-6 rounded-xl bg-red-50 p-4 border border-red-200 text-xs font-semibold text-red-600">
-          {errorMsg}
-        </div>
+        <Alert
+          type="error"
+          message={errorMsg}
+          onClose={() => setErrorMsg("")}
+          className="mb-6"
+        />
       )}
 
       {loading ? (
