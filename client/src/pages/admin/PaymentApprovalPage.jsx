@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { AdminShell } from "../../components/admin/AdminShell";
 import Alert from "../../components/common/Alert";
+import toast from "react-hot-toast";
 import { getOrders, updateOrder } from "../../services/orderServices";
 import { ClipboardList, Check, X, Eye, FileText } from "lucide-react";
 
@@ -36,30 +37,28 @@ export function PaymentApprovalPage() {
   }, []);
 
   const handleApprove = async (id) => {
-    if (!window.confirm("Are you sure you want to approve this payment slip?")) return;
     try {
       await updateOrder(id, {
         status: "Confirmed",
         paymentSlipStatus: "Approved",
       });
-      alert("Payment approved successfully! Order status updated to Confirmed.");
+      toast.success("Payment approved successfully! Order status updated to Confirmed.");
       fetchPendingOrders();
     } catch (err) {
-      alert("Failed to approve order: " + err.message);
+      toast.error("Failed to approve order: " + err.message);
     }
   };
 
   const handleReject = async (id) => {
-    if (!window.confirm("Are you sure you want to reject this payment slip? This will cancel the order.")) return;
     try {
       await updateOrder(id, {
         status: "Cancelled",
         paymentSlipStatus: "Rejected",
       });
-      alert("Payment rejected. Order status updated to Cancelled.");
+      toast.success("Payment rejected. Order status updated to Cancelled.");
       fetchPendingOrders();
     } catch (err) {
-      alert("Failed to reject order: " + err.message);
+      toast.error("Failed to reject order: " + err.message);
     }
   };
 

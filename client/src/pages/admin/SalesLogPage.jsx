@@ -1,6 +1,8 @@
 import { useMemo, useState, useEffect } from 'react'
+import toast from 'react-hot-toast'
 
 import { AdminShell } from '../../components/admin/AdminShell'
+import ConfirmModal from '../../components/common/ConfirmModal'
 import { SALES_STATUS_META, formatLKR } from '../../data/adminPagesData'
 import { getSales, createSale, updateSale, deleteSale } from '../../services/saleServices'
 import { getRepairs } from '../../services/repairServices'
@@ -18,6 +20,8 @@ export function SalesLogPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState(defaultForm)
+  const [itemToDeleteId, setItemToDeleteId] = useState(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const fetchItems = async () => {
     try {
@@ -117,25 +121,37 @@ export function SalesLogPage() {
     try {
       if (editingId) {
         await updateSale(editingId, payload)
+        toast.success("Sale record updated successfully!")
       } else {
         await createSale(payload)
+        toast.success("Sale record added successfully!")
       }
       setModalOpen(false)
       fetchItems()
       fetchRepairs()
     } catch (err) {
-      alert("Failed to save sale: " + err.message)
+      toast.error("Failed to save sale: " + err.message)
     }
   }
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this sales record?')) return
+  const handleDelete = (id) => {
+    setItemToDeleteId(id)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDeleteId) return
+    setIsDeleting(true)
     try {
-      await deleteSale(id)
+      await deleteSale(itemToDeleteId)
+      toast.success("Sale record deleted successfully.")
+      setItemToDeleteId(null)
       fetchItems()
       fetchRepairs()
     } catch (err) {
-      alert("Failed to delete sale: " + err.message)
+      toast.error("Failed to delete sale: " + err.message)
+      setItemToDeleteId(null)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -267,6 +283,19 @@ export function SalesLogPage() {
           </form>
         </div>
       ) : null}
+
+      {/* Delete Sales Record Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(itemToDeleteId)}
+        title="Delete Sales Record"
+        message="Are you sure you want to delete this sales record? This transaction will be permanently removed."
+        confirmText="Delete Record"
+        cancelText="Cancel"
+        confirmVariant="danger"
+        isLoading={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setItemToDeleteId(null)}
+      />
     </AdminShell>
   )
 }

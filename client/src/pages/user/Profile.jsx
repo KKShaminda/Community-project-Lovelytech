@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Check, Eye, EyeOff, Loader2, LockKeyhole, MapPin, PencilLine, Plus, ShieldCheck, UserRound, Upload, Trash2, X } from 'lucide-react'
+import toast from 'react-hot-toast'
 import Layout from '../../components/layout/Layout'
 import Alert from '../../components/common/Alert'
+import ConfirmModal from '../../components/common/ConfirmModal'
 import {
 	addUserAddress,
 	changePassword,
@@ -104,6 +106,12 @@ export function Profile() {
 	const [editingAddressId, setEditingAddressId] = useState(null)
 	const [showAddressForm, setShowAddressForm] = useState(false)
 	
+	// Modals
+	const [isDeletePhotoModalOpen, setIsDeletePhotoModalOpen] = useState(false)
+	const [isDeletingPhoto, setIsDeletingPhoto] = useState(false)
+	const [addressToDeleteId, setAddressToDeleteId] = useState(null)
+	const [isDeletingAddress, setIsDeletingAddress] = useState(false)
+
 	// Section-specific alerts
 	const [profileStatusMessage, setProfileStatusMessage] = useState('')
 	const [profileErrorMessage, setProfileErrorMessage] = useState('')
@@ -231,8 +239,10 @@ export function Profile() {
 			setProfileImageUrl(resolveProfileImageUrl(uploadedPath))
 			setProfileStatusMessage('Profile picture updated successfully.')
 			setProfileErrorMessage('')
+			toast.success('Profile picture updated successfully.')
 		} catch (error) {
 			setProfileErrorMessage(error.message)
+			toast.error(error.message || 'Failed to update profile picture.')
 		} finally {
 			event.target.value = ''
 		}
@@ -243,17 +253,18 @@ export function Profile() {
 		setIsProfileImageMenuOpen(false)
 	}
 
-	const removeProfileImage = async () => {
-		if (!profileImageUrl) {
-			setIsProfileImageMenuOpen(false)
-			setProfileErrorMessage('No profile image to delete.')
+	const openDeletePhotoModal = () => {
+		setIsProfileImageMenuOpen(false)
+		if (!profileImageUrl && !avatarPreview) {
+			setProfileErrorMessage('No profile photo to delete.')
+			toast.error('No profile photo to delete.')
 			return
 		}
+		setIsDeletePhotoModalOpen(true)
+	}
 
-		if (!window.confirm('Delete your profile image?')) {
-			return
-		}
-
+	const handleConfirmDeletePhoto = async () => {
+		setIsDeletingPhoto(true)
 		try {
 			const response = await deleteUserProfilePicture()
 			setProfileImageUrl(resolveProfileImageUrl(response?.user?.profilePicture || ''))
@@ -265,10 +276,13 @@ export function Profile() {
 			})
 			setProfileStatusMessage('Profile picture deleted successfully.')
 			setProfileErrorMessage('')
+			toast.success('Profile picture deleted successfully.')
+			setIsDeletePhotoModalOpen(false)
 		} catch (error) {
 			setProfileErrorMessage(error.message)
+			toast.error(error.message || 'Failed to delete profile picture.')
 		} finally {
-			setIsProfileImageMenuOpen(false)
+			setIsDeletingPhoto(false)
 		}
 	}
 
@@ -320,8 +334,10 @@ export function Profile() {
 			setEditingProfile(false)
 			setProfileStatusMessage('Profile updated successfully.')
 			setProfileErrorMessage('')
+			toast.success('Profile updated successfully!')
 		} catch (error) {
 			setProfileErrorMessage(error.message)
+			toast.error(error.message || 'Failed to update profile.')
 		} finally {
 			setIsSavingProfile(false)
 		}
@@ -332,27 +348,37 @@ export function Profile() {
 		setPasswordErrorMessage('')
 
 		if (!formValues.currentPassword || !formValues.newPassword || !formValues.confirmPassword) {
-			setPasswordErrorMessage('Please fill in all password fields.')
+			const msg = 'Please fill in all password fields.'
+			setPasswordErrorMessage(msg)
+			toast.error(msg)
 			return
 		}
 
 		if (formValues.newPassword !== formValues.confirmPassword) {
-			setPasswordErrorMessage('New passwords do not match.')
+			const msg = 'New passwords do not match.'
+			setPasswordErrorMessage(msg)
+			toast.error(msg)
 			return
 		}
 
 		if (formValues.newPassword.length < 8) {
-			setPasswordErrorMessage('New password must be at least 8 characters long.')
+			const msg = 'New password must be at least 8 characters long.'
+			setPasswordErrorMessage(msg)
+			toast.error(msg)
 			return
 		}
 
 		if (!/[A-Z]/.test(formValues.newPassword)) {
-			setPasswordErrorMessage('New password must contain at least one uppercase letter.')
+			const msg = 'New password must contain at least one uppercase letter.'
+			setPasswordErrorMessage(msg)
+			toast.error(msg)
 			return
 		}
 
 		if (!/[^A-Za-z0-9]/.test(formValues.newPassword)) {
-			setPasswordErrorMessage('New password must contain at least one special character.')
+			const msg = 'New password must contain at least one special character.'
+			setPasswordErrorMessage(msg)
+			toast.error(msg)
 			return
 		}
 
@@ -367,8 +393,11 @@ export function Profile() {
 			}))
 			setPasswordStatusMessage('Password updated successfully!')
 			setPasswordErrorMessage('')
+			toast.success('Password updated successfully!')
 		} catch (error) {
-			setPasswordErrorMessage(error.message || 'Failed to update password.')
+			const errorMsg = error.message || 'Failed to update password.'
+			setPasswordErrorMessage(errorMsg)
+			toast.error(errorMsg)
 		} finally {
 			setIsUpdatingPassword(false)
 		}
@@ -389,22 +418,35 @@ export function Profile() {
 				: await addUserAddress(addressForm)
 			setAddresses(response.addresses || [])
 			setShowAddressForm(false)
-			setAddressStatusMessage(editingAddressId ? 'Address updated successfully.' : 'Address added successfully.')
+			const successMsg = editingAddressId ? 'Address updated successfully.' : 'Address added successfully.'
+			setAddressStatusMessage(successMsg)
 			setAddressErrorMessage('')
+			toast.success(successMsg)
 		} catch (error) {
 			setAddressErrorMessage(error.message)
+			toast.error(error.message || 'Failed to save address.')
 		}
 	}
 
-	const removeAddress = async (addressId) => {
-		if (!window.confirm('Remove this address?')) return
+	const promptRemoveAddress = (addressId) => {
+		setAddressToDeleteId(addressId)
+	}
+
+	const handleConfirmDeleteAddress = async () => {
+		if (!addressToDeleteId) return
+		setIsDeletingAddress(true)
 		try {
-			const response = await deleteUserAddress(addressId)
+			const response = await deleteUserAddress(addressToDeleteId)
 			setAddresses(response.addresses || [])
 			setAddressStatusMessage('Address removed successfully.')
 			setAddressErrorMessage('')
+			toast.success('Address removed successfully.')
+			setAddressToDeleteId(null)
 		} catch (error) {
 			setAddressErrorMessage(error.message)
+			toast.error(error.message || 'Failed to remove address.')
+		} finally {
+			setIsDeletingAddress(false)
 		}
 	}
 
@@ -414,8 +456,10 @@ export function Profile() {
 			setAddresses(response.addresses || [])
 			setAddressStatusMessage('Default address updated.')
 			setAddressErrorMessage('')
+			toast.success('Default address updated.')
 		} catch (error) {
 			setAddressErrorMessage(error.message)
+			toast.error(error.message || 'Failed to update default address.')
 		}
 	}
 
@@ -493,8 +537,8 @@ export function Profile() {
 												</button>
 												<button
 													type="button"
-													onClick={removeProfileImage}
-													className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-slate-700 transition hover:bg-[#fff3f3]"
+													onClick={openDeletePhotoModal}
+													className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-slate-700 transition hover:bg-[#fff3f3] cursor-pointer"
 												>
 													<Trash2 className="h-3.5 w-3.5 text-[#ff2020]" />
 													Delete photo
@@ -746,13 +790,39 @@ export function Profile() {
 
 						<div className="mt-6 grid gap-4 lg:grid-cols-2">
 							{addresses.length > 0 ? addresses.map((address) => (
-								<AddressCard key={address._id} address={address} onEdit={openAddressForm} onRemove={removeAddress} onSetDefault={setDefaultAddress} />
+								<AddressCard key={address._id} address={address} onEdit={openAddressForm} onRemove={promptRemoveAddress} onSetDefault={setDefaultAddress} />
 							)) : <p className="text-sm text-slate-500">No saved addresses yet.</p>}
 						</div>
 					</div>
 				</div>
 			</section>
 			</div>
+
+			{/* Delete Profile Photo Confirmation Modal */}
+			<ConfirmModal
+				isOpen={isDeletePhotoModalOpen}
+				title="Delete Profile Photo"
+				message="Are you sure you want to remove your profile photo? Your avatar will revert to your name initial."
+				confirmText="Delete Photo"
+				cancelText="Cancel"
+				confirmVariant="danger"
+				isLoading={isDeletingPhoto}
+				onConfirm={handleConfirmDeletePhoto}
+				onCancel={() => setIsDeletePhotoModalOpen(false)}
+			/>
+
+			{/* Remove Address Confirmation Modal */}
+			<ConfirmModal
+				isOpen={Boolean(addressToDeleteId)}
+				title="Remove Address"
+				message="Are you sure you want to remove this address from your saved addresses?"
+				confirmText="Remove Address"
+				cancelText="Cancel"
+				confirmVariant="danger"
+				isLoading={isDeletingAddress}
+				onConfirm={handleConfirmDeleteAddress}
+				onCancel={() => setAddressToDeleteId(null)}
+			/>
 		</Layout>
 	)
 }

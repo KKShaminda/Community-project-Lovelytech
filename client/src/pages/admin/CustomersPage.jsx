@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import toast from 'react-hot-toast'
 import { Check, X } from 'lucide-react'
 
 import { AdminShell } from '../../components/admin/AdminShell'
@@ -144,12 +145,16 @@ export function CustomersPage() {
     try {
       if (customer.isSuspended) {
         await unsuspendUser(customer._id)
+        toast.success(`Account unsuspended for ${customer.fullname || 'customer'}.`)
       } else {
         await suspendUser(customer._id)
+        toast.success(`Account suspended for ${customer.fullname || 'customer'}.`)
       }
       await loadUsers()
     } catch (err) {
-      setError(err.message || 'Unable to update customer status.')
+      const errText = err.message || 'Unable to update customer status.'
+      setError(errText)
+      toast.error(errText)
     } finally {
       setLoadingId('')
     }
