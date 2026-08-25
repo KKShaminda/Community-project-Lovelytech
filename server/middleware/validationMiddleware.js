@@ -1,8 +1,10 @@
 // Validation middleware for Repair and Order requests
 
 export const validateRepairInput = (req, res, next) => {
-  const { issue, customer, name, phone, email } = req.body;
-  const customerName = customer || name;
+  const { issue, customer, name, customerName: bodyCustomerName, phone, customerPhone, email, customerEmail } = req.body;
+  const customerName = customer || name || bodyCustomerName;
+  const effectivePhone = phone || customerPhone;
+  const effectiveEmail = email || customerEmail;
 
   if (!issue || typeof issue !== 'string' || !issue.trim()) {
     res.status(400);
@@ -14,12 +16,12 @@ export const validateRepairInput = (req, res, next) => {
     throw new Error('Customer name is required');
   }
 
-  if (!phone || typeof phone !== 'string' || !phone.trim()) {
+  if (!effectivePhone || typeof effectivePhone !== 'string' || !effectivePhone.trim()) {
     res.status(400);
     throw new Error('Phone number is required');
   }
 
-  if (!email || typeof email !== 'string' || !email.trim()) {
+  if (!effectiveEmail || typeof effectiveEmail !== 'string' || !effectiveEmail.trim()) {
     res.status(400);
     throw new Error('Email address is required');
   }

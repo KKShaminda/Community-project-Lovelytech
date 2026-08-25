@@ -91,7 +91,7 @@ saleSchema.pre("save", async function (next) {
         const mm = String(today.getMonth() + 1).padStart(2, '0');
         const dd = String(today.getDate()).padStart(2, '0');
         const dateStr = `${yyyy}${mm}${dd}`;
-        const prefix = `LT${dateStr}`;
+        const prefix = `ORD-${dateStr}`;
 
         const nextNum = await getNextSequenceNumber(prefix);
         this.orderId = `${prefix}${String(nextNum).padStart(2, "0")}`;

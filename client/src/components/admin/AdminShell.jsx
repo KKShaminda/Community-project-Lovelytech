@@ -23,7 +23,7 @@ export function AdminShell({ activeSection = "dashboard", children }) {
   return (
     <Layout>
       <div className="flex min-h-[calc(100vh-10rem)] bg-[#f4f4f4] text-neutral-900">
-        <aside className="hidden w-[210px] shrink-0 bg-[#ef2027] pb-12 lg:block">
+        <aside className="hidden w-[210px] shrink-0 bg-gradient-to-b from-[#e01c23] to-[#8f0f11] pb-12 lg:block">
           <div className="mt-2 space-y-1">
             {isReceptionist ? (
               <>
