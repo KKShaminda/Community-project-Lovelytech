@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Heart, ShoppingCart } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { StarRating } from './StarRating'
 import {
   formatPrice,
@@ -8,8 +8,10 @@ import {
   getCategoryFallbackImage,
 } from '../../data/productsData'
 import { addToCart } from '../../utils/cartStorage'
+import { isAuthenticated } from '../../services/authServices'
 
 export function ProductCard({ product, isWishlisted, onToggleWishlist, showWishlist = false }) {
+  const navigate = useNavigate()
   const [justAdded, setJustAdded] = useState(false)
   const outOfStock = product.availability === 'Out of Stock'
   const productId = product.id || product._id
@@ -20,6 +22,12 @@ export function ProductCard({ product, isWishlisted, onToggleWishlist, showWishl
     e.preventDefault()
     e.stopPropagation()
     if (outOfStock) return
+
+    if (!isAuthenticated()) {
+      navigate('/login', { state: { from: `/products/${productId}` } })
+      return
+    }
+
     addToCart(product, 1)
     setJustAdded(true)
     setTimeout(() => setJustAdded(false), 1400)
@@ -28,6 +36,12 @@ export function ProductCard({ product, isWishlisted, onToggleWishlist, showWishl
   const handleHeartClick = (e) => {
     e.preventDefault()
     e.stopPropagation()
+
+    if (!isAuthenticated()) {
+      navigate('/login', { state: { from: `/products/${productId}` } })
+      return
+    }
+
     if (onToggleWishlist) {
       onToggleWishlist(productId, product)
     }

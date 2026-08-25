@@ -10,9 +10,11 @@ import {
   ArrowRight,
   Package,
 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import Layout from '../../components/layout/Layout'
 import { formatPrice, resolveImageUrl, getCategoryFallbackImage } from '../../data/productsData'
 import { getOrders, deleteOrder } from '../../services/orderServices'
+import { isAuthenticated } from '../../services/authServices'
 
 const STATUS_FLOW = ['Placed', 'Confirmed', 'Proceeded', 'Delivered']
 
@@ -25,8 +27,8 @@ const STATUS_COPY = {
   Canceled: { title: 'Cancelled', hint: 'This order was cancelled' },
 }
 
-const STATUS_PILL_STYLES = {
-  Placed: 'bg-[#fff3c4] text-[#b45309]',
+const STATUS_BADGE = {
+  Placed: 'bg-[#ffeedd] text-[#d97706]',
   Confirmed: 'bg-[#dbeafe] text-[#2563eb]',
   Proceeded: 'bg-[#ffedd5] text-[#c2410c]',
   Delivered: 'bg-[#dcfce7] text-[#16a34a]',
@@ -68,85 +70,68 @@ function OrderDetailsModal({ order, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4 backdrop-blur-xs transition-opacity duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
     >
       <div
-        role="dialog"
-        aria-modal="true"
+        className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl transition-all sm:p-8"
         onClick={(e) => e.stopPropagation()}
-        className="relative my-8 w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl transition-all"
       >
-        {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-5">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-[#E4342F]">
-              <ClipboardList className="h-5 w-5" />
+        {/* Header with Close */}
+        <div className="flex items-start justify-between border-b border-gray-100 pb-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-[#E4342F]">
+              <ClipboardList className="h-6 w-6" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-gray-900">Order Details</h2>
-              <p className="text-xs text-gray-500">{order.id}</p>
+              <span className="text-xs font-bold tracking-wider text-[#E4342F] uppercase">
+                Order Details
+              </span>
+              <h2 id="modal-title" className="text-xl font-bold text-gray-900 sm:text-2xl">
+                #{order.id}
+              </h2>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
-            aria-label="Close"
+            aria-label="Close modal"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-900 transition"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Modal Body */}
-        <div className="max-h-[70vh] space-y-6 overflow-y-auto px-6 py-5">
-          {/* Status Badge */}
-          <div className="flex items-center justify-between rounded-2xl bg-gray-50 p-3.5">
-            <span className="text-xs font-semibold text-gray-600">Current Status:</span>
-            <span
-              className={`rounded-full px-3 py-1 text-xs font-bold ${
-                STATUS_PILL_STYLES[order.status] || 'bg-gray-100 text-gray-700'
-              }`}
-            >
-              {order.status}
-            </span>
-          </div>
-
-          {/* Stepper */}
-          <div>
-            <h3 className="mb-4 flex items-center gap-2 text-sm font-bold text-gray-900">
-              <Truck className="h-4 w-4 text-[#E4342F]" />
-              Order Tracking Timeline
-            </h3>
-            <ol className="relative space-y-5 rounded-2xl border border-gray-100 bg-gray-50/50 p-4">
-              {activeFlow.map((step, index) => {
-                const done = index <= currentIndex
-                const isLast = index === activeFlow.length - 1
-
+        {/* Content Body */}
+        <div className="mt-6 space-y-6">
+          {/* Tracking Timeline */}
+          <div className="rounded-2xl border border-gray-100 bg-[#faf8f7] p-5">
+            <h3 className="mb-4 text-sm font-bold text-gray-900">Order Progress</h3>
+            <ol className="relative ml-3 space-y-6 border-l-2 border-dashed border-gray-200 sm:ml-4">
+              {activeFlow.map((step, idx) => {
+                const done = idx <= currentIndex
+                const isCurrent = idx === currentIndex
                 return (
-                  <li key={step} className="relative flex gap-3.5">
-                    {!isLast && (
-                      <span
-                        aria-hidden="true"
-                        className={`absolute left-[11px] top-6 h-[calc(100%+0.5rem)] w-0.5 ${
-                          index < currentIndex ? 'bg-emerald-500' : 'bg-gray-200'
-                        }`}
-                      />
-                    )}
+                  <li key={step} className="relative pl-6 sm:pl-8">
                     <span
-                      className={`relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${
-                        done
-                          ? 'border-emerald-500 bg-emerald-500 text-white'
-                          : 'border-gray-300 bg-white'
+                      className={`absolute -left-[11px] top-0.5 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold transition-colors ${
+                        isCurrent
+                          ? isCancelled
+                            ? 'bg-red-500 text-white ring-4 ring-red-100'
+                            : 'bg-[#E4342F] text-white ring-4 ring-red-100'
+                          : done
+                          ? isCancelled
+                            ? 'bg-red-500 text-white'
+                            : 'bg-emerald-500 text-white'
+                          : 'bg-gray-200 text-gray-500'
                       }`}
                     >
-                      {done ? (
-                        <Check className="h-3.5 w-3.5" strokeWidth={3} />
-                      ) : (
-                        <span className="h-1.5 w-1.5 rounded-full bg-gray-300" />
-                      )}
+                      {done ? <Check className="h-3 w-3" /> : idx + 1}
                     </span>
-                    <div className="pt-0.5">
+                    <div>
                       <p
                         className={`text-xs font-bold ${
                           done ? 'text-gray-900' : 'text-gray-400'
@@ -188,33 +173,54 @@ function OrderDetailsModal({ order, onClose }) {
                       Qty: {product.qty || 1} × {formatPrice(product.price)}
                     </p>
                   </div>
-                  <p className="text-xs font-bold text-gray-900">
-                    {formatPrice((product.price || 0) * (product.qty || 1))}
-                  </p>
+                  <span className="text-xs font-bold text-gray-900">
+                    {formatPrice((Number(product.price) || 0) * (Number(product.qty) || 1))}
+                  </span>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Price Summary */}
-          <div className="space-y-2 rounded-2xl bg-gray-50 p-4 text-xs">
-            <div className="flex justify-between text-gray-600">
-              <span>Subtotal</span>
-              <span className="font-semibold text-gray-900">{formatPrice(subTotal)}</span>
+          {/* Summary Details Grid */}
+          <div className="grid gap-3 rounded-2xl border border-gray-100 bg-gray-50/70 p-4 text-xs sm:grid-cols-2">
+            <div>
+              <span className="text-gray-500">Placed On:</span>{' '}
+              <strong className="text-gray-800">{order.placedAt}</strong>
             </div>
-            <div className="flex justify-between text-gray-600">
-              <span>Shipping</span>
-              <span className="font-semibold text-emerald-600">
-                {(order.shipping || 0) === 0 ? 'Free Shipping' : formatPrice(order.shipping)}
+            <div>
+              <span className="text-gray-500">Delivery Status:</span>{' '}
+              <span
+                className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                  STATUS_BADGE[order.status] || 'bg-gray-100 text-gray-700'
+                }`}
+              >
+                {order.status}
               </span>
             </div>
-            <div className="flex justify-between border-t border-gray-200 pt-2 text-sm font-bold text-gray-900">
-              <span>Total Paid</span>
-              <span className="text-[#E4342F]">
-                {formatPrice(subTotal + (order.shipping || 0))}
-              </span>
+            <div>
+              <span className="text-gray-500">Shipping Fee:</span>{' '}
+              <strong className="text-gray-800">
+                {order.shipping ? formatPrice(order.shipping) : 'Free Delivery'}
+              </strong>
+            </div>
+            <div>
+              <span className="text-gray-500">Grand Total:</span>{' '}
+              <strong className="text-base font-black text-[#E4342F]">
+                {formatPrice(subTotal)}
+              </strong>
             </div>
           </div>
+        </div>
+
+        {/* Modal Footer */}
+        <div className="mt-6 flex justify-end border-t border-gray-100 pt-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl bg-[#E4342F] px-6 py-2.5 text-xs font-bold text-white transition hover:bg-[#c92923]"
+          >
+            Close Details
+          </button>
         </div>
       </div>
     </div>
@@ -226,9 +232,24 @@ export function MyOrders() {
   const [filter, setFilter] = useState('All')
   const [query, setQuery] = useState('')
   const [detailsOrder, setDetailsOrder] = useState(null)
+  const [isLoggedIn, setIsLoggedIn] = useState(() => isAuthenticated())
 
-  // Load any newly created orders from server or keep initial
   useEffect(() => {
+    const syncAuth = () => setIsLoggedIn(isAuthenticated())
+    window.addEventListener('auth-updated', syncAuth)
+    window.addEventListener('storage', syncAuth)
+    window.addEventListener('focus', syncAuth)
+    return () => {
+      window.removeEventListener('auth-updated', syncAuth)
+      window.removeEventListener('storage', syncAuth)
+      window.removeEventListener('focus', syncAuth)
+    }
+  }, [])
+
+  // Load orders from server if authenticated
+  useEffect(() => {
+    if (!isAuthenticated()) return
+
     const loadServerOrders = async () => {
       try {
         const res = await getOrders()
@@ -249,18 +270,18 @@ export function MyOrders() {
           setOrders(mapped)
         }
       } catch {
-        // Fallback to rich demo orders catalog
+        // Handle error silently
       }
     }
 
     loadServerOrders()
-  }, [])
+  }, [isLoggedIn])
 
   const handleDelete = async (orderId) => {
     try {
       await deleteOrder(orderId)
     } catch {
-      // Local state fallback
+      // Local fallback
     }
     setOrders((prev) => prev.filter((o) => o.id !== orderId))
   }
@@ -282,6 +303,38 @@ export function MyOrders() {
       return matchFilter && matchSearch
     })
   }, [orders, filter, query])
+
+  if (!isLoggedIn) {
+    return (
+      <Layout>
+        <main className="min-h-screen bg-[#f4f3f2] px-4 py-12 md:px-6 lg:px-8">
+          <div className="mx-auto max-w-md rounded-2xl bg-white p-8 text-center shadow-sm">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-[#E4342F]">
+              <Package className="h-8 w-8" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900">Sign in to View Orders</h2>
+            <p className="mt-2 text-sm text-gray-500">
+              Please sign in to track and view your order history on LovelyTech.
+            </p>
+            <div className="mt-6 flex flex-col gap-3">
+              <Link
+                to="/login"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#E4342F] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#c92923]"
+              >
+                Sign In
+              </Link>
+              <Link
+                to="/products"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-6 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"
+              >
+                Explore Products
+              </Link>
+            </div>
+          </div>
+        </main>
+      </Layout>
+    )
+  }
 
   return (
     <Layout>
@@ -318,22 +371,24 @@ export function MyOrders() {
                 placeholder="Search by order ID or Product..."
                 className="w-full rounded-full border border-gray-300 bg-white py-2.5 pl-5 pr-11 text-xs text-gray-800 placeholder-gray-400 outline-none transition focus:border-[#E4342F] focus:ring-1 focus:ring-[#E4342F] sm:text-sm"
               />
-              <Search className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+                <Search size={18} />
+              </div>
             </div>
 
-            {/* Filter Pills */}
-            <div className="flex flex-wrap items-center gap-2">
+            {/* Filter Tabs / Pills */}
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               {filters.map((f) => {
-                const isActive = filter === f
+                const active = filter === f
                 return (
                   <button
                     key={f}
                     type="button"
                     onClick={() => setFilter(f)}
-                    className={`rounded-full px-5 py-2 text-xs font-semibold transition sm:text-sm ${
-                      isActive
+                    className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
+                      active
                         ? 'border border-[#E4342F] bg-[#E4342F] text-white shadow-xs'
-                        : 'border border-[#E4342F]/50 bg-white text-black hover:border-[#E4342F]'
+                        : 'border border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-gray-900'
                     }`}
                   >
                     {f}
@@ -343,108 +398,108 @@ export function MyOrders() {
             </div>
           </div>
 
-          {/* Orders List Cards */}
-          {filteredOrders.length === 0 ? (
-            <div className="my-12 rounded-3xl border border-dashed border-gray-200 bg-gray-50 py-16 text-center">
-              <Package className="mx-auto h-12 w-12 text-gray-300" />
-              <h3 className="mt-3 text-base font-bold text-gray-700">No orders found</h3>
-              <p className="mt-1 text-xs text-gray-500">
-                Try searching for a different order ID or change your status filter.
-              </p>
-            </div>
-          ) : (
-            <div className="mt-6 space-y-5">
-              {filteredOrders.map((order) => {
-                const totalAmount = getOrderTotal(order)
+          {/* Orders List / Cards */}
+          <div className="mt-8 space-y-4">
+            {filteredOrders.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 p-12 text-center text-gray-500">
+                <Package className="mx-auto h-12 w-12 text-gray-300 mb-2" />
+                <p className="text-base font-semibold text-gray-700">No orders found</p>
+                <p className="mt-1 text-xs text-gray-400">
+                  {orders.length === 0
+                    ? "You haven't placed any orders yet."
+                    : 'No orders match your filter or search query.'}
+                </p>
+                <Link
+                  to="/products"
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#E4342F] px-5 py-2.5 text-xs font-semibold text-white shadow-xs transition hover:bg-[#c92923]"
+                >
+                  Start Shopping
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            ) : (
+              filteredOrders.map((order) => {
+                const total = getOrderTotal(order)
 
                 return (
-                  <article
+                  <div
                     key={order.id}
-                    className="relative overflow-hidden rounded-2xl border border-gray-200 border-t-4 border-t-[#E4342F] bg-white p-4 shadow-sm transition hover:shadow-md sm:p-5"
+                    className="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md sm:flex-row sm:items-center sm:justify-between sm:p-5"
                   >
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                      {/* Left: Avatar & Order Info */}
-                      <div className="flex items-center gap-4">
-                        {/* Black PP Square */}
-                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-black text-base font-bold text-white sm:h-16 sm:w-16 sm:text-lg">
-                          PP
-                        </div>
-
-                        {/* Order Metadata */}
-                        <div className="space-y-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="text-base font-bold text-gray-900 sm:text-lg">
-                              {order.id}
-                            </h3>
-                            <span
-                              className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold sm:text-xs ${
-                                STATUS_PILL_STYLES[order.status] ||
-                                'bg-gray-100 text-gray-700'
-                              }`}
-                            >
-                              {order.status}
-                            </span>
-                          </div>
-
-                          <p className="text-xs text-gray-500">{order.placedAt}</p>
-
-                          {/* Tag Pills */}
-                          {order.tags && order.tags.length > 0 && (
-                            <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                              {order.tags.map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="rounded-full border border-gray-300 bg-white px-3 py-0.5 text-[11px] font-medium text-gray-700"
-                                >
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                    {/* Left: Basic Info & Tags */}
+                    <div className="space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-bold text-gray-800 sm:text-sm">
+                          Order #{order.id}
+                        </span>
+                        <span className="text-xs text-gray-400">•</span>
+                        <span className="text-xs text-gray-500">{order.placedAt}</span>
                       </div>
 
-                      {/* Right: Trash icon, Price, View Details */}
-                      <div className="flex items-center justify-between border-t border-gray-100 pt-3 sm:flex-col sm:items-end sm:justify-center sm:border-t-0 sm:pt-0">
-                        {/* Delete Button */}
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(order.id)}
-                          aria-label={`Delete order ${order.id}`}
-                          title="Delete order"
-                          className="rounded-lg p-1.5 text-[#E4342F] transition hover:bg-red-50"
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </button>
-
-                        {/* Price & Action */}
-                        <div className="text-right">
-                          <p className="text-base font-bold text-gray-900 sm:text-lg">
-                            {formatPrice(totalAmount)}
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => setDetailsOrder(order)}
-                            className="mt-0.5 flex items-center justify-end gap-1 text-xs font-bold text-[#E4342F] transition hover:underline sm:text-sm"
+                      {/* Tag badges */}
+                      <div className="flex flex-wrap gap-1.5 pt-0.5">
+                        {(order.tags || []).map((t, idx) => (
+                          <span
+                            key={idx}
+                            className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[10px] font-medium text-gray-600"
                           >
-                            View Details →
-                          </button>
-                        </div>
+                            {t}
+                          </span>
+                        ))}
                       </div>
                     </div>
-                  </article>
-                )
-              })}
-            </div>
-          )}
-        </div>
 
-        {/* Modal Popup */}
-        <OrderDetailsModal
-          order={detailsOrder}
-          onClose={() => setDetailsOrder(null)}
-        />
+                    {/* Middle: Price & Status Badge */}
+                    <div className="flex items-center justify-between gap-6 border-t border-gray-100 pt-3 sm:border-t-0 sm:pt-0">
+                      <div className="text-left sm:text-right">
+                        <div className="text-[11px] text-gray-400">Total Amount</div>
+                        <div className="text-sm font-black text-[#E4342F] sm:text-base">
+                          {formatPrice(total)}
+                        </div>
+                      </div>
+
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-bold ${
+                          STATUS_BADGE[order.status] || 'bg-gray-100 text-gray-700'
+                        }`}
+                      >
+                        {order.status}
+                      </span>
+                    </div>
+
+                    {/* Right: Actions */}
+                    <div className="flex items-center justify-end gap-2 border-t border-gray-100 pt-3 sm:border-t-0 sm:pt-0">
+                      <button
+                        type="button"
+                        onClick={() => setDetailsOrder(order)}
+                        className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700 transition hover:border-gray-400 hover:bg-gray-50"
+                      >
+                        View Details
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(order.id)}
+                        aria-label={`Delete order ${order.id}`}
+                        title="Delete Order"
+                        className="flex h-8 w-8 items-center justify-center rounded-xl border border-red-200 text-[#E4342F] transition hover:bg-red-50 hover:text-red-700"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </div>
       </main>
+
+      {/* Pop-up Modal */}
+      <OrderDetailsModal
+        order={detailsOrder}
+        onClose={() => setDetailsOrder(null)}
+      />
     </Layout>
   )
 }

@@ -35,7 +35,8 @@ export function SigninPage() {
       const data = await signIn(email, password, rememberMe);
       const role = data?.user?.role || data?.role || "User";
       setMessage("Login successful");
-      navigate(getDashboardPath(role));
+      const target = location.state?.from || getDashboardPath(role);
+      navigate(target);
     } catch (error) {
       setMessage(error.message || "Unable to sign in right now");
     } finally {

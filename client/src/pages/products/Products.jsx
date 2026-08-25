@@ -1,20 +1,16 @@
-import { useEffect, useState, useMemo } from 'react'
-import { ShoppingBag } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ShoppingBag, AlertCircle, RefreshCw } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 import { SearchSortBar } from '../../components/products/SearchSortBar'
 import { FilterSidebar } from '../../components/products/FilterSidebar'
 import { ProductGrid } from '../../components/products/ProductGrid'
 import { Pagination } from '../../components/products/Pagination'
 import Layout from '../../components/layout/Layout'
-import {
-  productsData,
-  categories as defaultCategories,
-  ratingOptions as defaultRatingOptions,
-  resolveImageUrl,
-  getCategoryFallbackImage,
-} from '../../data/productsData'
+import { getProducts, getProductFacets } from '../../services/productServices'
 import { getWishlistIds, toggleWishlistProduct } from '../../utils/wishlistStorage'
 import { isAuthenticated } from '../../services/authServices'
+import { resolveImageUrl, getCategoryFallbackImage } from '../../data/productsData'
 
 const ITEMS_PER_PAGE = 9
 const DEFAULT_PRICE_MAX = 600000
@@ -30,7 +26,7 @@ const normalizeProduct = (product) => {
 
   return {
     ...product,
-    id: product.id || product._id,
+    id: product._id || product.id,
     image: resolveImageUrl(rawImage, category),
     availability:
       product.stock > 0
@@ -40,24 +36,34 @@ const normalizeProduct = (product) => {
 }
 
 export function Products() {
+  const navigate = useNavigate()
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState('none')
   const [selectedCategories, setSelectedCategories] = useState([])
   const [selectedRatings, setSelectedRatings] = useState([])
   const [availability, setAvailability] = useState({ inStock: true, outOfStock: true })
   const [priceRange, setPriceRange] = useState(DEFAULT_PRICE_MAX)
+  const [maxPriceLimit, setMaxPriceLimit] = useState(DEFAULT_PRICE_MAX)
   const [wishlistIds, setWishlistIds] = useState(() => getWishlistIds())
   const [isLoggedIn, setIsLoggedIn] = useState(() => isAuthenticated())
   const [page, setPage] = useState(1)
 
-  // Listen to auth and wishlist updates across the app
+  const [products, setProducts] = useState([])
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalItems, setTotalItems] = useState(0)
+  const [facets, setFacets] = useState({
+    categories: [],
+    ratings: [],
+    priceRange: { min: 0, max: DEFAULT_PRICE_MAX },
+  })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  // Sync auth and wishlist events
   useEffect(() => {
-    const handleWishlistUpdate = () => {
-      setWishlistIds(getWishlistIds())
-    }
-    const handleAuthUpdate = () => {
-      setIsLoggedIn(isAuthenticated())
-    }
+    const handleWishlistUpdate = () => setWishlistIds(getWishlistIds())
+    const handleAuthUpdate = () => setIsLoggedIn(isAuthenticated())
+
     window.addEventListener('wishlist-updated', handleWishlistUpdate)
     window.addEventListener('auth-updated', handleAuthUpdate)
     window.addEventListener('storage', handleWishlistUpdate)
@@ -72,53 +78,90 @@ export function Products() {
     }
   }, [])
 
-  // Calculate dynamic facet counts based on demo products
-  const categoryOptions = useMemo(() => {
-    return defaultCategories.map(({ label }) => {
-      const count = productsData.filter((item) => item.category === label).length
-      return { label, count }
-    })
+  // Load facets from backend API
+  const loadFacets = async () => {
+    try {
+      const response = await getProductFacets()
+      const serverMax = response?.priceRange?.max || DEFAULT_PRICE_MAX
+
+      setFacets({
+        categories: response?.categories || [],
+        ratings: response?.ratings || [],
+        priceRange: response?.priceRange || { min: 0, max: DEFAULT_PRICE_MAX },
+      })
+      setMaxPriceLimit(serverMax)
+      setPriceRange((prev) => (prev === DEFAULT_PRICE_MAX ? serverMax : Math.min(prev, serverMax)))
+    } catch (err) {
+      console.error('Failed to load facets:', err)
+    }
+  }
+
+  useEffect(() => {
+    loadFacets()
   }, [])
 
-  const ratingOptions = useMemo(() => {
-    return defaultRatingOptions.map(({ value }) => {
-      const count = productsData.filter((item) => Math.round(item.rating) >= value).length
-      return { value, count }
-    })
-  }, [])
+  // Fetch products from backend whenever filters, search, sort or page changes
+  useEffect(() => {
+    let isCurrent = true
 
-  // Filter and sort products from the curated catalog
-  const filteredProducts = useMemo(() => {
-    const filtered = productsData.filter((item) => {
-      const matchSearch =
-        !searchTerm.trim() ||
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.category && item.category.toLowerCase().includes(searchTerm.toLowerCase()))
-      const matchCategory =
-        selectedCategories.length === 0 || selectedCategories.includes(item.category)
-      const matchRating =
-        selectedRatings.length === 0 || selectedRatings.some((r) => item.rating >= r)
-      const matchPrice = item.price <= priceRange
-      const isStockOk =
-        (availability.inStock && item.availability !== 'Out of Stock') ||
-        (availability.outOfStock && item.availability === 'Out of Stock')
+    const fetchProducts = async () => {
+      setLoading(true)
+      setError('')
 
-      return matchSearch && matchCategory && matchRating && matchPrice && isStockOk
-    })
+      try {
+        const params = {
+          page,
+          limit: ITEMS_PER_PAGE,
+          search: searchTerm.trim() || undefined,
+          category: selectedCategories.length > 0 ? selectedCategories.join(',') : undefined,
+          minPrice: 0,
+          maxPrice: priceRange < maxPriceLimit ? priceRange : undefined,
+          minRating: selectedRatings.length > 0 ? Math.min(...selectedRatings) : undefined,
+          inStock:
+            availability.inStock && availability.outOfStock
+              ? undefined
+              : availability.inStock
+                ? 'true'
+                : 'false',
+          sort: sortBy !== 'none' ? sortBy : undefined,
+        }
 
-    const sorted = [...filtered].sort((a, b) => {
-      if (sortBy === 'price-asc') return a.price - b.price
-      if (sortBy === 'price-desc') return b.price - a.price
-      if (sortBy === 'sold-desc') return (b.sold || 0) - (a.sold || 0)
-      return 0
-    })
+        const data = await getProducts(params)
 
-    return sorted.map(normalizeProduct)
-  }, [searchTerm, selectedCategories, selectedRatings, priceRange, availability, sortBy])
+        if (isCurrent) {
+          const rawList = data?.products || []
+          setProducts(rawList.map(normalizeProduct))
+          setTotalPages(data?.pagination?.totalPages || 1)
+          setTotalItems(data?.pagination?.totalItems || rawList.length)
+        }
+      } catch (err) {
+        if (isCurrent) {
+          console.error('Error loading products:', err)
+          setError(err.message || 'Failed to connect to the backend server. Please make sure the server is running.')
+          setProducts([])
+        }
+      } finally {
+        if (isCurrent) {
+          setLoading(false)
+        }
+      }
+    }
 
-  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE) || 1
-  const startIndex = (page - 1) * ITEMS_PER_PAGE
-  const displayedProducts = filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE)
+    fetchProducts()
+
+    return () => {
+      isCurrent = false
+    }
+  }, [
+    page,
+    searchTerm,
+    selectedCategories,
+    selectedRatings,
+    availability,
+    priceRange,
+    maxPriceLimit,
+    sortBy,
+  ])
 
   const updateFilterAndResetPage = (updater) => {
     updater()
@@ -147,6 +190,10 @@ export function Products() {
     )
 
   const toggleWishlist = (productId) => {
+    if (!isAuthenticated()) {
+      navigate('/login', { state: { from: '/products' } })
+      return
+    }
     toggleWishlistProduct(productId)
     setWishlistIds(getWishlistIds())
   }
@@ -155,22 +202,35 @@ export function Products() {
     setSelectedCategories([])
     setSelectedRatings([])
     setAvailability({ inStock: true, outOfStock: true })
-    setPriceRange(DEFAULT_PRICE_MAX)
+    setPriceRange(maxPriceLimit)
     setSearchTerm('')
     setSortBy('none')
     setPage(1)
   }
 
+  const categoryOptions = (facets.categories || []).map(({ category, count }) => ({
+    label: category,
+    count: count || 0,
+  }))
+
+  const ratingOptions = (facets.ratings || []).map(({ rating, count }) => ({
+    value: rating,
+    count: count || 0,
+  }))
+
   return (
     <Layout>
       <main className="min-h-screen bg-white px-4 py-8 sm:px-6 lg:px-10">
         <div className="mx-auto max-w-[1400px]">
+          {/* Page Header */}
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
               <ShoppingBag size={28} className="text-[#E4342F]" />
               <div>
                 <h1 className="text-3xl font-bold text-[#E4342F]">Products</h1>
-                <p className="text-gray-500">Browse your products</p>
+                <p className="text-gray-500">
+                  Browse {totalItems > 0 ? `${totalItems} ` : ''}products directly from our inventory
+                </p>
               </div>
             </div>
 
@@ -187,11 +247,12 @@ export function Products() {
           </div>
 
           <div className="flex flex-col gap-8 lg:flex-row">
+            {/* Filter Sidebar */}
             <FilterSidebar
               selectedCategories={selectedCategories}
               onToggleCategory={toggleCategory}
               priceRange={priceRange}
-              maxPrice={DEFAULT_PRICE_MAX}
+              maxPrice={maxPriceLimit}
               onPriceRangeChange={(value) => updateFilterAndResetPage(() => setPriceRange(value))}
               selectedRatings={selectedRatings}
               onToggleRating={toggleRating}
@@ -202,23 +263,49 @@ export function Products() {
               ratingOptions={ratingOptions}
             />
 
+            {/* Products Grid Content Area */}
             <div className="flex-1">
-              {displayedProducts.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-12 text-center text-gray-500">
+              {loading ? (
+                <div className="flex min-h-[400px] flex-col items-center justify-center rounded-2xl border border-gray-200 bg-gray-50 p-12 text-center">
+                  <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#E4342F] border-t-transparent mb-3" />
+                  <p className="text-base font-semibold text-gray-700">Loading products from server...</p>
+                  <p className="mt-1 text-sm text-gray-500">Connecting to LovelyTech API</p>
+                </div>
+              ) : error ? (
+                <div className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
+                  <AlertCircle className="mx-auto h-10 w-10 text-[#E4342F] mb-2" />
+                  <h3 className="text-lg font-bold text-gray-900">Unable to Fetch Products</h3>
+                  <p className="mt-1 text-sm text-red-600">{error}</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      loadFacets()
+                      setPage(1)
+                    }}
+                    className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#E4342F] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#c92923]"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Retry Connection
+                  </button>
+                </div>
+              ) : products.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-12 text-center text-gray-500">
                   <p className="text-base font-semibold text-gray-700">No products found</p>
-                  <p className="mt-1 text-sm text-gray-500">Try adjusting your search or filters.</p>
+                  <p className="mt-1 text-sm text-gray-500">
+                    No products match your current search or filter criteria.
+                  </p>
                   <button
                     type="button"
                     onClick={clearAll}
                     className="mt-4 rounded-xl bg-[#E4342F] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#c92923]"
                   >
-                    Reset Filters
+                    Reset All Filters
                   </button>
                 </div>
               ) : (
                 <>
                   <ProductGrid
-                    products={displayedProducts}
+                    products={products}
                     wishlistIds={wishlistIds}
                     onToggleWishlist={toggleWishlist}
                     showWishlist={isLoggedIn}
@@ -233,4 +320,5 @@ export function Products() {
     </Layout>
   )
 }
+
 export default Products

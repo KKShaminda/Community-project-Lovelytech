@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   ShoppingCart,
@@ -9,14 +9,13 @@ import {
   CheckCircle2,
   ArrowRight,
   ShoppingBag,
-  Tag,
+  Eye,
 } from 'lucide-react'
 import Layout from '../../components/layout/Layout'
 import {
   formatPrice,
   resolveImageUrl,
   getCategoryFallbackImage,
-  FALLBACK_PRODUCT_IMAGE,
 } from '../../data/productsData'
 
 import {
@@ -29,6 +28,7 @@ import { isAuthenticated } from '../../services/authServices'
 
 export function CartPage() {
   const navigate = useNavigate()
+  const itemsContainerRef = useRef(null)
   const [items, setItems] = useState(() => getCartItems())
   const [couponCode, setCouponCode] = useState('')
   const [discountApplied, setDiscountApplied] = useState(true)
@@ -85,6 +85,17 @@ export function CartPage() {
     setItems(updated)
   }
 
+  const handleViewAllItems = (e) => {
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    // Scroll smoothly to the cart items list without navigating to another page
+    if (itemsContainerRef.current) {
+      itemsContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
+
   const handleApplyCoupon = (e) => {
     e.preventDefault()
     const trimmed = couponCode.trim().toUpperCase()
@@ -107,6 +118,10 @@ export function CartPage() {
   }
 
   const handleCheckout = () => {
+    if (!isAuthenticated()) {
+      navigate('/login', { state: { from: '/payment' } })
+      return
+    }
     navigate('/payment')
   }
 
@@ -116,23 +131,39 @@ export function CartPage() {
         <div className="mx-auto max-w-[1320px]">
           
           {/* Header Title Section */}
-          <div className="mb-8">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2">
-                <ShoppingCart className="h-7 w-7 text-black sm:h-8 sm:w-8" />
-                <h1 className="text-2xl font-bold tracking-tight text-[#E4342F] sm:text-3xl lg:text-4xl">
-                  Shopping Cart
-                </h1>
+          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <ShoppingCart className="h-7 w-7 text-black sm:h-8 sm:w-8" />
+                  <h1 className="text-2xl font-bold tracking-tight text-[#E4342F] sm:text-3xl lg:text-4xl">
+                    Shopping Cart
+                  </h1>
+                </div>
+                {totalItemsCount > 0 && (
+                  <span className="rounded-full bg-[#E4342F] px-3.5 py-1 text-xs font-bold text-white shadow-xs">
+                    {totalItemsCount} {totalItemsCount === 1 ? 'Item' : 'Items'}
+                  </span>
+                )}
               </div>
-              {totalItemsCount > 0 && (
-                <span className="rounded-full bg-[#E4342F] px-3.5 py-1 text-xs font-bold text-white shadow-xs">
-                  {totalItemsCount} {totalItemsCount === 1 ? 'Item' : 'Items'}
-                </span>
-              )}
+              <p className="mt-1 text-xs text-gray-500 sm:text-sm">
+                Review your selected items before proceeding to checkout...
+              </p>
             </div>
-            <p className="mt-1 text-xs text-gray-500 sm:text-sm">
-              Just a step before make payment...
-            </p>
+
+            {items.length > 0 && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  id="view-all-items-btn"
+                  onClick={handleViewAllItems}
+                  className="inline-flex items-center gap-2 rounded-xl border border-[#E4342F]/30 bg-white px-4 py-2.5 text-xs font-semibold text-[#E4342F] shadow-xs transition hover:bg-[#E4342F] hover:text-white"
+                >
+                  <Eye className="h-4 w-4" />
+                  View All Items ({items.length})
+                </button>
+              </div>
+            )}
           </div>
 
           {items.length === 0 ? (
@@ -170,7 +201,7 @@ export function CartPage() {
             <div className="grid gap-8 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px]">
               
               {/* Left Column: Cart Items List */}
-              <div className="space-y-5">
+              <div ref={itemsContainerRef} id="cart-items-container" className="space-y-5">
                 {items.map((item) => {
                   const itemTotal = (item.price || 0) * (item.quantity || 1)
                   const itemImg = resolveImageUrl(item.image)
@@ -186,39 +217,32 @@ export function CartPage() {
                           <Store className="h-4 w-4 text-gray-700" />
                           <span>{item.category || 'Electronics & Accessories'}</span>
                         </div>
-                        <Link
-                          to={`/products/${item.id}`}
-                          className="flex items-center gap-1 text-xs font-semibold text-[#E4342F] transition hover:underline sm:text-sm"
-                        >
-                          View Details →
-                        </Link>
+                        <span className="text-xs font-semibold text-[#E4342F]">
+                          {item.quantity || 1} x {formatPrice(item.price)}
+                        </span>
                       </div>
 
                       {/* Item Content Body */}
                       <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:gap-6 sm:p-5">
                         {/* Product Image Frame */}
                         <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 sm:h-32 sm:w-32">
-                          <Link to={`/products/${item.id}`} className="block h-full w-full">
-                            <img
-                              src={itemImg}
-                              alt={item.name}
-                              className="h-full w-full object-cover transition duration-300 hover:scale-105"
-                              onError={(event) => {
-                                const fallback = getCategoryFallbackImage(item.category)
-                                if (event.currentTarget.src !== fallback) {
-                                  event.currentTarget.src = fallback
-                                }
-                              }}
-
-                            />
-                          </Link>
+                          <img
+                            src={itemImg}
+                            alt={item.name}
+                            className="h-full w-full object-cover transition duration-300 hover:scale-105"
+                            onError={(event) => {
+                              const fallback = getCategoryFallbackImage(item.category)
+                              if (event.currentTarget.src !== fallback) {
+                                event.currentTarget.src = fallback
+                              }
+                            }}
+                          />
                         </div>
-
 
                         {/* Product Details Info */}
                         <div className="flex-1 space-y-1.5">
-                          <h3 className="text-base font-bold text-[#1a1a1a] transition hover:text-[#E4342F] sm:text-lg">
-                            <Link to={`/products/${item.id}`}>{item.name}</Link>
+                          <h3 className="text-base font-bold text-[#1a1a1a] sm:text-lg">
+                            {item.name}
                           </h3>
 
                           {/* Attributes */}
@@ -305,7 +329,7 @@ export function CartPage() {
                   )
                 })}
 
-                {/* Continue Shopping Action */}
+                {/* Bottom Actions */}
                 <div className="flex items-center justify-between pt-2">
                   <Link
                     to="/products"
@@ -330,9 +354,18 @@ export function CartPage() {
               {/* Right Column: Order Summary Card */}
               <div className="lg:sticky lg:top-24 h-fit">
                 <div className="rounded-2xl border border-gray-200 border-t-4 border-t-[#E4342F] bg-white p-6 shadow-sm">
-                  <h2 className="text-xl font-bold tracking-tight text-gray-900">
-                    Order Summary
-                  </h2>
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-bold tracking-tight text-gray-900">
+                      Order Summary
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={handleViewAllItems}
+                      className="text-xs font-semibold text-[#E4342F] hover:underline"
+                    >
+                      View All ({items.length})
+                    </button>
+                  </div>
 
                   <div className="mt-5 space-y-3.5 text-sm">
                     <div className="flex items-center justify-between">
@@ -422,4 +455,5 @@ export function CartPage() {
     </Layout>
   )
 }
+
 export default CartPage

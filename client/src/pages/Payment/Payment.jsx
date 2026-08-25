@@ -5,6 +5,7 @@ import Layout from "../../components/layout/Layout";
 import { getCartItems, clearCart } from "../../utils/cartStorage";
 import { createOrder } from "../../services/orderServices";
 import { resolveImageUrl, getCategoryFallbackImage } from "../../data/productsData";
+import { isAuthenticated } from "../../services/authServices";
 
 const inputClassName =
 	"h-11 w-full rounded-md border border-[#cfcfcf] bg-white px-3 text-sm text-[#222] outline-none transition focus:border-[#ff2020] focus:ring-2 focus:ring-[#ff2020]/15";
@@ -43,8 +44,12 @@ function Payment() {
 	const shipping = 0;
 	const total = Math.max(0, subTotal + shipping - discount);
 
-	// Redirect if cart is empty
+	// Enforce authentication & redirect if cart is empty
 	useEffect(() => {
+		if (!isAuthenticated()) {
+			navigate("/login", { state: { from: "/payment" } });
+			return;
+		}
 		if (items.length === 0) {
 			navigate("/cart");
 		}
