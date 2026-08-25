@@ -22,18 +22,43 @@ const stockFillFor = (stock) => {
   return '94%'
 }
 
-const normalizeProduct = (product) => ({
-  id: product._id || product.id,
-  name: product.name,
-  sku: product.sku || product.code || product._id?.slice(-8)?.toUpperCase() || 'N/A',
-  category: product.category || 'Uncategorized',
-  stock: Number(product.stock) || 0,
-  price: Number(product.price) || 0,
-  brand: product.brand || '',
-  description: product.description || '',
-  isActive: product.isActive ?? true,
-  status: Number(product.stock) > 0 ? 'In Stock' : 'Low Stock',
-})
+const normalizeProduct = (product) => {
+  const stock = Number(product.stock) || 0
+  let status = 'In Stock'
+  let statusClass = 'bg-emerald-100 text-emerald-700'
+  let stockClass = 'text-emerald-700'
+  let barClass = 'bg-emerald-500'
+
+  if (stock === 0) {
+    status = 'Out of Stock'
+    statusClass = 'bg-red-105 text-red-600 border border-red-200'
+    stockClass = 'text-red-600 font-bold'
+    barClass = 'bg-red-500'
+  } else if (stock <= 5) {
+    status = 'Low Stock'
+    statusClass = 'bg-amber-100 text-amber-750 border border-amber-200'
+    stockClass = 'text-amber-600 font-bold'
+    barClass = 'bg-amber-500'
+  }
+
+  return {
+    id: product._id || product.id,
+    name: product.name,
+    sku: product.sku || product.code || product._id?.slice(-8)?.toUpperCase() || 'N/A',
+    category: product.category || 'Uncategorized',
+    stock,
+    price: Number(product.price) || 0,
+    brand: product.brand || '',
+    description: product.description || '',
+    isActive: product.isActive ?? true,
+    images: product.images || [],
+    status,
+    statusClass,
+    stockClass,
+    barWidth: stockFillFor(stock),
+    barClass,
+  }
+}
 
 const CATEGORIES = [
   'Mobile Phones',
@@ -62,29 +87,46 @@ function StatCard({ label, value }) {
   )
 }
 
-function InventoryRow({ item }) {
+function InventoryRow({ item, onEdit, onDelete }) {
+  const imageUrl = item.images && item.images[0] ? item.images[0].url : ''
+
   return (
-    <div className="grid grid-cols-[1.6fr_1fr_1fr_0.8fr_0.9fr_0.5fr] items-center border-b border-neutral-200 px-4 py-4 text-sm last:border-b-0 lg:px-6">
-      <div className="flex items-center gap-3">
-        <div className="h-8 w-8 rounded-md bg-neutral-900/90" />
-        <div>
-          <p className="font-semibold text-neutral-900">{item.name}</p>
-          <p className="text-[11px] text-neutral-600">SKU: {item.sku}</p>
+    <tr className="hover:bg-neutral-50 transition-colors border-b border-neutral-200 last:border-b-0">
+      <td className="px-6 py-4">
+        <div className="flex items-center gap-3">
+          {imageUrl ? (
+            <img src={imageUrl} alt={item.name} className="h-10 w-10 rounded-lg object-cover border border-neutral-200" />
+          ) : (
+            <div className="h-10 w-10 rounded-lg bg-neutral-900/90 flex items-center justify-center text-white text-[9px] font-bold">No Image</div>
+          )}
+          <div>
+            <p className="font-semibold text-neutral-900 leading-tight">{item.name}</p>
+            <p className="text-[11px] text-neutral-500 mt-0.5">SKU: {item.sku}</p>
+          </div>
         </div>
-      </div>
-      <span className="text-neutral-800">{item.category}</span>
-      <span className={`inline-flex w-fit items-center gap-2 font-medium ${item.stockClass}`}>
-        {item.stock} Units
-        <span className="block h-1.5 w-16 rounded-full bg-neutral-900/80">
-          <span className={`block h-full rounded-full ${item.barClass}`} style={{ width: item.barWidth }} />
-        </span>
-      </span>
-      <span className="font-medium text-neutral-900">{item.price}</span>
-      <span>
-        <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${item.statusClass}`}>{item.status}</span>
-      </span>
-      <button type="button" className="text-sm font-semibold text-[#ef2027]">Edit</button>
-    </div>
+      </td>
+      <td className="px-6 py-4 text-neutral-800 font-medium">{item.category}</td>
+      <td className="px-6 py-4">
+        <div className="flex items-center gap-2">
+          <span className={`font-semibold ${item.stockClass} min-w-[65px]`}>
+            {item.stock} Units
+          </span>
+          <div className="hidden sm:block h-1.5 w-16 rounded-full bg-neutral-200 overflow-hidden">
+            <div className={`h-full rounded-full ${item.barClass}`} style={{ width: item.barWidth }} />
+          </div>
+        </div>
+      </td>
+      <td className="px-6 py-4 font-semibold text-neutral-900">{item.priceFormatted}</td>
+      <td className="px-6 py-4">
+        <span className={`inline-block rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider ${item.statusClass}`}>{item.status}</span>
+      </td>
+      <td className="px-6 py-4 text-right">
+        <div className="flex items-center justify-end gap-3">
+          <button type="button" onClick={onEdit} className="text-sm font-semibold text-[#ef2027] cursor-pointer hover:underline">Edit</button>
+          <button type="button" onClick={onDelete} className="text-sm font-semibold text-neutral-500 hover:text-red-600 cursor-pointer hover:underline">Delete</button>
+        </div>
+      </td>
+    </tr>
   )
 }
 
@@ -97,6 +139,18 @@ export function InventoryManagementPage() {
   const [savingError, setSavingError] = useState('')
   const [editingProduct, setEditingProduct] = useState(null)
   const [form, setForm] = useState(emptyForm)
+
+  // Interactive Filters & Search State
+  const [search, setSearch] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('All')
+  const [statusFilter, setStatusFilter] = useState('All')
+  const [filtersOpen, setFiltersOpen] = useState(false)
+
+  // Product Images Upload State
+  const [selectedFiles, setSelectedFiles] = useState([]) // File objects
+  const [previewUrls, setPreviewUrls] = useState([]) // Preview object URLs
+  const [existingImages, setExistingImages] = useState([]) // Saved image records
+  const [removeImages, setRemoveImages] = useState([]) // List of image paths to remove
 
   const loadProducts = async () => {
     setLoading(true)
@@ -124,10 +178,15 @@ export function InventoryManagementPage() {
     setEditingProduct(null)
     setSavingError('')
     setForm(emptyForm)
+    setSelectedFiles([])
+    setPreviewUrls([])
+    setExistingImages([])
+    setRemoveImages([])
     setModalOpen(true)
   }
 
   const openEditModal = (item) => {
+    const origProduct = products.find(p => p.id === item.id) || item
     setEditingProduct(item)
     setSavingError('')
     setForm({
@@ -139,14 +198,45 @@ export function InventoryManagementPage() {
       stock: String(item.stock || ''),
       isActive: item.isActive ?? true,
     })
+    setSelectedFiles([])
+    setPreviewUrls([])
+    setExistingImages(origProduct.images || [])
+    setRemoveImages([])
     setModalOpen(true)
   }
 
   const closeModal = () => {
     if (saving) return
+    previewUrls.forEach(url => URL.revokeObjectURL(url))
     setModalOpen(false)
     setEditingProduct(null)
     setSavingError('')
+  }
+
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files)
+    if (files.length === 0) return
+
+    const totalCurrentImages = existingImages.length + selectedFiles.length
+    if (totalCurrentImages + files.length > 5) {
+      alert('You can only upload up to 5 images per product.')
+      return
+    }
+
+    const newPreviewUrls = files.map(file => URL.createObjectURL(file))
+    setSelectedFiles(prev => [...prev, ...files])
+    setPreviewUrls(prev => [...prev, ...newPreviewUrls])
+  }
+
+  const removeSelectedFile = (index) => {
+    URL.revokeObjectURL(previewUrls[index])
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index))
+    setPreviewUrls(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const removeExistingImage = (img, index) => {
+    setRemoveImages(prev => [...prev, img.path])
+    setExistingImages(prev => prev.filter((_, i) => i !== index))
   }
 
   const handleSubmit = async (event) => {
@@ -160,6 +250,8 @@ export function InventoryManagementPage() {
         price: Number(form.price),
         stock: Number(form.stock),
         isActive: Boolean(form.isActive),
+        images: selectedFiles,
+        removeImages: removeImages,
       }
 
       if (editingProduct) {
@@ -168,6 +260,7 @@ export function InventoryManagementPage() {
         await createProduct(payload)
       }
 
+      previewUrls.forEach(url => URL.revokeObjectURL(url))
       setModalOpen(false)
       setEditingProduct(null)
       setForm(emptyForm)
@@ -190,9 +283,35 @@ export function InventoryManagementPage() {
     }
   }
 
+  const handleExportCSV = () => {
+    if (inventoryItems.length === 0) return
+
+    const headers = ['Product Name', 'SKU', 'Category', 'Brand', 'Stock Level', 'Unit Price', 'Status']
+    const rows = inventoryItems.map(p => [
+      `"${p.name.replace(/"/g, '""')}"`,
+      `"${p.sku}"`,
+      `"${p.category}"`,
+      `"${p.brand.replace(/"/g, '""')}"`,
+      p.stock,
+      p.price,
+      `"${p.status}"`
+    ])
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.setAttribute('href', url)
+    link.setAttribute('download', `inventory_export_${new Date().toISOString().slice(0, 10)}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   const inventoryStats = useMemo(() => {
     const totalProducts = products.length
-    const lowStockCount = products.filter((product) => product.stock > 0 && product.stock <= 10).length
+    const lowStockCount = products.filter((product) => product.stock <= 5).length
     const inventoryValue = products.reduce((sum, product) => sum + product.price * product.stock, 0)
 
     return [
@@ -202,22 +321,49 @@ export function InventoryManagementPage() {
     ]
   }, [products])
 
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      const matchesSearch =
+        !search.trim() ||
+        product.name.toLowerCase().includes(search.toLowerCase()) ||
+        product.sku.toLowerCase().includes(search.toLowerCase()) ||
+        product.category.toLowerCase().includes(search.toLowerCase()) ||
+        (product.brand && product.brand.toLowerCase().includes(search.toLowerCase()))
+
+      const matchesCategory =
+        categoryFilter === 'All' || product.category === categoryFilter
+
+      const matchesStatus =
+        statusFilter === 'All' ||
+        (statusFilter === 'In Stock' && product.stock > 5) ||
+        (statusFilter === 'Low Stock' && product.stock > 0 && product.stock <= 5) ||
+        (statusFilter === 'Out of Stock' && product.stock === 0)
+
+      return matchesSearch && matchesCategory && matchesStatus
+    })
+  }, [products, search, categoryFilter, statusFilter])
+
   const inventoryItems = useMemo(
     () =>
-      products.map((product) => ({
+      filteredProducts.map((product) => ({
         id: product.id,
         name: product.name,
         sku: product.sku,
         category: product.category,
         stock: product.stock,
-        stockClass: product.stock > 10 ? 'text-emerald-700' : 'text-red-600',
-        barWidth: stockFillFor(product.stock),
-        barClass: product.stock > 10 ? 'bg-emerald-500' : 'bg-red-500',
-        price: formatLKR(product.price),
+        stockClass: product.stockClass,
+        barWidth: product.barWidth,
+        barClass: product.barClass,
+        price: product.price,
+        priceFormatted: formatLKR(product.price),
         status: product.status,
-        statusClass: product.stock > 10 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-red-500',
+        statusClass: product.statusClass,
+        images: product.images,
+        isActive: product.isActive,
+        brand: product.brand,
+        description: product.description,
       })),
-    [products],
+    [filteredProducts],
   )
 
   return (
@@ -231,9 +377,8 @@ export function InventoryManagementPage() {
         <button
           type="button"
           onClick={openCreateModal}
-          className="inline-flex items-center justify-center gap-2 self-start rounded-xl bg-gradient-to-b from-[#ff4c4f] to-[#e01c23] px-6 py-3 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(224,28,35,0.32)]"
+          className="rounded-full border border-[#ff2020] px-5 py-2.5 text-sm font-semibold text-[#ff2020] hover:bg-[#ff2020] hover:text-black cursor-pointer"
         >
-          <span className="text-base leading-none">⊕</span>
           Add Product
         </button>
       </div>
@@ -250,22 +395,80 @@ export function InventoryManagementPage() {
             <span className="mr-3 text-neutral-500">⌕</span>
             <input
               type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               placeholder="Search product name, SKU, or category..."
               className="w-full bg-transparent text-sm outline-none placeholder:text-neutral-500"
             />
           </label>
 
           <div className="flex items-center gap-3 self-start lg:self-auto">
-            <button type="button" className="inline-flex items-center gap-2 rounded-lg bg-[#ef2027] px-4 py-2 text-sm font-semibold text-white">
+            <button
+              type="button"
+              onClick={() => setFiltersOpen(!filtersOpen)}
+              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-all cursor-pointer ${
+                filtersOpen ? 'bg-neutral-800' : 'bg-[#ef2027] hover:bg-[#ef2027]/90'
+              }`}
+            >
               <span>≡</span>
               Filters
             </button>
-            <button type="button" className="inline-flex items-center gap-2 rounded-lg bg-[#ef2027] px-4 py-2 text-sm font-semibold text-white">
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              className="inline-flex items-center gap-2 rounded-lg bg-[#ef2027] px-4 py-2 text-sm font-semibold text-white hover:bg-[#ef2027]/90 cursor-pointer"
+            >
               <span>⇩</span>
               Export CSV
             </button>
           </div>
         </div>
+
+        {filtersOpen ? (
+          <div className="mt-4 grid gap-4 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm md:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">Category</p>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="w-full rounded-xl border border-neutral-300 px-4 py-2 text-sm outline-none focus:border-[#ef2027] bg-white text-neutral-800"
+              >
+                <option value="All">All Categories</option>
+                {CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">Stock Status</p>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full rounded-xl border border-neutral-300 px-4 py-2 text-sm outline-none focus:border-[#ef2027] bg-white text-neutral-800"
+              >
+                <option value="All">All Stock Statuses</option>
+                <option value="In Stock">In Stock (&gt; 5 units)</option>
+                <option value="Low Stock">Low Stock (1-5 units)</option>
+                <option value="Out of Stock">Out of Stock (0 units)</option>
+              </select>
+            </div>
+
+            <div className="flex items-end justify-end md:col-span-2 lg:col-span-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setCategoryFilter('All')
+                  setStatusFilter('All')
+                  setSearch('')
+                }}
+                className="w-full lg:w-auto rounded-xl border border-neutral-300 px-5 py-2 text-sm font-semibold text-neutral-600 hover:bg-neutral-50"
+              >
+                Reset Filters
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         {error ? (
           <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -273,40 +476,48 @@ export function InventoryManagementPage() {
           </div>
         ) : null}
 
-        <div className="mt-4 overflow-hidden rounded-xl border border-neutral-300 bg-white">
-          <div className="grid grid-cols-[1.6fr_1fr_1fr_0.8fr_0.9fr_0.5fr] bg-[#d8d8d8] px-4 py-3 text-[11px] font-bold uppercase tracking-wide text-red-500 lg:px-6">
-            <span>Product Name</span>
-            <span>Category</span>
-            <span>Stock Level</span>
-            <span>Unit Price</span>
-            <span>Status</span>
-            <span>Actions</span>
-          </div>
+        <div className="mt-4 overflow-x-auto rounded-xl border border-neutral-300 bg-white">
+          <table className="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr className="bg-[#d8d8d8] text-[11px] font-bold uppercase tracking-wide text-red-500 border-b border-neutral-200">
+                <th className="px-6 py-3">Product Name</th>
+                <th className="px-6 py-3">Category</th>
+                <th className="px-6 py-3">Stock Level</th>
+                <th className="px-6 py-3">Unit Price</th>
+                <th className="px-6 py-3">Status</th>
+                <th className="px-6 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-neutral-200">
+              {loading ? (
+                <tr>
+                  <td colSpan="6" className="px-6 py-8 text-center text-sm text-neutral-600">Loading inventory from the product catalog...</td>
+                </tr>
+              ) : inventoryItems.length > 0 ? (
+                inventoryItems.map((item) => (
+                  <InventoryRow
+                    key={item.id}
+                    item={item}
+                    onEdit={() => openEditModal(item)}
+                    onDelete={() => handleDelete(item)}
+                  />
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="6" className="px-6 py-8 text-center text-sm text-neutral-600">No active products found in the catalog.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
 
-          {loading ? (
-            <div className="px-4 py-8 text-center text-sm text-neutral-600 lg:px-6">Loading inventory from the product catalog...</div>
-          ) : inventoryItems.length > 0 ? (
-            inventoryItems.map((item) => (
-              <div key={item.id} className="group relative">
-                <InventoryRow item={item} />
-                <div className="absolute right-4 top-1/2 hidden -translate-y-1/2 items-center gap-3 group-hover:flex lg:right-6">
-                  <button type="button" onClick={() => openEditModal(item)} className="text-sm font-semibold text-[#ef2027]">Edit</button>
-                  <button type="button" onClick={() => handleDelete(item)} className="text-sm font-semibold text-neutral-500 hover:text-red-600">Delete</button>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="px-4 py-8 text-center text-sm text-neutral-600 lg:px-6">No active products found in the catalog.</div>
-          )}
-
-          <div className="flex flex-col gap-4 border-t border-neutral-200 bg-[#efefef] px-4 py-3 text-sm text-neutral-800 lg:flex-row lg:items-center lg:justify-between lg:px-6">
+          <div className="flex flex-col gap-4 border-t border-neutral-200 bg-[#efefef] px-6 py-3 text-sm text-neutral-800 lg:flex-row lg:items-center lg:justify-between">
             <p>Showing 1-{Math.min(inventoryItems.length || 1, DEFAULT_LIMIT)} of {products.length} products</p>
             <div className="flex items-center gap-2">
-              <button type="button" className="rounded-md bg-neutral-400 px-2 py-1 text-[11px] font-semibold text-white">◀</button>
-              <button type="button" className="rounded-md bg-[#ef2027] px-3 py-1 text-[11px] font-semibold text-white">1</button>
-              <button type="button" className="rounded-md bg-neutral-400 px-3 py-1 text-[11px] font-semibold text-white">2</button>
-              <button type="button" className="rounded-md bg-neutral-400 px-3 py-1 text-[11px] font-semibold text-white">3</button>
-              <button type="button" className="rounded-md bg-neutral-400 px-2 py-1 text-[11px] font-semibold text-white">▶</button>
+              <button type="button" className="rounded-md bg-neutral-400 px-2 py-1 text-[11px] font-semibold text-white cursor-pointer hover:bg-neutral-500">◀</button>
+              <button type="button" className="rounded-md bg-[#ef2027] px-3 py-1 text-[11px] font-semibold text-white cursor-pointer">1</button>
+              <button type="button" className="rounded-md bg-neutral-400 px-3 py-1 text-[11px] font-semibold text-white cursor-pointer hover:bg-neutral-500">2</button>
+              <button type="button" className="rounded-md bg-neutral-400 px-3 py-1 text-[11px] font-semibold text-white cursor-pointer hover:bg-neutral-500">3</button>
+              <button type="button" className="rounded-md bg-neutral-400 px-2 py-1 text-[11px] font-semibold text-white cursor-pointer hover:bg-neutral-500">▶</button>
             </div>
           </div>
         </div>
@@ -324,7 +535,7 @@ export function InventoryManagementPage() {
                   {editingProduct ? 'Update catalog item' : 'Add a catalog item'}
                 </h3>
               </div>
-              <button type="button" onClick={closeModal} className="text-2xl leading-none text-neutral-500">×</button>
+              <button type="button" onClick={closeModal} className="text-2xl leading-none text-neutral-500 cursor-pointer hover:text-neutral-700">×</button>
             </div>
 
             {savingError ? (
@@ -376,6 +587,65 @@ export function InventoryManagementPage() {
                 />
               </label>
 
+              <div className="md:col-span-2 border-t border-neutral-100 pt-4 mt-2">
+                <span className="text-sm font-medium text-neutral-700">Product Images (Max 5)</span>
+                
+                {/* Images grid for previews */}
+                <div className="mt-2 grid grid-cols-2 gap-4 sm:grid-cols-5">
+                  {/* Previews of existing images */}
+                  {existingImages.map((img, idx) => (
+                    <div key={`exist-${idx}`} className="relative aspect-square rounded-xl border border-neutral-200 overflow-hidden bg-neutral-50 group">
+                      <img src={img.url} alt={img.filename} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeExistingImage(img, idx)}
+                        className="absolute top-1.5 right-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow-md hover:scale-105 transition-all leading-none"
+                      >
+                        <span className="text-xs font-bold leading-none block px-1 py-0.5">×</span>
+                      </button>
+                      <span className="absolute bottom-0 inset-x-0 bg-black/60 text-[9px] text-white text-center py-0.5 truncate">
+                        Saved
+                      </span>
+                    </div>
+                  ))}
+
+                  {/* Previews of newly selected images */}
+                  {previewUrls.map((url, idx) => (
+                    <div key={`new-${idx}`} className="relative aspect-square rounded-xl border border-neutral-200 overflow-hidden bg-neutral-50 group">
+                      <img src={url} alt={`Preview ${idx}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeSelectedFile(idx)}
+                        className="absolute top-1.5 right-1.5 bg-red-500 hover:bg-red-650 text-white rounded-full p-1 shadow-md hover:scale-105 transition-all leading-none"
+                      >
+                        <span className="text-xs font-bold leading-none block px-1 py-0.5">×</span>
+                      </button>
+                      <span className="absolute bottom-0 inset-x-0 bg-blue-500/80 text-[9px] text-white text-center py-0.5 truncate">
+                        New
+                      </span>
+                    </div>
+                  ))}
+
+                  {/* Upload button box */}
+                  {existingImages.length + selectedFiles.length < 5 ? (
+                    <label className="flex aspect-square flex-col items-center justify-center rounded-xl border-2 border-dashed border-neutral-300 bg-neutral-50 cursor-pointer hover:bg-neutral-100 hover:border-[#ef2027] transition-all">
+                      <span className="text-2xl text-neutral-400 font-light">+</span>
+                      <span className="text-[10px] text-neutral-500 mt-1">Upload</span>
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                    </label>
+                  ) : null}
+                </div>
+                <p className="text-[11px] text-neutral-500 mt-2">
+                  Add up to 5 images. You currently have {existingImages.length} saved and {selectedFiles.length} new images selected.
+                </p>
+              </div>
+
               <label>
                 <span className="text-sm font-medium text-neutral-700">Price (LKR)</span>
                 <input
@@ -413,13 +683,13 @@ export function InventoryManagementPage() {
               </label>
 
               <div className="md:col-span-2 mt-2 flex items-center justify-end gap-3">
-                <button type="button" onClick={closeModal} className="rounded-xl border border-neutral-300 px-5 py-3 text-sm font-semibold text-neutral-700">
+                <button type="button" onClick={closeModal} className="rounded-xl border border-neutral-300 px-5 py-3 text-sm font-semibold text-neutral-700 cursor-pointer hover:bg-neutral-50">
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="rounded-xl bg-[#ef2027] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-xl bg-[#ef2027] px-5 py-3 text-sm font-semibold text-white cursor-pointer hover:bg-[#ef2027]/90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {saving ? 'Saving...' : editingProduct ? 'Update Product' : 'Create Product'}
                 </button>

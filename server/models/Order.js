@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { getNextSequenceNumber } from "../utils/sequenceGenerator.js";
 
 const orderProductSchema = new mongoose.Schema({
   id: { type: String },
@@ -70,8 +71,19 @@ const orderSchema = new mongoose.Schema(
   }
 );
 
-// Virtual or pre-save hook to calculate totalAmount if not provided
-orderSchema.pre("save", function (next) {
+orderSchema.pre("save", async function (next) {
+  if (!this.orderId || this.orderId.startsWith("ORD")) {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const dateStr = `${yyyy}${mm}${dd}`;
+    const prefix = `LT${dateStr}`;
+
+    const nextNum = await getNextSequenceNumber(prefix);
+    this.orderId = `${prefix}${String(nextNum).padStart(2, "0")}`;
+  }
+
   if (this.products && this.products.length > 0) {
     this.totalAmount = this.products.reduce(
       (sum, item) => sum + item.price * item.qty,

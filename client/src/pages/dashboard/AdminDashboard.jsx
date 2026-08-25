@@ -210,6 +210,7 @@ export function AdminDashboard() {
     sales.forEach((s) => {
       list.push({
         id: s._id || s.id,
+        orderId: s.orderId || s._id?.slice(-8)?.toUpperCase() || s.id?.slice(-8)?.toUpperCase() || "N/A",
         customer: s.customerName || "Walk-in Customer",
         product: s.items && s.items.length > 0 ? s.items.map(i => i.productName || i.name).join(", ") : "Product Sale",
         date: s.createdAt ? new Date(s.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "N/A",
@@ -223,7 +224,8 @@ export function AdminDashboard() {
     orders.forEach((o) => {
       const orderTotal = o.totalAmount || o.products.reduce((sum, p) => sum + p.price * p.qty, 0);
       list.push({
-        id: o.orderId || o._id,
+        id: o._id || o.id,
+        orderId: o.orderId || o._id?.slice(-8)?.toUpperCase() || "N/A",
         customer: "Online Customer",
         product: o.products && o.products.length > 0 ? o.products.map(p => p.name).join(", ") : "Online Order",
         date: o.createdAt ? new Date(o.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "N/A",
@@ -336,28 +338,35 @@ export function AdminDashboard() {
             </button>
           </div>
 
-          <div className="overflow-hidden rounded-b-2xl">
-            <div className="grid grid-cols-[1.1fr_1.3fr_1.4fr_1fr_1fr_1fr] bg-[#9a9a9a] px-6 py-3 text-[10px] font-bold uppercase text-neutral-900">
-              <span>Order ID</span>
-              <span>Customer</span>
-              <span>Product</span>
-              <span>Date</span>
-              <span>Status</span>
-              <span>Total</span>
-            </div>
-
-            {recentTransactions.map((order) => (
-              <div key={order.id} className="grid grid-cols-[1.1fr_1.3fr_1.4fr_1fr_1fr_1fr] items-center border-b border-neutral-200 px-6 py-4 text-sm last:border-b-0">
-                <span className="text-neutral-700 truncate mr-2" title={order.id}>{order.id}</span>
-                <span className="text-neutral-900">{order.customer}</span>
-                <span className="text-neutral-900 truncate mr-2" title={order.product}>{order.product}</span>
-                <span className="text-neutral-700">{order.date}</span>
-                <span>
-                  <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${order.statusClass}`}>{order.status}</span>
-                </span>
-                <span className="font-bold text-neutral-900">{order.total}</span>
-              </div>
-            ))}
+          <div className="overflow-x-auto rounded-b-2xl border-t border-neutral-250">
+            <table className="w-full text-left border-collapse text-sm bg-[#efefef]">
+              <thead>
+                <tr className="bg-[#9a9a9a] text-[10px] font-bold uppercase text-neutral-900 border-b border-neutral-300">
+                  <th className="px-6 py-3">Order ID</th>
+                  <th className="px-6 py-3">Customer</th>
+                  <th className="px-6 py-3">Product</th>
+                  <th className="px-6 py-3">Date</th>
+                  <th className="px-6 py-3">Status</th>
+                  <th className="px-6 py-3 text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-200">
+                {recentTransactions.map((order) => (
+                  <tr key={order.id} className="hover:bg-neutral-200/50 transition-colors">
+                    <td className="px-6 py-4 font-semibold text-red-500">{order.orderId}</td>
+                    <td className="px-6 py-4 text-neutral-900 font-medium">{order.customer}</td>
+                    <td className="px-6 py-4 text-neutral-900 truncate max-w-[200px]" title={order.product}>{order.product}</td>
+                    <td className="px-6 py-4 text-neutral-700">{order.date}</td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-block rounded-full px-3 py-1 text-[11px] font-semibold ${order.statusClass}`}>
+                        {order.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right font-bold text-neutral-900">{order.total}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
 
             <Link to="/receptionist/sales-log" className="block bg-[#6f7684] py-3 text-center text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-900 hover:bg-[#5e6573] transition-colors">
               View All Transactions

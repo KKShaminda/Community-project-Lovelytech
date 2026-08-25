@@ -13,21 +13,28 @@ const defaultForm = {
   amount: '',
 }
 
-function RepairCard({ item }) {
+function RepairCard({ item, onEdit, onDelete }) {
   const status = REPAIR_STATUS_META[item.status] || { label: item.status || 'Pending', className: 'bg-neutral-100 text-neutral-700' }
 
   return (
-    <article className="rounded-2xl border border-[#e7e7e7] bg-[#efefef] p-5 shadow-sm">
-      <div className="flex items-center justify-between gap-3">
-        <span className="rounded-md bg-red-100 px-2.5 py-1 text-xs font-semibold text-[#ef2027]">{item.id}</span>
-        <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${status.className}`}>{status.label}</span>
+    <article className="rounded-2xl border border-[#e7e7e7] bg-[#efefef] p-5 shadow-sm flex flex-col justify-between h-full">
+      <div>
+        <div className="flex items-center justify-between gap-3">
+          <span className="rounded-md bg-red-100 px-2.5 py-1 text-xs font-semibold text-[#ef2027]">{item.id}</span>
+          <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${status.className}`}>{status.label}</span>
+        </div>
+        <h3 className="mt-4 text-lg font-bold text-neutral-900">{item.device}</h3>
+        <p className="mt-1 text-sm text-neutral-700">{item.issue}</p>
+        <div className="mt-4 space-y-2 text-sm text-neutral-700">
+          <p><span className="font-semibold text-neutral-900">Customer:</span> {item.customer}</p>
+          <p><span className="font-semibold text-neutral-900">Technician:</span> {item.technician}</p>
+          <p><span className="font-semibold text-neutral-900">Value:</span> {formatLKR(item.amount)}</p>
+        </div>
       </div>
-      <h3 className="mt-4 text-lg font-bold text-neutral-900">{item.device}</h3>
-      <p className="mt-1 text-sm text-neutral-700">{item.issue}</p>
-      <div className="mt-4 space-y-2 text-sm text-neutral-700">
-        <p><span className="font-semibold text-neutral-900">Customer:</span> {item.customer}</p>
-        <p><span className="font-semibold text-neutral-900">Technician:</span> {item.technician}</p>
-        <p><span className="font-semibold text-neutral-900">Value:</span> {formatLKR(item.amount)}</p>
+      
+      <div className="mt-5 pt-4 border-t border-neutral-300 flex items-center justify-end gap-3">
+        <button type="button" onClick={onEdit} className="text-sm font-semibold text-[#ef2027] cursor-pointer hover:underline">Edit</button>
+        <button type="button" onClick={onDelete} className="text-sm font-semibold text-neutral-500 hover:text-red-600 cursor-pointer hover:underline">Delete</button>
       </div>
     </article>
   )
@@ -147,7 +154,7 @@ export function RepairOrdersPage() {
     <AdminShell
       activeSection="repair-orders"
       action={
-        <button type="button" onClick={openCreate} className="rounded-full border border-[#ff2020] px-5 py-2.5 text-sm font-semibold text-[#ff2020] hover:bg-[#ff2020] hover:text-black">
+        <button type="button" onClick={openCreate} className="rounded-full border border-[#ff2020] px-5 py-2.5 text-sm font-semibold text-[#ff2020] hover:bg-[#ff2020] hover:text-black cursor-pointer">
           New Order
         </button>
       }
@@ -170,42 +177,53 @@ export function RepairOrdersPage() {
 
       <section className="mt-8 grid gap-4 xl:grid-cols-3">
         {items.map((item) => (
-          <div key={item.id} className="relative group">
-            <RepairCard item={item} />
-            <div className="absolute right-4 top-4 hidden items-center gap-3 group-hover:flex">
-              <button type="button" onClick={() => openEdit(item)} className="text-sm font-semibold text-[#ef2027]">Edit</button>
-              <button type="button" onClick={() => handleDelete(item.id)} className="text-sm font-semibold text-neutral-500 hover:text-red-600">Delete</button>
-            </div>
-          </div>
+          <RepairCard
+            key={item.id}
+            item={item}
+            onEdit={() => openEdit(item)}
+            onDelete={() => handleDelete(item.id)}
+          />
         ))}
       </section>
 
-      <section className="mt-8 rounded-2xl bg-[#efefef]">
-        <div className="grid grid-cols-[1fr_1.2fr_1.5fr_1fr_1fr_0.7fr] bg-[#d8d8d8] px-6 py-3 text-[11px] font-bold uppercase tracking-wide text-red-500">
-          <span>Ticket ID</span>
-          <span>Customer</span>
-          <span>Device</span>
-          <span>Status</span>
-          <span>Technician</span>
-          <span>Actions</span>
-        </div>
-        {items.map((item) => {
-          const status = REPAIR_STATUS_META[item.status] || { label: item.status || 'Pending', className: 'bg-neutral-100 text-neutral-700' }
+      <section className="mt-8 overflow-x-auto rounded-xl border border-neutral-300 bg-white">
+        <table className="w-full text-left border-collapse text-sm">
+          <thead>
+            <tr className="bg-[#d8d8d8] text-[11px] font-bold uppercase tracking-wide text-red-500 border-b border-neutral-200">
+              <th className="px-6 py-3">Ticket ID</th>
+              <th className="px-6 py-3">Customer</th>
+              <th className="px-6 py-3">Device</th>
+              <th className="px-6 py-3">Status</th>
+              <th className="px-6 py-3">Technician</th>
+              <th className="px-6 py-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-neutral-200">
+            {items.map((item) => {
+              const status = REPAIR_STATUS_META[item.status] || { label: item.status || 'Pending', className: 'bg-neutral-100 text-neutral-700' }
 
-          return (
-            <div key={item.id} className="grid grid-cols-[1fr_1.2fr_1.5fr_1fr_1fr_0.7fr] items-center border-b border-neutral-200 px-6 py-4 text-sm last:border-b-0">
-              <span className="font-semibold text-[#ef2027]">{item.id}</span>
-              <span className="text-neutral-800">{item.customer}</span>
-              <span className="text-neutral-800">{item.device}</span>
-              <span><span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${status.className}`}>{status.label}</span></span>
-              <span className="text-neutral-800">{item.technician}</span>
-              <span className="flex items-center gap-3">
-                <button type="button" onClick={() => openEdit(item)} className="font-semibold text-[#ef2027]">Edit</button>
-                <button type="button" onClick={() => handleDelete(item.id)} className="font-semibold text-neutral-500 hover:text-red-600">Delete</button>
-              </span>
-            </div>
-          )
-        })}
+              return (
+                <tr key={item.id} className="hover:bg-neutral-50 transition-colors">
+                  <td className="px-6 py-4 font-semibold text-[#ef2027]">{item.id}</td>
+                  <td className="px-6 py-4 text-neutral-800 font-medium">{item.customer}</td>
+                  <td className="px-6 py-4 text-neutral-800">{item.device}</td>
+                  <td className="px-6 py-4">
+                    <span className={`inline-block rounded-full px-3 py-1 text-[11px] font-semibold ${status.className}`}>
+                      {status.label}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-neutral-800">{item.technician}</td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-3">
+                      <button type="button" onClick={() => openEdit(item)} className="font-semibold text-[#ef2027] cursor-pointer hover:underline">Edit</button>
+                      <button type="button" onClick={() => handleDelete(item.id)} className="font-semibold text-neutral-500 hover:text-red-600 cursor-pointer hover:underline">Delete</button>
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
       </section>
 
       {modalOpen ? (
@@ -216,7 +234,7 @@ export function RepairOrdersPage() {
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#ef2027]">Repair Order</p>
                 <h3 className="mt-2 text-2xl font-bold text-neutral-900">{editingId ? 'Edit order' : 'Create order'}</h3>
               </div>
-              <button type="button" onClick={() => setModalOpen(false)} className="text-2xl leading-none text-neutral-500">×</button>
+              <button type="button" onClick={() => setModalOpen(false)} className="text-2xl leading-none text-neutral-500 cursor-pointer hover:text-neutral-700">×</button>
             </div>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               {['customer', 'device', 'technician', 'amount'].map((field) => (
@@ -253,8 +271,8 @@ export function RepairOrdersPage() {
               </label>
             </div>
             <div className="mt-6 flex justify-end gap-3">
-              <button type="button" onClick={() => setModalOpen(false)} className="rounded-xl border border-neutral-300 px-5 py-3 text-sm font-semibold text-neutral-700">Cancel</button>
-              <button type="submit" className="rounded-xl bg-[#ef2027] px-5 py-3 text-sm font-semibold text-white">Save Order</button>
+              <button type="button" onClick={() => setModalOpen(false)} className="rounded-xl border border-neutral-300 px-5 py-3 text-sm font-semibold text-neutral-700 cursor-pointer hover:bg-neutral-50">Cancel</button>
+              <button type="submit" className="rounded-xl bg-[#ef2027] px-5 py-3 text-sm font-semibold text-white cursor-pointer hover:bg-[#ef2027]/90">Save Order</button>
             </div>
           </form>
         </div>

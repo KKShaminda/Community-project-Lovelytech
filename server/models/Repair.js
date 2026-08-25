@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { getNextSequenceNumber } from "../utils/sequenceGenerator.js";
 
 const trackingStepSchema = new mongoose.Schema({
   label: { type: String, required: true },
@@ -74,6 +75,7 @@ const repairSchema = new mongoose.Schema(
         "completed",
         "cancelled",
         "pending",
+        "in-progress",
       ],
       default: "received",
     },
@@ -102,6 +104,21 @@ const repairSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+repairSchema.pre("save", async function (next) {
+    if (!this.trackingId || this.trackingId.startsWith("PR") || this.trackingId.startsWith("RPR") || this.trackingId.includes("-")) {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        const dateStr = `${yyyy}${mm}${dd}`;
+        const prefix = `LT${dateStr}`;
+
+        const nextNum = await getNextSequenceNumber(prefix);
+        this.trackingId = `${prefix}${String(nextNum).padStart(2, "0")}`;
+    }
+    next();
+});
 
 const Repair = mongoose.model("Repair", repairSchema);
 

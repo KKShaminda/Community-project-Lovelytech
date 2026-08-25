@@ -92,6 +92,11 @@ export const createProduct = async (payload) => {
       return
     }
 
+    if (Array.isArray(value)) {
+      value.forEach((item) => formData.append(key, item))
+      return
+    }
+
     formData.append(key, value)
   })
 
@@ -106,6 +111,11 @@ export const updateProduct = async (productId, payload) => {
 
     if (key === 'images' && Array.isArray(value)) {
       value.forEach((file) => formData.append('images', file))
+      return
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach((item) => formData.append(key, item))
       return
     }
 
