@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Check, X } from 'lucide-react'
 
 import { AdminShell } from '../../components/admin/AdminShell'
 import { getAllUsers, suspendUser, unsuspendUser } from '../../services/userServices'
@@ -34,39 +35,53 @@ function MetricCard({ label, value, detail, accentClass }) {
 
 function CustomerRow({ customer, onToggleSuspend, loadingId }) {
   return (
-    <div className="grid grid-cols-[1.6fr_0.9fr_0.9fr_1fr_1fr_0.8fr] items-center border-b border-neutral-200 px-6 py-4 text-sm last:border-b-0">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-900 text-xs font-bold text-white">
-          {customer.fullname
-            .split(' ')
-            .slice(0, 2)
-            .map((part) => part[0])
-            .join('')
-            .toUpperCase()}
+    <tr className="hover:bg-neutral-50 transition-colors border-b border-neutral-200 last:border-b-0">
+      <td className="px-6 py-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-xs font-bold text-white">
+            {customer.fullname
+              ? customer.fullname
+                  .split(' ')
+                  .slice(0, 2)
+                  .map((part) => part[0])
+                  .join('')
+                  .toUpperCase()
+              : "U"}
+          </div>
+          <div>
+            <p className="font-semibold text-neutral-900 leading-tight">{customer.fullname}</p>
+            <p className="text-[11px] text-neutral-500 mt-0.5">{customer.email}</p>
+          </div>
         </div>
-        <div>
-          <p className="font-semibold text-neutral-900">{customer.fullname}</p>
-          <p className="text-[11px] text-neutral-500">{customer.email}</p>
+      </td>
+      <td className="px-6 py-4 text-neutral-700">{customer.phone || 'N/A'}</td>
+      <td className="px-6 py-4 text-neutral-700 font-medium">{formatRole(customer.role)}</td>
+      <td className="px-6 py-4 text-neutral-700">{customer.addresses?.length || 0} saved</td>
+      <td className="px-6 py-4 text-neutral-700">{formatDate(customer.createdAt)}</td>
+      <td className="px-6 py-4 text-right">
+        <div className="flex items-center justify-end gap-4">
+          {customer.isSuspended ? (
+            <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-700" title="Suspended">
+              <X size={14} strokeWidth={3} />
+            </span>
+          ) : (
+            <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700" title="Active">
+              <Check size={14} strokeWidth={3} />
+            </span>
+          )}
+          <button
+            type="button"
+            disabled={loadingId === customer._id}
+            onClick={() => onToggleSuspend(customer)}
+            className={`w-24 rounded-lg py-2 text-[11px] font-semibold text-white cursor-pointer transition text-center disabled:opacity-60 disabled:cursor-not-allowed ${
+              customer.isSuspended ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-[#ef2027] hover:bg-[#ef2027]/90'
+            }`}
+          >
+            {customer.isSuspended ? 'Unsuspend' : 'Suspend'}
+          </button>
         </div>
-      </div>
-      <span className="text-neutral-700">{customer.phone}</span>
-      <span className="text-neutral-700">{formatRole(customer.role)}</span>
-      <span className="text-neutral-700">{customer.addresses?.length || 0} saved</span>
-      <span className="text-neutral-700">{formatDate(customer.createdAt)}</span>
-      <div className="flex items-center justify-end gap-3">
-        <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${customer.isSuspended ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
-          {customer.isSuspended ? 'Suspended' : 'Active'}
-        </span>
-        <button
-          type="button"
-          disabled={loadingId === customer._id}
-          onClick={() => onToggleSuspend(customer)}
-          className="rounded-lg bg-[#ef2027] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60"
-        >
-          {customer.isSuspended ? 'Unsuspend' : 'Suspend'}
-        </button>
-      </div>
-    </div>
+      </td>
+    </tr>
   )
 }
 
@@ -143,7 +158,7 @@ export function CustomersPage() {
     <AdminShell
       activeSection="customers"
       action={
-        <button type="button" onClick={loadUsers} className="rounded-full border border-[#ff2020] px-5 py-2.5 text-sm font-semibold text-[#ff2020] hover:bg-[#ff2020] hover:text-black">
+        <button type="button" onClick={loadUsers} className="rounded-full border border-[#ff2020] px-5 py-2.5 text-sm font-semibold text-[#ff2020] hover:bg-[#ff2020] hover:text-black cursor-pointer">
           Refresh
         </button>
       }
@@ -179,37 +194,46 @@ export function CustomersPage() {
           <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
         ) : null}
 
-        <div className="mt-4 overflow-hidden rounded-xl border border-neutral-300 bg-white">
-          <div className="grid grid-cols-[1.6fr_0.9fr_0.9fr_1fr_1fr_0.8fr] bg-[#d8d8d8] px-6 py-3 text-[11px] font-bold uppercase tracking-wide text-red-500">
-            <span>Name & Contact</span>
-            <span>Phone</span>
-            <span>Role</span>
-            <span>Saved Addresses</span>
-            <span>Joined</span>
-            <span>Action</span>
-          </div>
-
-          {loading ? (
-            <div className="px-6 py-8 text-center text-sm text-neutral-600">Loading customers...</div>
-          ) : filteredUsers.length > 0 ? (
-            filteredUsers.map((customer) => (
-              <CustomerRow
-                key={customer._id}
-                customer={customer}
-                onToggleSuspend={handleToggleSuspend}
-                loadingId={loadingId}
-              />
-            ))
-          ) : (
-            <div className="px-6 py-8 text-center text-sm text-neutral-600">No customers match the current search.</div>
-          )}
+        <div className="mt-4 overflow-x-auto rounded-xl border border-neutral-300 bg-white">
+          <table className="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr className="bg-[#d8d8d8] text-[11px] font-bold uppercase tracking-wide text-red-500 border-b border-neutral-200">
+                <th className="px-6 py-3">Name & Contact</th>
+                <th className="px-6 py-3">Phone</th>
+                <th className="px-6 py-3">Role</th>
+                <th className="px-6 py-3">Saved Addresses</th>
+                <th className="px-6 py-3">Joined</th>
+                <th className="px-6 py-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-neutral-200">
+              {loading ? (
+                <tr>
+                  <td colSpan="6" className="px-6 py-8 text-center text-sm text-neutral-600">Loading customers...</td>
+                </tr>
+              ) : filteredUsers.length > 0 ? (
+                filteredUsers.map((customer) => (
+                  <CustomerRow
+                    key={customer._id}
+                    customer={customer}
+                    onToggleSuspend={handleToggleSuspend}
+                    loadingId={loadingId}
+                  />
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="6" className="px-6 py-8 text-center text-sm text-neutral-600">No customers match the current search.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
 
           <div className="flex items-center justify-between border-t border-neutral-200 bg-[#efefef] px-6 py-3 text-sm text-neutral-800">
             <p>Showing 1-{Math.min(filteredUsers.length || 1, filteredUsers.length || 1)} of {users.length} customers</p>
             <div className="flex items-center gap-2">
-              <button type="button" className="rounded-md bg-neutral-400 px-2 py-1 text-[11px] font-semibold text-white">◀</button>
-              <button type="button" className="rounded-md bg-[#ef2027] px-3 py-1 text-[11px] font-semibold text-white">1</button>
-              <button type="button" className="rounded-md bg-neutral-400 px-2 py-1 text-[11px] font-semibold text-white">▶</button>
+              <button type="button" className="rounded-md bg-neutral-400 px-2 py-1 text-[11px] font-semibold text-white cursor-pointer hover:bg-neutral-500">◀</button>
+              <button type="button" className="rounded-md bg-[#ef2027] px-3 py-1 text-[11px] font-semibold text-white cursor-pointer">1</button>
+              <button type="button" className="rounded-md bg-neutral-400 px-2 py-1 text-[11px] font-semibold text-white cursor-pointer hover:bg-neutral-500">▶</button>
             </div>
           </div>
         </div>

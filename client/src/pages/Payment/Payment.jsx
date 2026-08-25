@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, CreditCard, Landmark, MapPin, Package, ShoppingBag, Building, Info, Upload } from "lucide-react";
+import { ChevronRight, CreditCard, Landmark, MapPin, Package, ShoppingBag, Building, Info, Upload, X } from "lucide-react";
 import Layout from "../../components/layout/Layout";
 import { getCartItems, clearCart } from "../../utils/cartStorage";
 import { createOrder } from "../../services/orderServices";
@@ -296,21 +296,60 @@ function Payment() {
 												Upload Payment Slip
 											</label>
 											
-											<div className="relative flex flex-col items-center justify-center border-2 border-dashed border-[#cfcfcf] hover:border-[#ff2020] rounded-xl p-6 bg-slate-50/50 transition cursor-pointer">
-												<input
-													type="file"
-													accept="image/*"
-													onChange={(e) => setSlipFile(e.target.files[0] || null)}
-													className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-													required
-												/>
-												<Upload className="h-8 w-8 text-slate-400 mb-2" />
-												<p className="text-xs font-semibold text-slate-700">
-													{slipFile ? slipFile.name : "Select or drag slip image here"}
-												</p>
-												<p className="text-[10px] text-slate-400 mt-1">
-													PNG, JPG, JPEG up to 5MB
-												</p>
+											<div className="mt-2">
+												{slipFile ? (
+													<div className="flex flex-col items-center gap-3 p-4 border-2 border-dashed border-[#cfcfcf] rounded-xl bg-slate-50/50 relative">
+														<div className="relative group max-w-[200px] h-32 rounded-lg overflow-hidden border border-slate-200 bg-white shadow-xs">
+															<img
+																src={URL.createObjectURL(slipFile)}
+																alt="Slip Preview"
+																className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+															/>
+															<label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition duration-300 flex items-center justify-center cursor-pointer">
+																<input
+																	type="file"
+																	accept="image/*"
+																	onChange={(e) => setSlipFile(e.target.files[0] || null)}
+																	className="sr-only"
+																/>
+																<p className="text-[10px] text-white font-medium">Change Slip</p>
+															</label>
+														</div>
+														<div className="text-center">
+															<p className="text-xs font-semibold text-slate-800 truncate max-w-xs">
+																{slipFile.name}
+															</p>
+															<p className="text-[10px] text-slate-400 mt-0.5">
+																{(slipFile.size / 1024 / 1024).toFixed(2)} MB
+															</p>
+															<button
+																type="button"
+																onClick={() => setSlipFile(null)}
+																className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-600 hover:text-white border border-red-200 hover:border-red-600 hover:bg-red-600 rounded-md transition cursor-pointer"
+															>
+																<X className="h-3.5 w-3.5" />
+																Remove Slip
+															</button>
+														</div>
+													</div>
+												) : (
+													<label className="relative flex flex-col items-center justify-center border-2 border-dashed border-[#cfcfcf] hover:border-[#ff2020] rounded-xl p-6 bg-slate-50/50 transition cursor-pointer w-full min-h-[140px]">
+														<input
+															type="file"
+															accept="image/*"
+															onChange={(e) => setSlipFile(e.target.files[0] || null)}
+															className="sr-only"
+															required
+														/>
+														<Upload className="h-8 w-8 text-slate-400 mb-2" />
+														<p className="text-xs font-semibold text-slate-700">
+															Select or drag slip image here
+														</p>
+														<p className="text-[10px] text-slate-400 mt-1">
+															PNG, JPG, JPEG up to 5MB
+														</p>
+													</label>
+												)}
 											</div>
 										</div>
 
