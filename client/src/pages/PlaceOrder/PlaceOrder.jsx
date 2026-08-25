@@ -1,4 +1,4 @@
-import { ChevronRight, CircleCheckBig, CreditCard, MapPin, Package, ShoppingCart, Truck } from 'lucide-react'
+import { ChevronRight, CircleCheckBig, Clock, CreditCard, MapPin, Package, ShoppingCart, Truck } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import Layout from '../../components/layout/Layout'
 
@@ -48,6 +48,38 @@ function PlaceOrder() {
 	const navigate = useNavigate()
 
 	const orderDetails = location.state?.orderDetails
+
+	const status = orderDetails?.status || "Placed"
+
+	const getStepProps = (stepLabel) => {
+		const isCancelled = ["Cancelled", "Canceled", "Rejected"].includes(status)
+		if (isCancelled) {
+			return { done: false, active: false }
+		}
+
+		if (stepLabel === "Placed") {
+			return { done: true, active: false }
+		}
+		if (stepLabel === "Confirmed") {
+			return {
+				done: ["Confirmed", "Proceeded", "Processed", "Delivered"].includes(status),
+				active: status === "Placed",
+			}
+		}
+		if (stepLabel === "Processed") {
+			return {
+				done: ["Proceeded", "Processed", "Delivered"].includes(status),
+				active: status === "Confirmed",
+			}
+		}
+		if (stepLabel === "Delivered") {
+			return {
+				done: status === "Delivered",
+				active: ["Proceeded", "Processed"].includes(status),
+			}
+		}
+		return { done: false, active: false }
+	}
 
 	// Fallback mock items
 	const fallbackItems = [
@@ -216,10 +248,10 @@ function PlaceOrder() {
 									<div className="mt-5">
 										<p className="text-xs font-medium uppercase tracking-wide text-slate-400">Order Status</p>
 										<div className="mt-4 flex items-start justify-between gap-2 border-t border-slate-200 pt-4">
-											<Step label="Placed" done />
-											<Step label="Confirmed" done />
-											<Step label="Processed" active />
-											<Step label="Delivered" />
+											<Step label="Placed" {...getStepProps("Placed")} />
+											<Step label="Confirmed" {...getStepProps("Confirmed")} />
+											<Step label="Processed" {...getStepProps("Processed")} />
+											<Step label="Delivered" {...getStepProps("Delivered")} />
 										</div>
 									</div>
 								</section>
@@ -232,17 +264,32 @@ function PlaceOrder() {
 
 									<div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 										<div className="space-y-2 text-xs text-slate-500">
-											{paymentMethod === "koko" ? (
+											{paymentMethod === "Bank Transfer" ? (
+												<p>Payment Slip uploaded for Rs. {total.toLocaleString()} (Awaiting verification)</p>
+											) : paymentMethod === "koko" ? (
 												<p>Debited Rs. {total.toLocaleString()} via Koko Payment</p>
 											) : (
 												<p>Your card ending in {cardLastFour} has been debited by Rs. {total.toLocaleString()}</p>
 											)}
-											<p className="capitalize">{paymentMethod} Card</p>
+											<p className="capitalize">
+												{paymentMethod === "Bank Transfer" ? paymentMethod : `${paymentMethod} Card`}
+											</p>
 										</div>
 
-										<div className="inline-flex items-center gap-2 rounded-full bg-[#3bb54a] px-4 py-2 text-sm font-semibold text-white shadow-sm">
-											<CircleCheckBig className="h-4 w-4" />
-											Successful
+										<div className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-white shadow-sm ${
+											paymentMethod === "Bank Transfer" ? "bg-amber-500" : "bg-[#3bb54a]"
+										}`}>
+											{paymentMethod === "Bank Transfer" ? (
+												<>
+													<Clock className="h-4 w-4" />
+													Pending Verification
+												</>
+											) : (
+												<>
+													<CircleCheckBig className="h-4 w-4" />
+													Successful
+												</>
+											)}
 										</div>
 									</div>
 								</section>

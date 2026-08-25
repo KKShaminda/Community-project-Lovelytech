@@ -15,8 +15,11 @@ if (!fs.existsSync(productsDir)) {
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    // Default to 'products' folder safely
-    const folder = (req.body && typeof req.body.folder === 'string' && req.body.folder.replace(/[^a-zA-Z0-9_-]/g, '')) || 'products';
+    // Default to 'products' or 'slips' folder safely based on file fieldname
+    let folder = (req.body && typeof req.body.folder === 'string' && req.body.folder.replace(/[^a-zA-Z0-9_-]/g, ''));
+    if (!folder) {
+      folder = file.fieldname === "slip" ? "slips" : "products";
+    }
     const folderPath = path.join(uploadRoot, folder);
     if (!fs.existsSync(folderPath)) {
       fs.mkdirSync(folderPath, { recursive: true });
