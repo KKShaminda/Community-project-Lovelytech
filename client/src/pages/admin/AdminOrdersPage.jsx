@@ -43,7 +43,14 @@ export function AdminOrdersPage() {
   };
 
   return (
-    <AdminShell activeSection="orders">
+    <AdminShell
+      activeSection="orders"
+      action={
+        <button type="button" onClick={fetchConfirmedOrders} className="rounded-full border border-[#ff2020] px-5 py-2.5 text-sm font-semibold text-[#ff2020] hover:bg-[#ff2020] hover:text-black cursor-pointer">
+          Refresh
+        </button>
+      }
+    >
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-neutral-900 sm:text-3xl">
@@ -84,16 +91,16 @@ export function AdminOrdersPage() {
         <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white shadow-xs">
           <table className="w-full text-left border-collapse text-sm">
             <thead>
-              <tr className="border-b border-neutral-200 bg-neutral-50 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                <th className="px-6 py-4">Customer</th>
-                <th className="px-6 py-4">Order ID</th>
-                <th className="px-6 py-4">Placed Date</th>
-                <th className="px-6 py-4 text-right">Total Amount</th>
-                <th className="px-6 py-4 text-center">Status</th>
-                <th className="px-6 py-4 text-right">Update Status</th>
+              <tr className="bg-[#d8d8d8] text-[11px] font-bold uppercase tracking-wide text-red-500 border-b border-neutral-200">
+                <th className="px-6 py-3">Customer</th>
+                <th className="px-6 py-3">Order ID</th>
+                <th className="px-6 py-3">Placed Date</th>
+                <th className="px-6 py-3 text-right">Total Amount</th>
+                <th className="px-6 py-3 text-center">Status</th>
+                <th className="px-6 py-3 text-right">Update Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-150">
+            <tbody className="divide-y divide-neutral-200">
               {orders.map((order) => {
                 const name = order.deliveryAddress
                   ? `${order.deliveryAddress.firstName} ${order.deliveryAddress.lastName}`
@@ -117,7 +124,7 @@ export function AdminOrdersPage() {
                         {order.deliveryAddress?.streetAddress}, {order.deliveryAddress?.city}
                       </p>
                     </td>
-                    <td className="px-6 py-4 font-mono text-xs font-semibold text-neutral-600">
+                    <td className="px-6 py-4 font-semibold text-[#ef2027]">
                       {order.orderId}
                     </td>
                     <td className="px-6 py-4 text-neutral-700">

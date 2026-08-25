@@ -54,16 +54,27 @@ export const createRepair = asyncHandler(async (req, res) => {
     issue,
     name,
     customer,
+    customerName: bodyCustomerName,
     phone,
+    customerPhone,
     email,
+    customerEmail,
     address,
+    customerAddress,
     technician,
     amount,
     estimate,
+    estimatedCost,
     status,
   } = req.body;
 
-  const customerName = customer || name;
+  const customerName = customer || name || bodyCustomerName;
+  const effectivePhone = phone || customerPhone;
+  const effectiveEmail = email || customerEmail;
+  const effectiveAddress = address || customerAddress;
+  const effectiveEstimate = Number(estimate || amount || estimatedCost || 0);
+  const effectiveAmount = Number(amount || estimate || estimatedCost || 0);
+
   const brandName = brand || "";
   const modelName = model || "";
   const fullDeviceName = req.body.device || (brandName || modelName ? `${brandName} ${modelName}`.trim() : "Electronic Device");
@@ -95,13 +106,13 @@ export const createRepair = asyncHandler(async (req, res) => {
     imei: imei || "",
     issue,
     customer: customerName,
-    phone,
-    email,
-    address: address || "",
+    phone: effectivePhone,
+    email: effectiveEmail,
+    address: effectiveAddress || "",
     status: repairStatus,
     technician: technician || "Unassigned",
-    amount: Number(amount || estimate || 0),
-    estimate: Number(estimate || amount || 0),
+    amount: effectiveAmount,
+    estimate: effectiveEstimate,
     submitted: formattedSubmitted,
     estimatedCompletion: formattedEta,
     trackingSteps: getDefaultTrackingSteps(repairStatus),
@@ -207,6 +218,7 @@ export const updateRepair = asyncHandler(async (req, res) => {
     technician,
     amount,
     estimate,
+    estimatedCost,
     customer,
     device,
     issue,
@@ -215,6 +227,7 @@ export const updateRepair = asyncHandler(async (req, res) => {
     phone,
     email,
     address,
+    notes,
   } = req.body;
 
   const prevStatus = repair.status;
@@ -240,7 +253,9 @@ export const updateRepair = asyncHandler(async (req, res) => {
 
   if (technician !== undefined) repair.technician = technician;
   if (amount !== undefined) repair.amount = Number(amount);
+  else if (estimatedCost !== undefined) repair.amount = Number(estimatedCost);
   if (estimate !== undefined) repair.estimate = Number(estimate);
+  else if (estimatedCost !== undefined) repair.estimate = Number(estimatedCost);
   if (customer !== undefined) repair.customer = customer;
   if (device !== undefined) repair.device = device;
   if (issue !== undefined) repair.issue = issue;
@@ -249,6 +264,7 @@ export const updateRepair = asyncHandler(async (req, res) => {
   if (phone !== undefined) repair.phone = phone;
   if (email !== undefined) repair.email = email;
   if (address !== undefined) repair.address = address;
+  if (notes !== undefined) repair.notes = notes;
 
   const updatedRepair = await repair.save();
 

@@ -342,7 +342,7 @@ export function ReceptionistDashboard() {
       .reduce((sum, r) => sum + (r.estimatedCost || 0), 0);
 
     return {
-      booked: todayRepairs || repairs.length,
+      booked: todayRepairs,
       invoiced: completedVal ? `${(completedVal / 1000).toFixed(1)}k` : "0",
     };
   }, [repairs]);
@@ -353,7 +353,7 @@ export function ReceptionistDashboard() {
         {/* ── Sidebar + Content Body ── */}
         <div className="flex flex-1 bg-[#f4f4f4] print:bg-white">
           {/* Sidebar */}
-          <aside className="hidden w-[210px] shrink-0 bg-[#ef2027] pb-12 lg:block print:hidden">
+          <aside className="hidden w-[210px] shrink-0 bg-gradient-to-b from-[#e01c23] to-[#8f0f11] pb-12 lg:block print:hidden">
             <div className="mt-2 space-y-1">
               <button
                 type="button"
@@ -493,16 +493,30 @@ export function ReceptionistDashboard() {
                 </div>
               )}
 
-              <div className="mb-8 bg-white rounded-3xl border border-neutral-200 p-6 shadow-sm space-y-4">
-                <h2 className="text-sm font-extrabold uppercase tracking-widest text-[#ef2027]">Daily Stats</h2>
-                <div className="grid grid-cols-2 gap-4 text-center">
-                  <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
-                    <p className="text-xs text-neutral-400 font-bold uppercase">Repairs Booked</p>
-                    <p className="text-3xl font-extrabold text-neutral-800 mt-2">{dailyStats.booked}</p>
+              <div className="mb-8 bg-gradient-to-tr from-slate-50 to-white rounded-3xl border border-slate-100 p-6 shadow-sm space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xs font-extrabold uppercase tracking-widest text-[#ef2027]">Daily Operational Stats</h2>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase bg-slate-100 px-2 py-0.5 rounded-md">Live Data</span>
+                </div>
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="p-5 bg-white rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm hover:shadow-md transition-all duration-300">
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Repairs Booked</p>
+                      <p className="text-2xl font-extrabold text-slate-800">{dailyStats.booked}</p>
+                    </div>
+                    <div className="p-3 bg-red-50 text-[#ef2027] rounded-xl shadow-inner">
+                      <Clipboard size={20} />
+                    </div>
                   </div>
-                  <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
-                    <p className="text-xs text-neutral-400 font-bold uppercase">Invoiced</p>
-                    <p className="text-3xl font-extrabold text-[#ef2027] mt-2">LKR {dailyStats.invoiced}</p>
+                  
+                  <div className="p-5 bg-white rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm hover:shadow-md transition-all duration-300">
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Invoiced Revenue</p>
+                      <p className="text-2xl font-extrabold text-emerald-600">LKR {dailyStats.invoiced}</p>
+                    </div>
+                    <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl shadow-inner">
+                      <CircleDollarSign size={20} />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -511,29 +525,49 @@ export function ReceptionistDashboard() {
 
                 {/* ── Left Column: Active Repair Queue ── */}
                 <div className="space-y-8">
-                  <div className="bg-white rounded-3xl border border-neutral-200 shadow-sm overflow-hidden">
-                    <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
-                      <h2 className="text-sm font-extrabold uppercase tracking-widest text-[#ef2027]">Active Repair Queue</h2>
-                      {/* Tabs */}
-                      <div className="flex bg-neutral-100 rounded-lg p-1 text-xs font-bold text-neutral-500">
-                        <button
-                          onClick={() => setActiveQueueTab("ALL")}
-                          className={`px-4 py-2 rounded-md transition ${activeQueueTab === "ALL" ? "bg-[#ef2027] text-white" : "hover:text-neutral-800"}`}
-                        >
-                          ALL
-                        </button>
-                        <button
-                          onClick={() => setActiveQueueTab("PENDING")}
-                          className={`px-4 py-2 rounded-md transition ${activeQueueTab === "PENDING" ? "bg-[#ef2027] text-white" : "hover:text-neutral-800"}`}
-                        >
-                          PENDING
-                        </button>
-                        <button
-                          onClick={() => setActiveQueueTab("IN-PROGRESS")}
-                          className={`px-4 py-2 rounded-md transition ${activeQueueTab === "IN-PROGRESS" ? "bg-[#ef2027] text-white" : "hover:text-neutral-800"}`}
-                        >
-                          IN-PROGRESS
-                        </button>
+                  <div className="bg-white rounded-3xl border border-slate-200/80 shadow-md shadow-slate-100/50 overflow-hidden">
+                    <div className="p-6 border-b border-slate-100 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-slate-50/40">
+                      <div>
+                        <h2 className="text-sm font-extrabold uppercase tracking-widest text-[#ef2027]">Active Repair Queue</h2>
+                        <p className="text-xs text-neutral-400 mt-0.5">Real-time status updates and checkouts</p>
+                      </div>
+                      
+                      <div className="flex flex-wrap items-center gap-3">
+                        {/* Search Input */}
+                        <div className="relative">
+                          <input
+                            type="text"
+                            placeholder="Search customer, device..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs font-semibold outline-none focus:border-[#ef2027] shadow-inner transition-all duration-300 w-44 focus:w-56"
+                          />
+                          <svg className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                          </svg>
+                        </div>
+
+                        {/* Tabs */}
+                        <div className="flex bg-slate-100 rounded-xl p-1 text-xs font-bold text-neutral-500 shadow-inner">
+                          <button
+                            onClick={() => setActiveQueueTab("ALL")}
+                            className={`px-3 py-1.5 rounded-lg transition-all duration-300 ${activeQueueTab === "ALL" ? "bg-white text-[#ef2027] shadow-sm" : "hover:text-neutral-800"}`}
+                          >
+                            ALL
+                          </button>
+                          <button
+                            onClick={() => setActiveQueueTab("PENDING")}
+                            className={`px-3 py-1.5 rounded-lg transition-all duration-300 ${activeQueueTab === "PENDING" ? "bg-white text-[#ef2027] shadow-sm" : "hover:text-neutral-800"}`}
+                          >
+                            PENDING
+                          </button>
+                          <button
+                            onClick={() => setActiveQueueTab("IN-PROGRESS")}
+                            className={`px-3 py-1.5 rounded-lg transition-all duration-300 ${activeQueueTab === "IN-PROGRESS" ? "bg-white text-[#ef2027] shadow-sm" : "hover:text-neutral-800"}`}
+                          >
+                            IN-PROGRESS
+                          </button>
+                        </div>
                       </div>
                     </div>
 
@@ -541,15 +575,15 @@ export function ReceptionistDashboard() {
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-sm border-collapse">
                         <thead>
-                          <tr className="bg-neutral-50/50 text-xs font-bold uppercase tracking-wider text-neutral-400 border-b border-neutral-100">
+                          <tr className="bg-slate-50/20 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
                             <th className="px-6 py-4">Ticket</th>
                             <th className="px-6 py-4">Customer</th>
                             <th className="px-6 py-4">Device</th>
                             <th className="px-6 py-4">Status</th>
-                            <th className="px-6 py-4">Action</th>
+                            <th className="px-6 py-4 text-right">Action</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-neutral-100 font-medium">
+                        <tbody className="divide-y divide-slate-100 font-medium">
                           {loading ? (
                             <tr>
                               <td colSpan={5} className="py-12 text-center text-neutral-400">
@@ -559,35 +593,43 @@ export function ReceptionistDashboard() {
                             </tr>
                           ) : filteredRepairs.length === 0 ? (
                             <tr>
-                              <td colSpan={5} className="py-12 text-center text-neutral-400">
+                              <td colSpan={5} className="py-12 text-center text-neutral-400 text-xs italic">
                                 No repairs found matching this category.
                               </td>
                             </tr>
                           ) : (
                             filteredRepairs.map((item) => (
-                              <tr key={item._id || item.id} className="hover:bg-neutral-50/40">
-                                <td className="px-6 py-4 text-xs font-bold text-neutral-500">
-                                  #{item.trackingId ? item.trackingId.slice(-4) : "—"}
+                              <tr key={item._id || item.id} className="hover:bg-slate-50/40 border-b border-slate-100 last:border-0 transition-colors">
+                                <td className="px-6 py-4">
+                                  <span className="px-2.5 py-1 bg-red-50 text-red-600 font-mono font-bold text-xs rounded-lg border border-red-100/50">
+                                    {item.trackingId}
+                                  </span>
                                 </td>
                                 <td className="px-6 py-4">
-                                  <p className="font-bold text-neutral-900">{item.customerName}</p>
+                                  <p className="font-bold text-slate-800 text-sm">{item.customerName}</p>
+                                  {item.customerPhone && (
+                                    <p className="text-[11px] text-slate-400 font-semibold mt-0.5">{item.customerPhone}</p>
+                                  )}
                                 </td>
-                                <td className="px-6 py-4 text-neutral-700">
+                                <td className="px-6 py-4 text-slate-700 text-sm font-semibold">
                                   {item.brand} {item.model}
                                 </td>
                                 <td className="px-6 py-4">
                                   <span
-                                    className={`inline-block px-2.5 py-0.5 rounded text-[10px] font-extrabold uppercase border ${item.status === "ready"
-                                      ? "bg-green-50 text-green-700 border-green-200"
-                                      : item.status === "in-progress"
-                                        ? "bg-red-50 text-red-700 border-red-200"
-                                        : "bg-yellow-50 text-yellow-700 border-yellow-200"
-                                      }`}
+                                    className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase border ${
+                                      item.status === "ready"
+                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                        : item.status === "in-progress" || item.status === "repairing" || item.status === "diagnosing"
+                                          ? "bg-blue-50 text-blue-700 border-blue-200"
+                                          : item.status === "completed"
+                                            ? "bg-slate-100 text-slate-600 border-slate-200"
+                                            : "bg-amber-50 text-amber-700 border-amber-200"
+                                    }`}
                                   >
                                     {item.status === "in-progress" ? "IN PROGRESS" : item.status || "PENDING"}
                                   </span>
                                 </td>
-                                <td className="px-6 py-4">
+                                <td className="px-6 py-4 text-right">
                                   <button
                                     onClick={() => {
                                       if (item.status === "ready") {
@@ -596,7 +638,11 @@ export function ReceptionistDashboard() {
                                         handleEditTicket(item);
                                       }
                                     }}
-                                    className="text-xs font-bold text-[#ef2027] hover:underline"
+                                    className={`inline-flex items-center gap-1 text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-sm transition-all duration-300 hover:scale-[1.02] active:scale-95 cursor-pointer ${
+                                      item.status === "ready"
+                                        ? "text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-emerald-100"
+                                        : "text-slate-700 bg-slate-100 hover:bg-slate-200 shadow-slate-100"
+                                    }`}
                                   >
                                     {item.status === "ready" ? "Invoice" : "Details"}
                                   </button>
@@ -613,13 +659,13 @@ export function ReceptionistDashboard() {
                 {/* ── Right Column: Billing / Waiting / Stats ── */}
                 <div className="space-y-8">
                   {/* Billing & Invoice Interactive Checkout Panel */}
-                  <div className="bg-white rounded-3xl border border-neutral-200 p-6 shadow-sm space-y-4">
+                  <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-md shadow-slate-100/50 space-y-4">
                     <div className="flex items-center justify-between">
                       <h2 className="text-sm font-extrabold uppercase tracking-widest text-[#ef2027]">Billing & Invoice</h2>
                       {!selectedTicket && (
                         <button
                           onClick={handleStartDirectSale}
-                          className="text-xs font-bold text-slate-500 hover:text-[#ef2027] border border-slate-200 rounded-lg px-2.5 py-1 hover:border-[#ef2027] transition-colors"
+                          className="text-xs font-bold text-slate-500 hover:text-[#ef2027] border border-slate-200 rounded-lg px-2.5 py-1 hover:border-[#ef2027] transition-all duration-300"
                         >
                           + Direct POS Sale
                         </button>
@@ -653,11 +699,11 @@ export function ReceptionistDashboard() {
                     </div>
 
                     {/* Invoice Checkout List */}
-                    <div className="bg-neutral-800 rounded-2xl p-5 text-white space-y-4">
-                      <div className="flex items-center justify-between border-b border-neutral-750 pb-2">
-                        <span className="text-xs text-neutral-450 font-bold uppercase">Selected Ticket</span>
+                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 text-white space-y-4 shadow-lg">
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Selected Ticket</span>
                         <span className="font-extrabold text-[#ef2027]">
-                          {selectedTicket ? `#${selectedTicket.trackingId ? selectedTicket.trackingId.slice(-4) : "—"}` : "# —"}
+                          {selectedTicket ? (selectedTicket.trackingId || "—") : "No Ticket"}
                         </span>
                       </div>
 
@@ -666,16 +712,16 @@ export function ReceptionistDashboard() {
                           invoiceItems.map((item) => (
                             <div key={item.id} className="flex justify-between items-center text-xs">
                               <div className="space-y-0.5">
-                                <p className="font-semibold truncate max-w-35">{item.name}</p>
+                                <p className="font-semibold truncate max-w-[150px]">{item.name}</p>
                                 {(item.isPart || item.isLabor) ? (
                                   <input
                                     type="number"
                                     value={item.price}
                                     onChange={(e) => handlePriceChange(item.id, e.target.value)}
-                                    className="w-16 bg-neutral-700 text-white text-[10px] rounded px-1.5 py-0.5 outline-none border border-neutral-600 focus:border-[#ef2027]"
+                                    className="w-20 bg-slate-800 text-white text-[10px] rounded px-1.5 py-0.5 outline-none border border-slate-700 focus:border-[#ef2027]"
                                   />
                                 ) : (
-                                  <p className="text-[10px] text-neutral-400">{formatLKR(item.price)} each</p>
+                                  <p className="text-[10px] text-slate-400">{formatLKR(item.price)} each</p>
                                 )}
                               </div>
                               <div className="flex items-center gap-2">
@@ -685,13 +731,13 @@ export function ReceptionistDashboard() {
                                     min="1"
                                     value={item.quantity}
                                     onChange={(e) => handleQuantityChange(item.id, e.target.value)}
-                                    className="w-10 bg-neutral-700 text-white text-center rounded px-1 py-0.5 outline-none"
+                                    className="w-10 bg-slate-800 text-white text-center rounded px-1 py-0.5 outline-none border border-slate-700 focus:border-[#ef2027]"
                                   />
                                 )}
-                                <span className="font-bold">{formatLKR(item.price * item.quantity)}</span>
+                                <span className="font-bold text-slate-200">{formatLKR(item.price * item.quantity)}</span>
                                 <button
                                   onClick={() => handleRemoveInvoiceItem(item.id)}
-                                  className="text-neutral-400 hover:text-red-500 transition ml-1"
+                                  className="text-slate-400 hover:text-red-500 transition ml-1"
                                 >
                                   <Trash2 size={12} />
                                 </button>
@@ -699,15 +745,15 @@ export function ReceptionistDashboard() {
                             </div>
                           ))
                         ) : (
-                          <p className="text-xs text-neutral-450 italic text-center py-4">
+                          <p className="text-xs text-slate-500 italic text-center py-4">
                             Select a "Ready" ticket in the queue to load checkout items.
                           </p>
                         )}
                       </div>
 
-                      <div className="flex justify-between items-center border-t border-neutral-750 pt-3">
-                        <span className="text-xs text-neutral-300 font-bold uppercase">Total Amount</span>
-                        <span className="text-xl font-extrabold text-[#ef2027]">
+                      <div className="flex justify-between items-center border-t border-slate-800 pt-3">
+                        <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Total Amount</span>
+                        <span className="text-xl font-extrabold text-emerald-400">
                           {selectedTicket ? formatLKR(invoiceSubtotal) : formatLKR(0)}
                         </span>
                       </div>
@@ -718,8 +764,8 @@ export function ReceptionistDashboard() {
                           disabled={!selectedTicket}
                           onClick={() => setPaymentMethod("CASH")}
                           className={`flex items-center justify-center gap-2 rounded-xl py-3 text-xs font-bold transition border disabled:opacity-50 disabled:cursor-not-allowed ${selectedTicket && paymentMethod === "CASH"
-                            ? "bg-white text-neutral-900 border-white"
-                            : "bg-neutral-700 text-neutral-300 border-neutral-600 hover:bg-neutral-600"
+                            ? "bg-white text-slate-900 border-white shadow-md shadow-white/10"
+                            : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:border-slate-600"
                             }`}
                         >
                           <CircleDollarSign size={16} />
@@ -729,8 +775,8 @@ export function ReceptionistDashboard() {
                           disabled={!selectedTicket}
                           onClick={() => setPaymentMethod("TRANSFER")}
                           className={`flex items-center justify-center gap-2 rounded-xl py-3 text-xs font-bold transition border disabled:opacity-50 disabled:cursor-not-allowed ${selectedTicket && paymentMethod === "TRANSFER"
-                            ? "bg-white text-neutral-900 border-white"
-                            : "bg-neutral-700 text-neutral-300 border-neutral-600 hover:bg-neutral-600"
+                            ? "bg-white text-slate-900 border-white shadow-md shadow-white/10"
+                            : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:border-slate-600"
                             }`}
                         >
                           <CreditCard size={16} />
@@ -742,7 +788,7 @@ export function ReceptionistDashboard() {
                     <button
                       onClick={handlePrintAndClose}
                       disabled={!selectedTicket || checkoutLoading}
-                      className="w-full bg-[#ef2027] text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-[#d61219] transition shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-md shadow-red-500/10 hover:shadow-red-500/25 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {checkoutLoading ? <Loader2 className="animate-spin" size={18} /> : <Printer size={18} />}
                       Print Receipt & Close
