@@ -7,6 +7,8 @@ import {
 	unsuspendUser,
 	viewProfile,
 	updateProfile,
+	updateProfilePicture,
+	deleteProfilePicture,
 	changePassword,
 	getAddresses,
 	addAddress,
@@ -15,6 +17,7 @@ import {
 	setDefaultAddress,
 } from '../controllers/userController.js';
 import { requiredSignIn, isAdmin } from '../middlewares/authMiddleware.js';
+import { upload } from '../middlewares/imageUploader.js';
 
 const router = express.Router();
 
@@ -22,6 +25,11 @@ router.post('/register', register);
 router.post('/login', login);
 router.get('/profile', requiredSignIn, viewProfile);
 router.put('/update-profile', requiredSignIn, updateProfile);
+router.put('/update-profile-picture', requiredSignIn, (req, res, next) => {
+	req.uploadFolder = 'profiles';
+	next();
+}, upload.single('profilePicture'), updateProfilePicture);
+router.delete('/delete-profile-picture', requiredSignIn, deleteProfilePicture);
 router.put('/change-password', requiredSignIn, changePassword);
 router.get('/addresses', requiredSignIn, getAddresses);
 router.post('/addresses', requiredSignIn, addAddress);

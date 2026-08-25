@@ -3,6 +3,8 @@ import { Eye, EyeOff, LockKeyhole, MapPin, PencilLine, Plus, ShieldCheck, UserRo
 import Layout from '../../components/layout/Layout'
 import {
 	addUserAddress,
+	changePassword,
+	deleteUserProfilePicture,
 	deleteUserAddress,
 	getUserAddresses,
 	getUserProfile,
@@ -10,10 +12,18 @@ import {
 	setDefaultUserAddress,
 	updateUserAddress,
 	updateUserProfile,
+	updateUserProfilePicture,
 } from '../../services/authServices'
 import { useNavigate } from 'react-router-dom'
 
 const securityRules = ['8+ characters', 'Upper case letter', 'Special character']
+const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000').replace(/\/+$/, '').replace(/\/api$/i, '')
+
+const resolveProfileImageUrl = (value = '') => {
+	if (!value) return ''
+	if (/^https?:\/\//i.test(value)) return value
+	return `${API_ORIGIN}${value.startsWith('/') ? '' : '/'}${value}`
+}
 
 function Field({ label, type = 'text', value, onChange, placeholder, rightIcon, disabled = false }) {
 	return (
@@ -78,7 +88,10 @@ function AddressCard({ address, onEdit, onRemove, onSetDefault }) {
 export function Profile() {
 	const navigate = useNavigate()
 	const fileInputRef = useRef(null)
+	const profileImageMenuRef = useRef(null)
 	const [avatarPreview, setAvatarPreview] = useState('')
+	const [profileImageUrl, setProfileImageUrl] = useState('')
+	const [isProfileImageMenuOpen, setIsProfileImageMenuOpen] = useState(false)
 	const [addresses, setAddresses] = useState([])
 	const [editingProfile, setEditingProfile] = useState(false)
 	const [editingAddressId, setEditingAddressId] = useState(null)
@@ -109,6 +122,7 @@ export function Profile() {
 			try {
 				const [profileResponse, addressResponse] = await Promise.all([getUserProfile(), getUserAddresses()])
 				const user = profileResponse.user || {}
+				setProfileImageUrl(resolveProfileImageUrl(user.profilePicture || ''))
 				setFormValues((previous) => ({
 					...previous,
 					fullName: user.fullname || user.name || '',
@@ -133,6 +147,17 @@ export function Profile() {
 		}
 	}, [avatarPreview])
 
+	useEffect(() => {
+		const closeMenuOnOutsideClick = (event) => {
+			if (!profileImageMenuRef.current?.contains(event.target)) {
+				setIsProfileImageMenuOpen(false)
+			}
+		}
+
+		document.addEventListener('mousedown', closeMenuOnOutsideClick)
+		return () => document.removeEventListener('mousedown', closeMenuOnOutsideClick)
+	}, [])
+
 	const avatarInitial = useMemo(() => {
 		return formValues.fullName?.trim()?.charAt(0)?.toUpperCase() || ''
 	}, [formValues.fullName])
@@ -144,7 +169,7 @@ export function Profile() {
 		}))
 	}
 
-	const handleAvatarChange = (event) => {
+	const handleAvatarChange = async (event) => {
 		const file = event.target.files?.[0]
 
 		if (!file) {
@@ -159,10 +184,52 @@ export function Profile() {
 
 			return objectUrl
 		})
+
+		try {
+			const response = await updateUserProfilePicture(file)
+			const uploadedPath = response?.user?.profilePicture || ''
+			setProfileImageUrl(resolveProfileImageUrl(uploadedPath))
+			setStatusMessage('Profile picture updated successfully.')
+			setErrorMessage('')
+		} catch (error) {
+			setErrorMessage(error.message)
+		} finally {
+			event.target.value = ''
+		}
 	}
 
 	const openFilePicker = () => {
 		fileInputRef.current?.click()
+		setIsProfileImageMenuOpen(false)
+	}
+
+	const removeProfileImage = async () => {
+		if (!profileImageUrl) {
+			setIsProfileImageMenuOpen(false)
+			setErrorMessage('No profile image to delete.')
+			return
+		}
+
+		if (!window.confirm('Delete your profile image?')) {
+			return
+		}
+
+		try {
+			const response = await deleteUserProfilePicture()
+			setProfileImageUrl(resolveProfileImageUrl(response?.user?.profilePicture || ''))
+			setAvatarPreview((previous) => {
+				if (previous) {
+					URL.revokeObjectURL(previous)
+				}
+				return ''
+			})
+			setStatusMessage('Profile picture deleted successfully.')
+			setErrorMessage('')
+		} catch (error) {
+			setErrorMessage(error.message)
+		} finally {
+			setIsProfileImageMenuOpen(false)
+		}
 	}
 
 	const saveProfile = async () => {
@@ -173,9 +240,36 @@ export function Profile() {
 				phone: formValues.phone,
 			})
 			const user = response.user || {}
+			setProfileImageUrl(resolveProfileImageUrl(user.profilePicture || profileImageUrl))
 			setFormValues((previous) => ({ ...previous, fullName: user.fullname || previous.fullName, email: user.email || previous.email, phone: user.phone || previous.phone }))
 			setEditingProfile(false)
 			setStatusMessage('Profile updated successfully.')
+			setErrorMessage('')
+		} catch (error) {
+			setErrorMessage(error.message)
+		}
+	}
+
+	const savePassword = async () => {
+		if (!formValues.currentPassword || !formValues.newPassword || !formValues.confirmPassword) {
+			setErrorMessage('Please fill in all password fields.')
+			return
+		}
+
+		if (formValues.newPassword !== formValues.confirmPassword) {
+			setErrorMessage('New passwords do not match.')
+			return
+		}
+
+		try {
+			await changePassword(formValues.currentPassword, formValues.newPassword, formValues.confirmPassword)
+			setFormValues((previous) => ({
+				...previous,
+				currentPassword: '',
+				newPassword: '',
+				confirmPassword: '',
+			}))
+			setStatusMessage('Password updated successfully.')
 			setErrorMessage('')
 		} catch (error) {
 			setErrorMessage(error.message)
@@ -262,11 +356,11 @@ export function Profile() {
 					<div className="rounded-3xl border border-[#ff2020] bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.08)] sm:p-6">
 						<div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
 							<div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-								<div className="relative h-20 w-20 overflow-hidden rounded-2xl border-2 border-[#ff2020] bg-[#fff2f2] shadow-sm">
-									{avatarPreview ? (
-										<img src={avatarPreview} alt="Profile preview" className="h-full w-full object-cover" />
+								<div className="relative h-20 w-20 overflow-visible rounded-2xl border-2 border-[#ff2020] bg-[#fff2f2] shadow-sm">
+									{avatarPreview || profileImageUrl ? (
+										<img src={avatarPreview || profileImageUrl} alt="Profile preview" className="h-full w-full rounded-[14px] object-cover" />
 									) : (
-										<div className="flex h-full w-full items-center justify-center text-[#ff2020]">
+										<div className="flex h-full w-full rounded-[14px] items-center justify-center text-[#ff2020]">
 											{avatarInitial ? (
 												<span className="text-2xl font-bold">{avatarInitial}</span>
 											) : (
@@ -275,14 +369,37 @@ export function Profile() {
 										</div>
 									)}
 
-									<button
-										type="button"
-										onClick={openFilePicker}
-										className="absolute -right-1 -bottom-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-[#ff2020] text-white shadow-md transition hover:bg-[#e11b1b]"
-										aria-label="Upload profile photo"
-									>
-										<Upload className="h-3.5 w-3.5" />
-									</button>
+									<div ref={profileImageMenuRef} className="absolute -right-1 -bottom-1 z-30">
+										<button
+											type="button"
+											onClick={() => setIsProfileImageMenuOpen((value) => !value)}
+											className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-[#ff2020] text-white shadow-md transition hover:bg-[#e11b1b]"
+											aria-label="Profile image actions"
+										>
+											<Upload className="h-3.5 w-3.5" />
+										</button>
+
+										{isProfileImageMenuOpen ? (
+											<div className="absolute right-0 mt-2 w-36 overflow-hidden rounded-xl border border-[#ffb4b4] bg-white shadow-lg z-40">
+												<button
+													type="button"
+													onClick={openFilePicker}
+													className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-slate-700 transition hover:bg-[#fff3f3]"
+												>
+													<PencilLine className="h-3.5 w-3.5 text-[#ff2020]" />
+													Edit photo
+												</button>
+												<button
+													type="button"
+													onClick={removeProfileImage}
+													className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-slate-700 transition hover:bg-[#fff3f3]"
+												>
+													<Trash2 className="h-3.5 w-3.5 text-[#ff2020]" />
+													Delete photo
+												</button>
+											</div>
+										) : null}
+									</div>
 
 									<input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
 								</div>
@@ -359,6 +476,7 @@ export function Profile() {
 
 								<button
 									type="button"
+									onClick={savePassword}
 									className="mt-4 inline-flex items-center justify-center rounded-xl bg-[#ff2020] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#e11b1b]"
 								>
 									Update Password
