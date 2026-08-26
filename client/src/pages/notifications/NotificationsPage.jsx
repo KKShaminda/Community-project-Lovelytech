@@ -104,7 +104,7 @@ function resolveLink(notification) {
       if (isStaff) {
         return role === "receptionist" ? "/receptionist/repair-orders" : "/admin/repair-orders";
       }
-      return notification.referenceId ? `/repair/track` : "/repair/history";
+      return notification.referenceId ? `/repair/track?id=${encodeURIComponent(notification.referenceId)}` : "/repair/history";
     case "payment":
       if (isStaff) {
         return role === "receptionist" ? "/receptionist/sales-log" : "/admin/sales-log";
