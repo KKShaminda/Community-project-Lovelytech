@@ -15,6 +15,7 @@ import productRoutes from "./routes/productRoutes.js";
 import repairRoutes from "./routes/repairRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import saleRoutes from "./routes/saleRoutes.js";
+import uploadRoutes from "./routes/uploadRoutes.js";
 
 // Load environment variables
 dotenv.config();
@@ -50,6 +51,7 @@ app.use("/api/products", productRoutes);
 app.use("/api/repairs", repairRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/sales", saleRoutes);
+app.use("/api/upload", uploadRoutes);
 
 // Health check / welcome route
 app.get("/", (req, res) => {
