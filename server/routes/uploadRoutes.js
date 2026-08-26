@@ -6,6 +6,7 @@ import {
   uploadProductImages,
   uploadRepairImages,
   createImageRecord,
+  createMongoImageRecord,
 } from "../middlewares/imageUploader.js";
 import {
   requiredSignIn,
@@ -38,7 +39,7 @@ router.post(
   }
 );
 
-// 2. Product Images Upload (Admin & Receptionist)
+// 2. Product Images Upload (Admin & Receptionist) - Stored in MongoDB
 router.post(
   "/product",
   requiredSignIn,
@@ -54,10 +55,10 @@ router.post(
       });
     }
 
-    const images = files.map((file) => createImageRecord(file, "products", req));
+    const images = files.map((file) => createMongoImageRecord(file)).filter(Boolean);
     res.status(200).json({
       success: true,
-      message: `${images.length} product image(s) uploaded successfully.`,
+      message: `${images.length} product image(s) processed for MongoDB storage.`,
       images,
       data: images,
     });

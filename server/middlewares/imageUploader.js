@@ -151,10 +151,21 @@ export const uploadPaymentSlip = (req, res, next) => {
   });
 };
 
-// Middleware for Admin / Receptionist product catalog images upload
+// Memory storage for product images to be stored directly in MongoDB
+const memoryStorage = multer.memoryStorage();
+
+export const uploadProductMemory = multer({
+  storage: memoryStorage,
+  fileFilter,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit per image
+    files: 10, // max 10 images
+  },
+});
+
+// Middleware for Admin / Receptionist product catalog images upload (stored in MongoDB)
 export const uploadProductImages = (req, res, next) => {
-  req.uploadFolder = 'products';
-  const uploader = upload.fields([
+  const uploader = uploadProductMemory.fields([
     { name: 'images', maxCount: 10 },
     { name: 'image', maxCount: 10 },
     { name: 'files', maxCount: 10 },
@@ -172,6 +183,34 @@ export const uploadProductImages = (req, res, next) => {
     }
     next();
   });
+};
+
+// Helper to convert Multer file into a MongoDB-storable image record with Base64 Data URI
+export const createMongoImageRecord = (file) => {
+  if (!file) return null;
+
+  let buffer = file.buffer;
+  if (!buffer && file.path && fs.existsSync(file.path)) {
+    try {
+      buffer = fs.readFileSync(file.path);
+      fs.unlinkSync(file.path); // Remove temporary file from uploads directory
+    } catch {
+      // Ignore cleanup error
+    }
+  }
+
+  const mimetype = file.mimetype || 'image/jpeg';
+  const base64 = buffer ? buffer.toString('base64') : '';
+  const dataUri = base64 ? `data:${mimetype};base64,${base64}` : (file.url || file.path || '');
+  const filename = file.originalname || file.filename || 'product-image.jpg';
+
+  return {
+    url: dataUri,
+    filename: filename,
+    path: dataUri,
+    contentType: mimetype,
+    size: file.size || (buffer ? buffer.length : 0),
+  };
 };
 
 // Middleware for Repair inspection images upload
