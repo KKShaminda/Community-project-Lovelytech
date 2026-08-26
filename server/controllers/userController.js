@@ -1,6 +1,11 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
+import { deleteImageFile, uploadImage } from "../middlewares/imageUploader.js";
+import {
+  createNotificationForUser,
+  createNotificationsForRole,
+} from "./notificationController.js";
 
 // Generate JWT Token
 const generateToken = (userId) => {
@@ -23,21 +28,12 @@ export const register = async (req, res) => {
       });
     }
 
-    /* Check if passwords match
-    if (password !== confirmPassword) {
-      return res.status(400).json({
-        success: false,
-        message: "Passwords do not match",
-      });
-    }*/
-
     // Create new user
     const user = await User.create({
       fullname,
       email,
       phone,
       password,
-      //confirmPassword,
       role: role || "Buyer", // Default to Buyer if not specified
     });
 
@@ -53,6 +49,25 @@ export const register = async (req, res) => {
       message: "User registered successfully",
       token,
       user: userResponse,
+    });
+
+    // Non-blocking notifications
+    // 1. Welcome notification to user
+    createNotificationForUser(user._id, {
+      type: "account",
+      title: "Welcome to Lovely Tech!",
+      message: `Welcome, ${user.fullname}! Your Lovely Tech account has been created.`,
+      referenceId: user._id.toString(),
+      referenceType: "User",
+    });
+
+    // 2. Notify Admin of new registration
+    createNotificationsForRole("admin", {
+      type: "account",
+      title: "New User Registered",
+      message: `${user.fullname} (${user.email}) joined as ${user.role || "User"}.`,
+      referenceId: user._id.toString(),
+      referenceType: "User",
     });
   } catch (error) {
     res.status(500).json({
@@ -286,6 +301,34 @@ export const updatePhone = async (req, res) => {
   }
 };
 
+// Update the logged-in user's profile details
+export const updateProfile = async (req, res) => {
+  try {
+    const { fullname, email, phone } = req.body;
+    const updates = {};
+
+    if (fullname !== undefined) updates.fullname = fullname.trim();
+    if (email !== undefined) updates.email = email.trim().toLowerCase();
+    if (phone !== undefined) updates.phone = phone.trim();
+
+    const user = await User.findByIdAndUpdate(req.user._id, updates, {
+      new: true,
+      runValidators: true,
+    }).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    res.status(200).json({ success: true, message: "Profile updated successfully", user });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.code === 11000 ? "Email or phone number is already in use" : error.message,
+    });
+  }
+};
+
 //get all users (admin)
 export const getAllUsers = async (req, res) => {
   try {
@@ -326,102 +369,6 @@ export const getUsersByRole = async (req, res) => {
   }
 };
 
-// Upload profile picture
-{/*export const uploadProfilePicture = async (req, res) => {
-  try {
-    // Check if file exists
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: "No file uploaded",
-      });
-    }
-
-    // Upload image to Cloudinary using your existing uploadImage function
-    const publicId = await uploadImage(req.file.buffer, 'profile-pictures');
-    
-    // Generate Cloudinary URL (as per team leader's instruction)
-    const imageUrl = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/${publicId}`;
-
-    // Update user's profile picture URL in database
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      { profilePicture: imageUrl },
-      { new: true, runValidators: true }
-    ).select("-password");
-
-    res.status(200).json({
-      success: true,
-      message: "Profile picture uploaded successfully",
-      user,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error uploading profile picture",
-      error: error.message,
-    });
-  }
-}; */}
-
-{/*
-// Delete/Remove profile picture
-export const removeProfilePicture = async (req, res) => {
-  try {
-    const user = await User.findById(req.user._id);
-    
-    if (!user.profilePicture) {
-      return res.status(400).json({
-        success: false,
-        message: "No profile picture to remove",
-      });
-    }
-
-    // Remove profile picture URL from database
-    user.profilePicture = null;
-    await user.save();
-
-    res.status(200).json({
-      success: true,
-      message: "Profile picture removed successfully",
-      user: user.toJSON(),
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error removing profile picture",
-      error: error.message,
-    });
-  }
-}; */}
-
-{/*
-// Get profile picture
-export const getProfilePicture = async (req, res) => {
-  try {
-    const user = await User.findById(req.user._id).select("profilePicture fullname");
-    
-    if (!user.profilePicture) {
-      return res.status(404).json({
-        success: false,
-        message: "No profile picture found",
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      profilePicture: user.profilePicture,
-      fullname: user.fullname,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error fetching profile picture",
-      error: error.message,
-    });
-  }
-}; */}
-
 // Add address
 export const addAddress = async (req, res) => {
   try {
@@ -443,7 +390,14 @@ export const addAddress = async (req, res) => {
       });
     }
 
-    user.addresses.push({ street, city, district, postalCode, country });
+    user.addresses.push({
+      street,
+      city,
+      district,
+      postalCode,
+      country,
+      isDefault: user.addresses.length === 0,
+    });
 
     await user.save();
 
@@ -525,9 +479,14 @@ export const deleteAddress = async (req, res) => {
       });
     }
 
+    const wasDefault = user.addresses.id(addressId)?.isDefault;
     user.addresses = user.addresses.filter(
       (addr) => addr._id?.toString() !== addressId
     );
+
+    if (wasDefault && user.addresses.length > 0) {
+      user.addresses[0].isDefault = true;
+    }
 
     await user.save();
 
@@ -576,6 +535,13 @@ export const suspendUser = async (req, res) => {
       user,
     });
 
+    createNotificationForUser(user._id, {
+      type: "account",
+      title: "Account Suspended",
+      message: "Your Lovely Tech account has been suspended. Please contact customer support for assistance.",
+      referenceId: user._id.toString(),
+      referenceType: "User",
+    });
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -615,6 +581,14 @@ export const unsuspendUser = async (req, res) => {
       user,
     });
 
+    createNotificationForUser(user._id, {
+      type: "account",
+      title: "Account Re-activated",
+      message: "Your account suspension has been lifted. Welcome back to Lovely Tech!",
+      referenceId: user._id.toString(),
+      referenceType: "User",
+    });
+
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -649,6 +623,99 @@ export const getAddresses = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error fetching addresses",
+      error: error.message,
+    });
+  }
+};
+
+// Set one saved address as the logged-in user's default address
+export const setDefaultAddress = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    const address = user?.addresses.id(req.params.addressId);
+
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    if (!address) return res.status(404).json({ success: false, message: "Address not found" });
+
+    user.addresses.forEach((savedAddress) => {
+      savedAddress.isDefault = savedAddress._id.equals(address._id);
+    });
+    await user.save();
+
+    res.status(200).json({ success: true, message: "Default address updated", addresses: user.addresses });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error setting default address", error: error.message });
+  }
+};
+
+// Update the logged-in user's profile picture
+export const updateProfilePicture = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "Profile picture is required" });
+    }
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    const previousProfilePicture = user.profilePicture;
+    const uploadedImage = uploadImage(req.file, req, req.uploadFolder || "profiles");
+    user.profilePicture = uploadedImage.path;
+    await user.save();
+
+    if (previousProfilePicture && previousProfilePicture !== user.profilePicture) {
+      deleteImageFile(previousProfilePicture);
+    }
+
+    const sanitizedUser = await User.findById(req.user._id).select("-password");
+
+    res.status(200).json({
+      success: true,
+      message: "Profile picture updated successfully",
+      user: sanitizedUser,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error updating profile picture",
+      error: error.message,
+    });
+  }
+};
+
+// Delete the logged-in user's profile picture
+export const deleteProfilePicture = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    if (!user.profilePicture) {
+      return res.status(400).json({ success: false, message: "No profile picture to delete" });
+    }
+
+    const previousProfilePicture = user.profilePicture;
+    user.profilePicture = null;
+    await user.save();
+
+    deleteImageFile(previousProfilePicture);
+
+    const sanitizedUser = await User.findById(req.user._id).select("-password");
+
+    res.status(200).json({
+      success: true,
+      message: "Profile picture removed successfully",
+      user: sanitizedUser,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error deleting profile picture",
       error: error.message,
     });
   }

@@ -10,12 +10,18 @@ const API_URL = `${normalizedBaseUrl}${apiPrefix}`;
 
 console.log("🔗 Auth API URL:", API_URL);
 
-const getAuthHeaders = () => {
-  const token = localStorage.getItem("token");
+export const getAuthHeaders = () => {
+  const token = localStorage.getItem("token") || sessionStorage.getItem("token");
   return {
     "Content-Type": "application/json",
     ...(token && { Authorization: `Bearer ${token}` }),
   };
+};
+
+const getActiveAuthStorage = () => {
+  if (localStorage.getItem("token")) return localStorage;
+  if (sessionStorage.getItem("token")) return sessionStorage;
+  return localStorage;
 };
 
 const parseResponse = async (response) => {
@@ -37,11 +43,24 @@ const request = async (url, options = {}) => {
     ...(options.headers || {}),
   };
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-    credentials: "include",
-  });
+  if (options.body instanceof FormData) {
+    delete headers["Content-Type"];
+  }
+
+  let response;
+
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+      credentials: "include",
+    });
+  } catch (error) {
+    throw new Error(
+      `Unable to reach the authentication service at ${API_URL}. Make sure the backend is running on http://localhost:5000.`
+    );
+  }
+
   const data = await parseResponse(response);
 
   if (!response.ok) {
@@ -66,6 +85,10 @@ export const loginUser = async (credentials, rememberMe = true) => {
     }
     if (data.user) {
       storage.setItem("user", JSON.stringify(data.user));
+    }
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("auth-updated"));
     }
 
     return data;
@@ -98,7 +121,7 @@ export const logoutUser = async () => {
     const data = await request(`${API_URL}/logout`, {
       method: "POST",
       headers: getAuthHeaders(),
-    });
+    }).catch(() => ({ success: true }));
 
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -107,25 +130,37 @@ export const logoutUser = async () => {
     sessionStorage.removeItem("token");
     sessionStorage.removeItem("user");
 
-    return data;
-  } catch (error) {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("auth-updated"));
+    }
+
+    return data || { success: true };
+  } catch {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("rememberEmail");
     sessionStorage.removeItem("token");
     sessionStorage.removeItem("user");
-    throw new Error(error.message || "Logout failed");
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("auth-updated"));
+    }
+    return { success: true };
   }
 };
 
 export const signOut = logoutUser;
 
-export const changePassword = async (currentPassword, newPassword) => {
+export const changePassword = async (currentPassword, newPassword, confirmNewPassword = newPassword) => {
   try {
     return await request(`${API_URL}/change-password`, {
       method: "PUT",
-      body: JSON.stringify({ currentPassword, newPassword }),
+      body: JSON.stringify({
+        currentPassword,
+        newPassword,
+        confirmNewPassword,
+      }),
     });
   } catch (error) {
     throw new Error(error.message || "Failed to change password");
@@ -150,12 +185,57 @@ export const updateUserProfile = async (profileData) => {
     });
 
     if (data.user) {
-      localStorage.setItem("user", JSON.stringify(data.user));
+      getActiveAuthStorage().setItem("user", JSON.stringify(data.user));
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("auth-updated"));
+      }
     }
 
     return data;
   } catch (error) {
     throw new Error(error.message || "Failed to update profile");
+  }
+};
+
+export const updateUserProfilePicture = async (profilePictureFile) => {
+  try {
+    const formData = new FormData();
+    formData.append("profilePicture", profilePictureFile);
+
+    const data = await request(`${API_URL}/update-profile-picture`, {
+      method: "PUT",
+      body: formData,
+    });
+
+    if (data.user) {
+      getActiveAuthStorage().setItem("user", JSON.stringify(data.user));
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("auth-updated"));
+      }
+    }
+
+    return data;
+  } catch (error) {
+    throw new Error(error.message || "Failed to update profile picture");
+  }
+};
+
+export const deleteUserProfilePicture = async () => {
+  try {
+    const data = await request(`${API_URL}/delete-profile-picture`, {
+      method: "DELETE",
+    });
+
+    if (data.user) {
+      getActiveAuthStorage().setItem("user", JSON.stringify(data.user));
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("auth-updated"));
+      }
+    }
+
+    return data;
+  } catch (error) {
+    throw new Error(error.message || "Failed to delete profile picture");
   }
 };
 
@@ -186,4 +266,30 @@ export const rememberEmail = (email) => {
 
 export const getRememberedEmail = () => {
   return localStorage.getItem("rememberEmail");
+};
+
+export const getUserAddresses = async () => {
+  return request(`${API_URL}/addresses`, { method: "GET" });
+};
+
+export const addUserAddress = async (address) => {
+  return request(`${API_URL}/addresses`, {
+    method: "POST",
+    body: JSON.stringify(address),
+  });
+};
+
+export const updateUserAddress = async (addressId, address) => {
+  return request(`${API_URL}/addresses/${addressId}`, {
+    method: "PUT",
+    body: JSON.stringify(address),
+  });
+};
+
+export const deleteUserAddress = async (addressId) => {
+  return request(`${API_URL}/addresses/${addressId}`, { method: "DELETE" });
+};
+
+export const setDefaultUserAddress = async (addressId) => {
+  return request(`${API_URL}/addresses/${addressId}/default`, { method: "PATCH" });
 };

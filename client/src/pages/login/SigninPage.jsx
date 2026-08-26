@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { signIn } from "../../services/authServices";
+import Alert from "../../components/common/Alert";
 
 const getDashboardPath = (role) => {
   const normalizedRole = (role || "").toLowerCase();
@@ -13,16 +14,18 @@ const getDashboardPath = (role) => {
     return "/receptionist/dashboard";
   }
 
-  return "/user/dashboard";
+  return "/products";
 };
+
 
 export function SigninPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const location = useLocation();
+  const [email, setEmail] = useState(() => location.state?.email || "");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(() => location.state?.message || "");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -33,7 +36,8 @@ export function SigninPage() {
       const data = await signIn(email, password, rememberMe);
       const role = data?.user?.role || data?.role || "User";
       setMessage("Login successful");
-      navigate(getDashboardPath(role));
+      const target = location.state?.from || getDashboardPath(role);
+      navigate(target);
     } catch (error) {
       setMessage(error.message || "Unable to sign in right now");
     } finally {
@@ -135,9 +139,11 @@ export function SigninPage() {
             </label>
 
             {message ? (
-              <p className={`text-sm ${message.includes("successful") ? "text-green-600" : "text-red-500"}`}>
-                {message}
-              </p>
+              <Alert
+                type={message.toLowerCase().includes("success") ? "success" : "error"}
+                message={message}
+                onClose={() => setMessage("")}
+              />
             ) : null}
 
             <button
@@ -150,9 +156,9 @@ export function SigninPage() {
 
             <p className="text-center text-sm text-gray-500">
               Don't have an account?{" "}
-              <a href="/signup" className="font-medium text-[#E4342F] hover:underline">
+              <Link to="/signup" className="font-medium text-[#E4342F] hover:underline">
                 Sign up here
-              </a>
+              </Link>
             </p>
           </form>
         </div>

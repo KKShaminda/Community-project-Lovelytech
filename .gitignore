@@ -1,5 +1,12 @@
 # Ignore environment files containing secrets
+.env
 
 # Node modules
 node_modules/
+
+
+.env
+
+# Uploaded images
+server/uploads/
 config.bat
