@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import Product from "../models/Product.js";
-import { uploadImage, deleteImageFile } from "../middlewares/imageUploader.js";
+import { createMongoImageRecord, deleteImageFile } from "../middlewares/imageUploader.js";
 import { createNotificationsForRole } from "./notificationController.js";
 
 const CATEGORIES = [
@@ -200,11 +200,32 @@ export const getProductById = async (req, res) => {
 };
 
 // POST /api/products
-// Expects multipart/form-data — text fields + up to 5 files under "images"
+// Expects multipart/form-data — text fields + up to 10 files under "images" (or JSON)
 export const createProduct = async (req, res) => {
   try {
-    const files = req.files || [];
-    const images = files.map((file) => uploadImage(file, req, "products"));
+    const files = req.files || (req.file ? [req.file] : []);
+    const newImages = files
+      .map((file) => createMongoImageRecord(file))
+      .filter(Boolean);
+
+    // Also support images array if passed in req.body
+    let initialImages = [];
+    if (req.body.images) {
+      try {
+        const parsed = typeof req.body.images === 'string' ? JSON.parse(req.body.images) : req.body.images;
+        if (Array.isArray(parsed)) {
+          initialImages = parsed.map((img) =>
+            typeof img === 'string'
+              ? { url: img, filename: 'product-image.jpg', path: img }
+              : { url: img.url || img.path || '', filename: img.filename || 'product-image.jpg', path: img.path || img.url || '' }
+          );
+        }
+      } catch {
+        // Not a JSON string
+      }
+    }
+
+    const images = [...initialImages, ...newImages];
 
     const productData = {
       ...req.body,
@@ -237,7 +258,7 @@ export const createProduct = async (req, res) => {
 };
 
 // PUT /api/products/:id
-// Expects multipart/form-data — text fields + new images, or JSON
+// Expects multipart/form-data — text fields + new images (stored in MongoDB), or JSON
 export const updateProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -248,15 +269,27 @@ export const updateProduct = async (req, res) => {
       const toRemove = Array.isArray(req.body.removeImages)
         ? req.body.removeImages
         : [req.body.removeImages];
-      for (const imgPath of toRemove) {
-        deleteImageFile(imgPath);
-        product.images = product.images.filter((img) => img.path !== imgPath);
-      }
+
+      toRemove.forEach((itemToRemove) => {
+        const targetPath = typeof itemToRemove === 'object' ? itemToRemove.url || itemToRemove.path : itemToRemove;
+        if (targetPath) {
+          // If it was a legacy disk upload path, clean it up
+          if (targetPath.includes('/uploads/')) {
+            deleteImageFile(targetPath);
+          }
+          product.images = product.images.filter(
+            (img) => img.path !== targetPath && img.url !== targetPath && img.filename !== targetPath
+          );
+        }
+      });
     }
 
-    // Handle new uploaded images
-    if (req.files && req.files.length > 0) {
-      const newImages = req.files.map((file) => uploadImage(file, req, "products"));
+    // Handle new uploaded images (converted to MongoDB Base64 Data URIs)
+    const files = req.files || (req.file ? [req.file] : []);
+    if (files && files.length > 0) {
+      const newImages = files
+        .map((file) => createMongoImageRecord(file))
+        .filter(Boolean);
       product.images = [...(product.images || []), ...newImages];
     }
 
@@ -308,9 +341,13 @@ export const deleteProduct = async (req, res) => {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: "Product not found" });
 
-    // Clean up images on disk
+    // Clean up any legacy disk files if applicable
     if (product.images && product.images.length > 0) {
-      product.images.forEach((img) => deleteImageFile(img.path));
+      product.images.forEach((img) => {
+        if (img.path && img.path.includes('/uploads/')) {
+          deleteImageFile(img.path);
+        }
+      });
     }
 
     await Product.findByIdAndDelete(req.params.id);

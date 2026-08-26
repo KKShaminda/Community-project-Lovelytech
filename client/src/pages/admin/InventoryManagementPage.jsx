@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { AdminShell } from '../../components/admin/AdminShell'
 import ConfirmModal from '../../components/common/ConfirmModal'
 import { createProduct, deleteProduct, getProducts, updateProduct } from '../../services/productServices'
+import { resolveImageUrl } from '../../data/productsData'
 
 const REFRESH_INTERVAL_MS = 30000
 const DEFAULT_LIMIT = 500
@@ -90,7 +91,8 @@ function StatCard({ label, value }) {
 }
 
 function InventoryRow({ item, onEdit, onDelete }) {
-  const imageUrl = item.images && item.images[0] ? item.images[0].url : ''
+  const firstImage = item.images && item.images[0] ? (item.images[0].url || item.images[0].path || item.images[0]) : ''
+  const imageUrl = firstImage ? resolveImageUrl(firstImage, item.category) : ''
 
   return (
     <tr className="hover:bg-neutral-50 transition-colors border-b border-neutral-200 last:border-b-0">
@@ -614,7 +616,11 @@ export function InventoryManagementPage() {
                   {/* Previews of existing images */}
                   {existingImages.map((img, idx) => (
                     <div key={`exist-${idx}`} className="relative aspect-square rounded-xl border border-neutral-200 overflow-hidden bg-neutral-50 group">
-                      <img src={img.url} alt={img.filename} className="w-full h-full object-cover" />
+                      <img
+                        src={resolveImageUrl(img.url || img.path || img, form.category)}
+                        alt={img.filename || `Image ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                      />
                       <button
                         type="button"
                         onClick={() => removeExistingImage(img, idx)}
