@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Heart, Search, ShoppingCart, ArrowRight, RefreshCw, AlertCircle } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
+import toast from 'react-hot-toast'
 import Layout from '../../components/layout/Layout'
 import { formatPrice, resolveImageUrl, getCategoryFallbackImage } from '../../data/productsData'
 import {
@@ -98,6 +99,7 @@ export function WishlistPage() {
     // Optimistic UI update
     setItems((prev) => prev.filter((item) => String(item.id) !== String(id) && String(item._id) !== String(id)))
     await removeWishlistProduct(id)
+    toast('Item removed from wishlist', { icon: '🗑️' })
   }
 
   const handleAddToCart = (id, e) => {
@@ -106,6 +108,7 @@ export function WishlistPage() {
     const product = items.find((item) => String(item.id) === String(id) || String(item._id) === String(id))
     if (product) {
       addToCart(product, 1)
+      toast.success(`${product.name || 'Product'} added to cart!`)
     }
     setAddedIds((prev) => ({ ...prev, [id]: true }))
     setTimeout(() => {

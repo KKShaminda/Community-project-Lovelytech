@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { signIn } from "../../services/authServices";
+import Alert from "../../components/common/Alert";
 
 const getDashboardPath = (role) => {
   const normalizedRole = (role || "").toLowerCase();
@@ -138,9 +139,11 @@ export function SigninPage() {
             </label>
 
             {message ? (
-              <p className={`text-sm ${message.toLowerCase().includes("success") ? "text-green-600 font-medium" : "text-red-500"}`}>
-                {message}
-              </p>
+              <Alert
+                type={message.toLowerCase().includes("success") ? "success" : "error"}
+                message={message}
+                onClose={() => setMessage("")}
+              />
             ) : null}
 
             <button

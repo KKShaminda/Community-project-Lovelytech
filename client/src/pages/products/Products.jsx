@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ShoppingBag, AlertCircle, RefreshCw } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import toast from 'react-hot-toast'
 
 import { SearchSortBar } from '../../components/products/SearchSortBar'
 import { FilterSidebar } from '../../components/products/FilterSidebar'
@@ -189,13 +190,19 @@ export function Products() {
       setAvailability((prev) => ({ ...prev, [key]: !prev[key] })),
     )
 
-  const toggleWishlist = (productId) => {
+  const toggleWishlist = async (productId) => {
     if (!isAuthenticated()) {
+      toast.error('Please sign in to save items to your wishlist')
       navigate('/login', { state: { from: '/products' } })
       return
     }
-    toggleWishlistProduct(productId)
+    const isAdded = await toggleWishlistProduct(productId)
     setWishlistIds(getWishlistIds())
+    if (isAdded) {
+      toast.success('Added to wishlist!')
+    } else {
+      toast('Removed from wishlist', { icon: '🗑️' })
+    }
   }
 
   const clearAll = () => {

@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { Toaster } from 'react-hot-toast'
 import './App.css'
 import { HomePage } from './pages/home/HomePage'
 import { AboutUs } from './pages/home/AboutUs'
@@ -33,6 +34,48 @@ import { AdminOrdersPage } from './pages/admin/AdminOrdersPage'
 function App() {
   return (
     <>
+      <Toaster
+        position="top-right"
+        reverseOrder={false}
+        gutter={10}
+        toastOptions={{
+          duration: 3500,
+          style: {
+            borderRadius: '16px',
+            background: '#ffffff',
+            color: '#0f172a',
+            fontSize: '14px',
+            fontWeight: '500',
+            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+            border: '1px solid #e2e8f0',
+            padding: '12px 18px',
+          },
+          success: {
+            duration: 3000,
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#ffffff',
+            },
+            style: {
+              border: '1px solid #a7f3d0',
+              backgroundColor: '#f0fdf4',
+              color: '#065f46',
+            },
+          },
+          error: {
+            duration: 4000,
+            iconTheme: {
+              primary: '#ff2020',
+              secondary: '#ffffff',
+            },
+            style: {
+              border: '1px solid #fecaca',
+              backgroundColor: '#fef2f2',
+              color: '#991b1b',
+            },
+          },
+        }}
+      />
       <Router>
         <Routes>
           {/* Public Pages */}

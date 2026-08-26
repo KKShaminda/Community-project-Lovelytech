@@ -1,6 +1,8 @@
 import { useMemo, useState, useEffect } from 'react'
+import toast from 'react-hot-toast'
 
 import { AdminShell } from '../../components/admin/AdminShell'
+import ConfirmModal from '../../components/common/ConfirmModal'
 import { REPAIR_ORDERS, REPAIR_STATUS_META, formatLKR } from '../../data/adminPagesData'
 import { getRepairs, createRepairRequest, updateRepair, deleteRepair } from '../../services/repairServices'
 
@@ -45,6 +47,8 @@ export function RepairOrdersPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState(defaultForm)
+  const [itemToDeleteId, setItemToDeleteId] = useState(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const fetchItems = async () => {
     try {
@@ -104,6 +108,7 @@ export function RepairOrdersPage() {
           amount: Number(form.amount),
           estimate: Number(form.amount),
         })
+        toast.success('Repair order updated successfully!')
       } else {
         await createRepairRequest({
           customer: form.customer,
@@ -116,6 +121,7 @@ export function RepairOrdersPage() {
           email: `${form.customer.toLowerCase().replace(/\s+/g, '')}@example.com`,
           phone: "0770000000",
         })
+        toast.success('Repair order created successfully!')
       }
       fetchItems()
       setModalOpen(false)
@@ -129,18 +135,30 @@ export function RepairOrdersPage() {
         createdAt: new Date().toISOString().slice(0, 10),
       }
       setItems((current) => (editingId ? current.map((item) => (item.id === editingId ? next : item)) : [next, ...current]))
+      toast.success(editingId ? 'Repair order updated.' : 'Repair order created.')
       setModalOpen(false)
     }
   }
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this repair order?')) return
+  const handleDelete = (id) => {
+    setItemToDeleteId(id)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDeleteId) return
+    setIsDeleting(true)
     try {
-      await deleteRepair(id)
-      setItems((current) => current.filter((item) => item.id !== id))
+      await deleteRepair(itemToDeleteId)
+      setItems((current) => current.filter((item) => item.id !== itemToDeleteId))
+      toast.success('Repair order deleted successfully.')
+      setItemToDeleteId(null)
     } catch (err) {
       console.error("Error deleting repair order:", err)
-      setItems((current) => current.filter((item) => item.id !== id))
+      setItems((current) => current.filter((item) => item.id !== itemToDeleteId))
+      toast.success('Repair order deleted.')
+      setItemToDeleteId(null)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -277,6 +295,19 @@ export function RepairOrdersPage() {
           </form>
         </div>
       ) : null}
+
+      {/* Delete Repair Order Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(itemToDeleteId)}
+        title="Delete Repair Order"
+        message="Are you sure you want to delete this repair order? This record will be permanently removed."
+        confirmText="Delete Order"
+        cancelText="Cancel"
+        confirmVariant="danger"
+        isLoading={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setItemToDeleteId(null)}
+      />
     </AdminShell>
   )
 }

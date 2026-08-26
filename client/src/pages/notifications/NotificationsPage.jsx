@@ -15,6 +15,8 @@ import {
   ExternalLink,
 } from "lucide-react";
 import Layout from "../../components/layout/Layout";
+import ConfirmModal from "../../components/common/ConfirmModal";
+import toast from "react-hot-toast";
 import {
   getNotifications,
   markNotificationRead,
@@ -173,6 +175,8 @@ export function NotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("all");
   const [markingAll, setMarkingAll] = useState(false);
+  const [notificationToDeleteId, setNotificationToDeleteId] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchNotifications = useCallback(async () => {
     setLoading(true);
@@ -231,13 +235,24 @@ export function NotificationsPage() {
     }
   };
 
-  const handleDelete = async (e, id) => {
+  const handleDelete = (e, id) => {
     e.stopPropagation();
+    setNotificationToDeleteId(id);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!notificationToDeleteId) return;
+    setIsDeleting(true);
     try {
-      await deleteNotification(id);
-      setNotifications((prev) => prev.filter((n) => n._id !== id));
+      await deleteNotification(notificationToDeleteId);
+      setNotifications((prev) => prev.filter((n) => n._id !== notificationToDeleteId));
+      toast.success("Notification deleted.");
+      setNotificationToDeleteId(null);
     } catch (err) {
-      console.error("Failed to delete notification:", err.message);
+      toast.error("Failed to delete notification: " + err.message);
+      setNotificationToDeleteId(null);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -432,6 +447,19 @@ export function NotificationsPage() {
           </div>
         </div>
       </main>
+
+      {/* Delete Notification Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(notificationToDeleteId)}
+        title="Delete Notification"
+        message="Are you sure you want to delete this notification?"
+        confirmText="Delete"
+        cancelText="Cancel"
+        confirmVariant="danger"
+        isLoading={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setNotificationToDeleteId(null)}
+      />
     </Layout>
   );
 }
