@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
+import toast from 'react-hot-toast'
 import { Check, X } from 'lucide-react'
 
 import { AdminShell } from '../../components/admin/AdminShell'
+import Alert from '../../components/common/Alert'
 import { getAllUsers, suspendUser, unsuspendUser } from '../../services/userServices'
 
 const formatDate = (value) =>
@@ -143,12 +145,16 @@ export function CustomersPage() {
     try {
       if (customer.isSuspended) {
         await unsuspendUser(customer._id)
+        toast.success(`Account unsuspended for ${customer.fullname || 'customer'}.`)
       } else {
         await suspendUser(customer._id)
+        toast.success(`Account suspended for ${customer.fullname || 'customer'}.`)
       }
       await loadUsers()
     } catch (err) {
-      setError(err.message || 'Unable to update customer status.')
+      const errText = err.message || 'Unable to update customer status.'
+      setError(errText)
+      toast.error(errText)
     } finally {
       setLoadingId('')
     }
@@ -191,7 +197,12 @@ export function CustomersPage() {
         </div>
 
         {error ? (
-          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+          <Alert
+            type="error"
+            message={error}
+            onClose={() => setError('')}
+            className="mt-4"
+          />
         ) : null}
 
         <div className="mt-4 overflow-x-auto rounded-xl border border-neutral-300 bg-white">

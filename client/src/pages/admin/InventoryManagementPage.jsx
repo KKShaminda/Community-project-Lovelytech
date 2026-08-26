@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
+import toast from 'react-hot-toast'
 
 import { AdminShell } from '../../components/admin/AdminShell'
+import ConfirmModal from '../../components/common/ConfirmModal'
 import { createProduct, deleteProduct, getProducts, updateProduct } from '../../services/productServices'
 
 const REFRESH_INTERVAL_MS = 30000
@@ -139,6 +141,8 @@ export function InventoryManagementPage() {
   const [savingError, setSavingError] = useState('')
   const [editingProduct, setEditingProduct] = useState(null)
   const [form, setForm] = useState(emptyForm)
+  const [itemToDelete, setItemToDelete] = useState(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Interactive Filters & Search State
   const [search, setSearch] = useState('')
@@ -219,7 +223,7 @@ export function InventoryManagementPage() {
 
     const totalCurrentImages = existingImages.length + selectedFiles.length
     if (totalCurrentImages + files.length > 5) {
-      alert('You can only upload up to 5 images per product.')
+      toast.error('You can only upload up to 5 images per product.')
       return
     }
 
@@ -256,8 +260,10 @@ export function InventoryManagementPage() {
 
       if (editingProduct) {
         await updateProduct(editingProduct.id, payload)
+        toast.success('Product updated successfully!')
       } else {
         await createProduct(payload)
+        toast.success('Product created successfully!')
       }
 
       previewUrls.forEach(url => URL.revokeObjectURL(url))
@@ -266,20 +272,33 @@ export function InventoryManagementPage() {
       setForm(emptyForm)
       await loadProducts()
     } catch (err) {
-      setSavingError(err.message || 'Unable to save product.')
+      const msg = err.message || 'Unable to save product.'
+      setSavingError(msg)
+      toast.error(msg)
     } finally {
       setSaving(false)
     }
   }
 
-  const handleDelete = async (item) => {
-    if (!window.confirm(`Delete ${item.name}?`)) return
+  const handleDelete = (item) => {
+    setItemToDelete(item)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete) return
+    setIsDeleting(true)
 
     try {
-      await deleteProduct(item.id)
+      await deleteProduct(itemToDelete.id)
+      toast.success(`${itemToDelete.name} deleted successfully.`)
+      setItemToDelete(null)
       await loadProducts()
     } catch (err) {
-      setError(err.message || 'Unable to delete product.')
+      const msg = err.message || 'Unable to delete product.'
+      setError(msg)
+      toast.error(msg)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -698,6 +717,19 @@ export function InventoryManagementPage() {
           </div>
         </div>
       ) : null}
+
+      {/* Delete Product Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(itemToDelete)}
+        title="Delete Product"
+        message={`Are you sure you want to delete "${itemToDelete?.name}"? This product will be removed from the catalog.`}
+        confirmText="Delete Product"
+        cancelText="Cancel"
+        confirmVariant="danger"
+        isLoading={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setItemToDelete(null)}
+      />
     </AdminShell>
   )
 }

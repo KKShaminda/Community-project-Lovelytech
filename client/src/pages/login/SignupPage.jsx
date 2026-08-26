@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { signUp } from "../../services/authServices";
+import Alert from "../../components/common/Alert";
 
 export function SignupPage() {
 	const navigate = useNavigate();
@@ -109,7 +110,13 @@ export function SignupPage() {
 							<label htmlFor="agree" className="text-sm text-gray-600">I agree to the Terms of Services and Privacy Policies</label>
 						</div>
 
-						{message ? <p className={`text-sm ${message.includes("success") ? "text-green-600" : "text-red-500"}`}>{message}</p> : null}
+						{message ? (
+							<Alert
+								type={message.toLowerCase().includes("success") ? "success" : "error"}
+								message={message}
+								onClose={() => setMessage("")}
+							/>
+						) : null}
 
 						<button disabled={loading} type="submit" className="w-full rounded-lg bg-[#E4342F] py-3.5 text-[16px] font-bold text-white shadow-sm transition hover:bg-[#c92923] disabled:opacity-70">
 							{loading ? "Creating account..." : "Sign up"}

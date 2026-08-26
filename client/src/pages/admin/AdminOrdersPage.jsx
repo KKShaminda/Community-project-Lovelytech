@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { AdminShell } from "../../components/admin/AdminShell";
+import Alert from "../../components/common/Alert";
+import toast from "react-hot-toast";
 import { getOrders, updateOrder } from "../../services/orderServices";
 import { ClipboardList, ShieldCheck, Truck, Check, RefreshCw } from "lucide-react";
 
@@ -34,10 +36,10 @@ export function AdminOrdersPage() {
   const handleStatusChange = async (id, newStatus) => {
     try {
       await updateOrder(id, { status: newStatus });
-      alert(`Order status updated to ${newStatus} successfully.`);
+      toast.success(`Order status updated to ${newStatus} successfully.`);
       fetchConfirmedOrders();
     } catch (err) {
-      alert("Failed to update status: " + err.message);
+      toast.error("Failed to update status: " + err.message);
     }
   };
 
@@ -62,9 +64,12 @@ export function AdminOrdersPage() {
       </div>
 
       {errorMsg && (
-        <div className="mb-6 rounded-xl bg-red-50 p-4 border border-red-200 text-xs font-semibold text-red-600">
-          {errorMsg}
-        </div>
+        <Alert
+          type="error"
+          message={errorMsg}
+          onClose={() => setErrorMsg("")}
+          className="mb-6"
+        />
       )}
 
       {loading ? (

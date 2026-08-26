@@ -81,7 +81,7 @@ export function HomePage() {
                   </p>
 
                   <Link
-                    to="/login"
+                    to="/about-us"
                     className="mt-7 inline-flex items-center rounded-full border border-[#ff2020] px-5 py-2.5 text-sm font-medium text-[#ff2020] transition-colors duration-200 hover:bg-[#ff2020] hover:text-black"
                   >
                     Learn More &gt;&gt;
@@ -159,7 +159,7 @@ export function HomePage() {
               </p>
 
               <Link
-                to="/login"
+                to="/signup"
                 className="mt-6 inline-flex items-center rounded-full border border-black px-5 py-2.5 text-sm font-medium text-black transition-colors hover:bg-black hover:text-white"
               >
                 Join Us

@@ -1,11 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, CreditCard, Landmark, MapPin, Package, ShoppingBag, Building, Info, Upload, X } from "lucide-react";
+import { ChevronRight, CreditCard, Landmark, MapPin, Package, ShoppingBag, Building, Info, Upload, X, Check, ArrowRight } from "lucide-react";
+import toast from "react-hot-toast";
 import Layout from "../../components/layout/Layout";
+import Alert from "../../components/common/Alert";
 import { getCartItems, clearCart } from "../../utils/cartStorage";
 import { createOrder } from "../../services/orderServices";
 import { resolveImageUrl, getCategoryFallbackImage } from "../../data/productsData";
-import { isAuthenticated } from "../../services/authServices";
+import { isAuthenticated, getUserProfile } from "../../services/authServices";
 
 const inputClassName =
 	"h-11 w-full rounded-md border border-[#cfcfcf] bg-white px-3 text-sm text-[#222] outline-none transition focus:border-[#ff2020] focus:ring-2 focus:ring-[#ff2020]/15";
@@ -24,8 +26,13 @@ function Payment() {
 		streetAddress: "",
 		city: "",
 		postalCode: "",
-		country: "",
+		country: "Sri Lanka",
 	});
+
+	const [savedAddresses, setSavedAddresses] = useState([]);
+	const [selectedAddressId, setSelectedAddressId] = useState("");
+	const [isAddressLoadedFromProfile, setIsAddressLoadedFromProfile] = useState(false);
+	const [loadingProfileAddress, setLoadingProfileAddress] = useState(true);
 
 	const [slipFile, setSlipFile] = useState(null);
 	const [showBankModal, setShowBankModal] = useState(false);
@@ -55,8 +62,79 @@ function Payment() {
 		}
 	}, [items, navigate]);
 
+	// Fetch default address and user information from Profile
+	useEffect(() => {
+		const loadProfileData = async () => {
+			if (!isAuthenticated()) return;
+			setLoadingProfileAddress(true);
+			try {
+				const res = await getUserProfile();
+				const user = res?.user || {};
+				const addressesList = Array.isArray(user.addresses) ? user.addresses : [];
+				setSavedAddresses(addressesList);
+
+				// Extract first name and last name from user profile
+				const fullName = (user.fullname || user.name || "").trim();
+				let fName = "";
+				let lName = "";
+				if (fullName) {
+					const parts = fullName.split(/\s+/);
+					fName = parts[0] || "";
+					lName = parts.slice(1).join(" ") || "";
+				}
+
+				// Find default address or the first address saved in Profile
+				const defaultAddr = addressesList.find((a) => a.isDefault) || addressesList[0];
+
+				if (defaultAddr) {
+					setSelectedAddressId(defaultAddr._id || "default");
+					setAddress({
+						firstName: fName,
+						lastName: lName,
+						streetAddress: defaultAddr.street || "",
+						city: defaultAddr.city || defaultAddr.district || "",
+						postalCode: defaultAddr.postalCode || "",
+						country: defaultAddr.country || user.country || "Sri Lanka",
+					});
+					setIsAddressLoadedFromProfile(true);
+				} else {
+					// Fallback to name and country from user profile if no addresses saved yet
+					setAddress((prev) => ({
+						...prev,
+						firstName: fName || prev.firstName,
+						lastName: lName || prev.lastName,
+						country: user.country || prev.country || "Sri Lanka",
+					}));
+				}
+			} catch (err) {
+				console.error("Error loading profile default address:", err);
+			} finally {
+				setLoadingProfileAddress(false);
+			}
+		};
+
+		loadProfileData();
+	}, []);
+
 	const handleAddressChange = (e, field) => {
 		setAddress((prev) => ({ ...prev, [field]: e.target.value }));
+	};
+
+	const handleSelectSavedAddress = (e) => {
+		const addrId = e.target.value;
+		setSelectedAddressId(addrId);
+		const chosen = savedAddresses.find((a) => a._id === addrId);
+		if (chosen) {
+			setAddress((prev) => ({
+				...prev,
+				streetAddress: chosen.street || "",
+				city: chosen.city || chosen.district || "",
+				postalCode: chosen.postalCode || "",
+				country: chosen.country || prev.country || "Sri Lanka",
+			}));
+			setIsAddressLoadedFromProfile(true);
+			toast.success("Loaded address from Profile");
+		}
 	};
 
 	const handleApplyCoupon = (e) => {
@@ -67,13 +145,13 @@ function Payment() {
 		if (trimmed === "LOVELY10" || trimmed === "SAVE10" || trimmed === "DEMO10") {
 			setCouponDiscountPercent(10);
 			setDiscountApplied(true);
-			alert("Coupon applied! 10% discount added.");
+			toast.success("Coupon applied! 10% discount added.");
 		} else if (trimmed === "LOVELY20" || trimmed === "SAVE20") {
 			setCouponDiscountPercent(20);
 			setDiscountApplied(true);
-			alert("Coupon applied! 20% discount added.");
+			toast.success("Coupon applied! 20% discount added.");
 		} else {
-			alert('Invalid coupon code. Try "LOVELY10".');
+			toast.error('Invalid coupon code. Try "LOVELY10".');
 		}
 	};
 
@@ -180,32 +258,69 @@ function Payment() {
 						<div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.95fr)] lg:items-start">
 							<div className="space-y-4">
 								<section className="rounded-2xl border border-[#d7d7d7] bg-white p-5 shadow-[0_2px_14px_rgba(0,0,0,0.04)]">
-									<div className="flex items-center gap-2 text-[#202020]">
-										<MapPin className="h-5 w-5 text-[#1f1f1f]" />
-										<h2 className="text-lg font-semibold">Delivery Address</h2>
+									<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-4">
+										<div className="flex items-center gap-2 text-[#202020]">
+											<MapPin className="h-5 w-5 text-[#ff2020]" />
+											<div>
+												<h2 className="text-lg font-semibold">Delivery Address</h2>
+												<p className="text-xs text-slate-500">
+													Pre-filled from your profile. You can edit any details below for this order.
+												</p>
+											</div>
+										</div>
+
+										<div className="flex items-center gap-2">
+											{loadingProfileAddress ? (
+												<span className="text-xs text-slate-400">Loading saved address...</span>
+											) : isAddressLoadedFromProfile ? (
+												<span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200 shadow-xs">
+													<Check className="h-3.5 w-3.5" />
+													Profile Address Loaded
+												</span>
+											) : null}
+
+											{savedAddresses.length > 1 && (
+												<div className="relative">
+													<select
+														value={selectedAddressId}
+														onChange={handleSelectSavedAddress}
+														className="text-xs font-medium rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-700 outline-none hover:bg-slate-100 transition cursor-pointer"
+													>
+														<option value="" disabled>Switch saved address</option>
+														{savedAddresses.map((addr, index) => (
+															<option key={addr._id || index} value={addr._id}>
+																{addr.street}, {addr.city} {addr.isDefault ? "(Default)" : ""}
+															</option>
+														))}
+													</select>
+												</div>
+											)}
+										</div>
 									</div>
 
 									<form className="mt-5 grid gap-4" onSubmit={(e) => e.preventDefault()}>
 										<div className="grid gap-4 md:grid-cols-2">
 											<div>
 												<label className="mb-1 block text-xs font-medium text-black/55">
-													First Name
+													First Name <span className="text-[#ff2020]">*</span>
 												</label>
 												<input
 													className={inputClassName}
 													value={address.firstName}
 													onChange={(e) => handleAddressChange(e, "firstName")}
+													placeholder="First name"
 													required
 												/>
 											</div>
 											<div>
 												<label className="mb-1 block text-xs font-medium text-black/55">
-													Last Name
+													Last Name <span className="text-[#ff2020]">*</span>
 												</label>
 												<input
 													className={inputClassName}
 													value={address.lastName}
 													onChange={(e) => handleAddressChange(e, "lastName")}
+													placeholder="Last name"
 													required
 												/>
 											</div>
@@ -214,23 +329,25 @@ function Payment() {
 										<div className="grid gap-4 md:grid-cols-2">
 											<div>
 												<label className="mb-1 block text-xs font-medium text-black/55">
-													Street Address
+													Street Address <span className="text-[#ff2020]">*</span>
 												</label>
 												<input
 													className={inputClassName}
 													value={address.streetAddress}
 													onChange={(e) => handleAddressChange(e, "streetAddress")}
+													placeholder="House no, Street name"
 													required
 												/>
 											</div>
 											<div>
 												<label className="mb-1 block text-xs font-medium text-black/55">
-													City
+													City / District <span className="text-[#ff2020]">*</span>
 												</label>
 												<input
 													className={inputClassName}
 													value={address.city}
 													onChange={(e) => handleAddressChange(e, "city")}
+													placeholder="City or District"
 													required
 												/>
 											</div>
@@ -239,23 +356,25 @@ function Payment() {
 										<div className="grid gap-4 md:grid-cols-2">
 											<div>
 												<label className="mb-1 block text-xs font-medium text-black/55">
-													Postal Code
+													Postal Code <span className="text-[#ff2020]">*</span>
 												</label>
 												<input
 													className={inputClassName}
 													value={address.postalCode}
 													onChange={(e) => handleAddressChange(e, "postalCode")}
+													placeholder="Postal / ZIP code"
 													required
 												/>
 											</div>
 											<div>
 												<label className="mb-1 block text-xs font-medium text-black/55">
-													Country
+													Country <span className="text-[#ff2020]">*</span>
 												</label>
 												<input
 													className={inputClassName}
 													value={address.country}
 													onChange={(e) => handleAddressChange(e, "country")}
+													placeholder="Country"
 													required
 												/>
 											</div>
@@ -354,9 +473,12 @@ function Payment() {
 										</div>
 
 										{errorMsg && (
-											<p className="text-red-500 text-xs font-semibold mt-1">
-												{errorMsg}
-											</p>
+											<Alert
+												type="error"
+												message={errorMsg}
+												onClose={() => setErrorMsg("")}
+												className="mt-2"
+											/>
 										)}
 
 										<button

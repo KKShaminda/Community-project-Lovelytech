@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
   Wrench,
   CheckCircle,
@@ -212,9 +213,12 @@ export function ReceptionistDashboard() {
       const res = await createRepair(form);
       setNewTrackingId(res.trackingId);
       setForm(defaultForm);
+      toast.success(`Intake ticket registered: ${res.trackingId}`);
       loadData();
     } catch (err) {
-      setFormError(err.message || "Intake registration failed.");
+      const msg = err.message || "Intake registration failed.";
+      setFormError(msg);
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
@@ -239,9 +243,12 @@ export function ReceptionistDashboard() {
       await updateRepair(editingTicket._id || editingTicket.id, editForm);
       setEditModalOpen(false);
       setEditingTicket(null);
+      toast.success("Repair ticket updated successfully!");
       loadData();
     } catch (err) {
-      setFormError(err.message || "Failed to update repair order.");
+      const msg = err.message || "Failed to update repair order.";
+      setFormError(msg);
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
@@ -285,10 +292,10 @@ export function ReceptionistDashboard() {
       setSelectedTicket(null);
       setInvoiceItems([]);
 
-      alert(`Sale registered and checkout completed for ${selectedTicket.trackingId}`);
+      toast.success(`Sale registered & completed for ${selectedTicket.trackingId || "order"}`);
       loadData();
     } catch (err) {
-      alert("Checkout failed: " + err.message);
+      toast.error("Checkout failed: " + err.message);
     } finally {
       setCheckoutLoading(false);
     }

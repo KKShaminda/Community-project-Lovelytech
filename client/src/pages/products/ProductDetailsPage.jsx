@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import toast from 'react-hot-toast'
 import Layout from '../../components/layout/Layout'
 import {
   formatPrice,
@@ -171,12 +172,14 @@ export function ProductDetailsPage() {
     if (!product) return
 
     if (!isAuthenticated()) {
+      toast.error('Please sign in to add items to your cart')
       navigate('/login', { state: { from: `/products/${product.id}` } })
       return
     }
 
     addToCart(product, quantity, { image: selectedImage || product.image })
     setAddedToCart(true)
+    toast.success(`${product.name || 'Product'} (${quantity}) added to cart!`)
     setTimeout(() => setAddedToCart(false), 1600)
   }
 
@@ -184,6 +187,7 @@ export function ProductDetailsPage() {
     if (!product) return
 
     if (!isAuthenticated()) {
+      toast.error('Please sign in to continue')
       navigate('/login', { state: { from: `/products/${product.id}` } })
       return
     }
@@ -196,6 +200,7 @@ export function ProductDetailsPage() {
     if (!product) return
 
     if (!isAuthenticated()) {
+      toast.error('Please sign in to save items to your wishlist')
       navigate('/login', { state: { from: `/products/${product.id}` } })
       return
     }
@@ -203,14 +208,21 @@ export function ProductDetailsPage() {
     const nextState = !liked
     setLiked(nextState)
     await toggleWishlistProduct(product.id)
+    if (nextState) {
+      toast.success('Added to wishlist!')
+    } else {
+      toast('Removed from wishlist', { icon: '🗑️' })
+    }
   }
 
   const handleAddSimilarToCart = (item) => {
     if (!isAuthenticated()) {
+      toast.error('Please sign in to add items to your cart')
       navigate('/login', { state: { from: `/products/${id}` } })
       return
     }
     addToCart(item, 1)
+    toast.success(`${item.name || 'Product'} added to cart!`)
   }
 
   const galleryImages = useMemo(() => {

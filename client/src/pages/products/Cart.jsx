@@ -18,13 +18,9 @@ import {
   getCategoryFallbackImage,
 } from '../../data/productsData'
 
-import {
-  getCartItems,
-  updateCartQuantity,
-  removeFromCart,
-  clearCart,
-} from '../../utils/cartStorage'
+import { getCartItems, updateCartQuantity, removeFromCart, clearCart } from '../../utils/cartStorage'
 import { isAuthenticated } from '../../services/authServices'
+import toast from 'react-hot-toast'
 
 export function CartPage() {
   const navigate = useNavigate()
@@ -83,6 +79,7 @@ export function CartPage() {
   const handleRemove = (productId) => {
     const updated = removeFromCart(productId)
     setItems(updated)
+    toast('Item removed from cart', { icon: '🗑️' })
   }
 
   const handleViewAllItems = (e) => {
@@ -101,6 +98,7 @@ export function CartPage() {
     const trimmed = couponCode.trim().toUpperCase()
     if (!trimmed) {
       setCouponMessage({ text: 'Please enter a coupon code.', type: 'error' })
+      toast.error('Please enter a coupon code.')
       return
     }
 
@@ -108,12 +106,15 @@ export function CartPage() {
       setCouponDiscountPercent(10)
       setDiscountApplied(true)
       setCouponMessage({ text: 'Coupon applied! 10% discount added.', type: 'success' })
+      toast.success('Coupon applied! 10% discount added.')
     } else if (trimmed === 'LOVELY20' || trimmed === 'SAVE20') {
       setCouponDiscountPercent(20)
       setDiscountApplied(true)
       setCouponMessage({ text: 'Coupon applied! 20% discount added.', type: 'success' })
+      toast.success('Coupon applied! 20% discount added.')
     } else {
       setCouponMessage({ text: 'Invalid coupon code. Try "LOVELY10".', type: 'error' })
+      toast.error('Invalid coupon code. Try "LOVELY10".')
     }
   }
 

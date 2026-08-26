@@ -12,6 +12,8 @@ import {
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import Layout from '../../components/layout/Layout'
+import ConfirmModal from '../../components/common/ConfirmModal'
+import toast from 'react-hot-toast'
 import { formatPrice, resolveImageUrl, getCategoryFallbackImage } from '../../data/productsData'
 import { getOrders, deleteOrder } from '../../services/orderServices'
 import { isAuthenticated } from '../../services/authServices'
@@ -232,6 +234,8 @@ export function MyOrders() {
   const [filter, setFilter] = useState('All')
   const [query, setQuery] = useState('')
   const [detailsOrder, setDetailsOrder] = useState(null)
+  const [orderToDeleteId, setOrderToDeleteId] = useState(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(() => isAuthenticated())
 
   useEffect(() => {
@@ -277,13 +281,25 @@ export function MyOrders() {
     loadServerOrders()
   }, [isLoggedIn])
 
-  const handleDelete = async (orderId) => {
+  const handleDelete = (orderId) => {
+    setOrderToDeleteId(orderId)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!orderToDeleteId) return
+    setIsDeleting(true)
     try {
-      await deleteOrder(orderId)
+      await deleteOrder(orderToDeleteId)
+      setOrders((prev) => prev.filter((o) => o.id !== orderToDeleteId))
+      toast.success('Order record removed.')
+      setOrderToDeleteId(null)
     } catch {
-      // Local fallback
+      setOrders((prev) => prev.filter((o) => o.id !== orderToDeleteId))
+      toast.success('Order record removed.')
+      setOrderToDeleteId(null)
+    } finally {
+      setIsDeleting(false)
     }
-    setOrders((prev) => prev.filter((o) => o.id !== orderId))
   }
 
   const filters = ['All', 'Placed', 'Confirmed', 'Proceeded', 'Delivered']
@@ -499,6 +515,19 @@ export function MyOrders() {
       <OrderDetailsModal
         order={detailsOrder}
         onClose={() => setDetailsOrder(null)}
+      />
+
+      {/* Delete Order Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(orderToDeleteId)}
+        title="Remove Order Record"
+        message="Are you sure you want to remove this order from your history? This will hide it from your order list."
+        confirmText="Remove Order"
+        cancelText="Cancel"
+        confirmVariant="danger"
+        isLoading={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setOrderToDeleteId(null)}
       />
     </Layout>
   )
