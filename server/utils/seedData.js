@@ -1,6 +1,7 @@
 import Repair from "../models/Repair.js";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
+import User from "../models/User.js";
 
 const initialProducts = [
   {
@@ -475,6 +476,14 @@ const initialOrders = [
 
 export const seedInitialData = async () => {
   try {
+    const admin = await User.findOne({ role: "admin" });
+    if (admin && (admin.fullname !== "lovelytech" || admin.email !== "lovelytech@gmail.com")) {
+      admin.fullname = "lovelytech";
+      admin.email = "lovelytech@gmail.com";
+      await admin.save();
+      console.log("Admin account updated to lovelytech.".bgGreen.black);
+    }
+
     const productCount = await Product.countDocuments();
     if (productCount === 0) {
       await Product.insertMany(initialProducts);

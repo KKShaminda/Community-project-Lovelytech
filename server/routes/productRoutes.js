@@ -7,16 +7,19 @@ import {
   updateProduct,
   deleteProduct,
 } from "../controllers/productController.js";
-import { upload } from "../middlewares/imageUploader.js";
+import { uploadProductImages } from "../middlewares/imageUploader.js";
+import { requiredSignIn, isAdminOrReceptionist } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
+// Public routes for product catalog browsing
 router.get("/", getProducts);
 router.get("/facets", getProductFacets);
 router.get("/:id", getProductById);
 
-router.post("/", upload.array("images", 5), createProduct);
-router.put("/:id", upload.array("images", 5), updateProduct);
-router.delete("/:id", deleteProduct);
+// Admin & Receptionist routes for product inventory & images management
+router.post("/", requiredSignIn, isAdminOrReceptionist, uploadProductImages, createProduct);
+router.put("/:id", requiredSignIn, isAdminOrReceptionist, uploadProductImages, updateProduct);
+router.delete("/:id", requiredSignIn, isAdminOrReceptionist, deleteProduct);
 
 export default router;

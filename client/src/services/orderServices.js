@@ -15,9 +15,17 @@ const parseResponse = async (response) => {
   }
 };
 
+const getAuthHeaders = () => {
+  const token = typeof window !== 'undefined' ? (localStorage.getItem('token') || sessionStorage.getItem('token')) : null;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 const request = async (url, options = {}) => {
   const isFormData = options.body instanceof FormData;
-  const headers = { ...(options.headers || {}) };
+  const headers = {
+    ...getAuthHeaders(),
+    ...(options.headers || {}),
+  };
   if (!isFormData) {
     headers['Content-Type'] = 'application/json';
   }
