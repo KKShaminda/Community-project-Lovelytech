@@ -115,11 +115,13 @@ export function RepairHistoryPage() {
         <div className="mt-10 space-y-7">
           {repairList.map((repair) => {
             const meta = statusMeta[repair.status] || { label: repair.status || "Received", tone: "blue" };
+            const trackingId = repair.trackingId || repair.id;
 
             return (
               <Link
                 key={repair.id}
-                to={`/repair/track=${repair.id}`}
+                to={`/repair/track?id=${encodeURIComponent(trackingId)}`}
+                state={{ trackingId }}
                 className="group flex flex-col gap-6 rounded-2xl border-t-4 border-[#EC1C24] bg-white p-7 shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl md:flex-row md:items-center"
               >
                 {/* Avatar */}
@@ -137,7 +139,7 @@ export function RepairHistoryPage() {
                     </h2>
 
                     <span className="rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-[#EC1C24]">
-                      {repair.id}
+                      {trackingId}
                     </span>
 
                     <span
@@ -170,9 +172,12 @@ export function RepairHistoryPage() {
                   </div>
                 </div>
 
-                {/* Arrow */}
+                {/* Action CTA & Arrow */}
 
-                <ChevronRight className="hidden h-7 w-7 text-neutral-300 transition group-hover:translate-x-1 md:block" />
+                <div className="flex items-center gap-2 text-sm font-semibold text-[#EC1C24] transition group-hover:translate-x-1">
+                  <span className="hidden md:inline">Track Progress</span>
+                  <ChevronRight className="h-6 w-6 text-[#EC1C24]" />
+                </div>
               </Link>
             );
           })}

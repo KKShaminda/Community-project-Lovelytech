@@ -1,7 +1,8 @@
 export const REPAIR_STATUS_META = {
   pending: { label: 'Pending', className: 'bg-yellow-100 text-yellow-700' },
-  'in-progress': { label: 'In Progress', className: 'bg-blue-100 text-blue-700' },
-  ready: { label: 'Ready', className: 'bg-green-100 text-green-700' },
+  diagnosing: { label: 'Diagnosing', className: 'bg-blue-100 text-blue-700' },
+  repairing: { label: 'Repairing', className: 'bg-indigo-100 text-indigo-700' },
+  testing: { label: 'Testing', className: 'bg-purple-100 text-purple-700' },
   completed: { label: 'Completed', className: 'bg-emerald-100 text-emerald-700' },
 }
 
@@ -21,7 +22,7 @@ export const REPAIR_ORDERS = [
     customer: 'Elena Rodriguez',
     device: 'iPhone 15 Ultra - Camera Array',
     issue: 'OIS failure in primary lens. Replacement module ordered.',
-    status: 'in-progress',
+    status: 'repairing',
     technician: 'David K.',
     amount: 95000,
     createdAt: '2026-07-17',
@@ -31,7 +32,7 @@ export const REPAIR_ORDERS = [
     customer: 'Julian Vane',
     device: 'PS5 Pro - Thermal Management',
     issue: 'Heatsink cleaning completed. Stress test passed.',
-    status: 'ready',
+    status: 'testing',
     technician: 'Sarah J.',
     amount: 65000,
     createdAt: '2026-07-16',
