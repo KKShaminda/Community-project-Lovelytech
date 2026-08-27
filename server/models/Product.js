@@ -39,8 +39,10 @@ const productSchema = new mongoose.Schema(
       type: [
         {
           url: { type: String, required: true },
-          filename: { type: String, required: true },
-          path: { type: String, required: true },
+          filename: { type: String, default: "product-image.jpg" },
+          path: { type: String, default: "" },
+          contentType: { type: String, default: "image/jpeg" },
+          size: { type: Number, default: 0 },
         },
       ],
       default: [],

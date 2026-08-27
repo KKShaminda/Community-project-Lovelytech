@@ -12,7 +12,7 @@ const generateTrackingId = () => {
 };
 
 // Helper function to generate default tracking steps
-const getDefaultTrackingSteps = (status = 'received') => {
+const getDefaultTrackingSteps = (status = 'pending') => {
   return [
     {
       label: "Request Submitted",
@@ -22,17 +22,17 @@ const getDefaultTrackingSteps = (status = 'received') => {
     {
       label: "Diagnosing",
       detail: "Technician is checking the device",
-      status: status === 'diagnosing' || status === 'repairing' || status === 'ready' || status === 'completed' ? "complete" : "pending",
+      status: status === 'diagnosing' || status === 'repairing' || status === 'testing' || status === 'completed' ? "complete" : "pending",
     },
     {
       label: "Repairing",
       detail: "Repair in progress",
-      status: status === 'repairing' || status === 'ready' || status === 'completed' ? "complete" : "pending",
+      status: status === 'repairing' || status === 'testing' || status === 'completed' ? "complete" : "pending",
     },
     {
       label: "Testing",
       detail: "Quality inspection",
-      status: status === 'ready' || status === 'completed' ? "complete" : "pending",
+      status: status === 'testing' || status === 'completed' ? "complete" : "pending",
     },
     {
       label: "Completed",
@@ -95,7 +95,7 @@ export const createRepair = asyncHandler(async (req, res) => {
     year: "numeric",
   });
 
-  const repairStatus = status || "received";
+  const repairStatus = status || "pending";
 
   const newRepair = await Repair.create({
     trackingId,
@@ -276,9 +276,11 @@ export const updateRepair = asyncHandler(async (req, res) => {
   // Notify customer if status changed
   if (statusChanged && updatedRepair.email) {
     const statusTextMap = {
+      pending: "is currently pending diagnostic check",
       diagnosing: "is currently being diagnosed by our technicians",
       "awaiting-approval": "is awaiting your approval for repair estimates",
       repairing: "is now actively under repair",
+      testing: "is undergoing final quality testing",
       ready: "is ready for collection / pickup",
       completed: "has been marked as completed. Thank you!",
       cancelled: "has been cancelled",
