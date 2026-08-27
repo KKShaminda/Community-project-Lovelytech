@@ -164,7 +164,7 @@ export function RepairOrdersPage() {
 
   const stats = useMemo(() => [
     { label: 'OPEN ORDERS', value: String(items.filter((item) => item.status !== 'completed').length) },
-    { label: 'READY TODAY', value: String(items.filter((item) => item.status === 'ready').length) },
+    { label: 'READY TODAY', value: String(items.filter((item) => item.status === 'testing').length) },
     { label: 'TOTAL VALUE', value: formatLKR(items.reduce((sum, item) => sum + item.amount, 0)) },
   ], [items])
 
