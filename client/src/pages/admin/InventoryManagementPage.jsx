@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { AdminShell } from '../../components/admin/AdminShell'
 import ConfirmModal from '../../components/common/ConfirmModal'
 import { createProduct, deleteProduct, getProducts, updateProduct } from '../../services/productServices'
+import { resolveImageUrl } from '../../data/productsData'
 
 const REFRESH_INTERVAL_MS = 30000
 const DEFAULT_LIMIT = 500
@@ -90,7 +91,8 @@ function StatCard({ label, value }) {
 }
 
 function InventoryRow({ item, onEdit, onDelete }) {
-  const imageUrl = item.images && item.images[0] ? item.images[0].url : ''
+  const firstImage = item.images && item.images[0] ? (item.images[0].url || item.images[0].path || item.images[0]) : ''
+  const imageUrl = firstImage ? resolveImageUrl(firstImage, item.category) : ''
 
   return (
     <tr className="hover:bg-neutral-50 transition-colors border-b border-neutral-200 last:border-b-0">
@@ -149,6 +151,13 @@ export function InventoryManagementPage() {
   const [categoryFilter, setCategoryFilter] = useState('All')
   const [statusFilter, setStatusFilter] = useState('All')
   const [filtersOpen, setFiltersOpen] = useState(false)
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, categoryFilter, statusFilter])
 
   // Product Images Upload State
   const [selectedFiles, setSelectedFiles] = useState([]) // File objects
@@ -385,6 +394,24 @@ export function InventoryManagementPage() {
     [filteredProducts],
   )
 
+  const itemsPerPage = 10
+  const totalPages = Math.ceil(inventoryItems.length / itemsPerPage) || 1
+
+  const paginatedItems = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage
+    return inventoryItems.slice(start, start + itemsPerPage)
+  }, [inventoryItems, currentPage])
+
+  const getPageNumbers = () => {
+    const pages = []
+    const start = Math.max(1, currentPage - 2)
+    const end = Math.min(totalPages, currentPage + 2)
+    for (let i = start; i <= end; i++) {
+      pages.push(i)
+    }
+    return pages
+  }
+
   return (
     <AdminShell activeSection="inventory">
       <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
@@ -512,8 +539,8 @@ export function InventoryManagementPage() {
                 <tr>
                   <td colSpan="6" className="px-6 py-8 text-center text-sm text-neutral-600">Loading inventory from the product catalog...</td>
                 </tr>
-              ) : inventoryItems.length > 0 ? (
-                inventoryItems.map((item) => (
+              ) : paginatedItems.length > 0 ? (
+                paginatedItems.map((item) => (
                   <InventoryRow
                     key={item.id}
                     item={item}
@@ -529,14 +556,50 @@ export function InventoryManagementPage() {
             </tbody>
           </table>
 
-          <div className="flex flex-col gap-4 border-t border-neutral-200 bg-[#efefef] px-6 py-3 text-sm text-neutral-800 lg:flex-row lg:items-center lg:justify-between">
-            <p>Showing 1-{Math.min(inventoryItems.length || 1, DEFAULT_LIMIT)} of {products.length} products</p>
+          <div className="flex flex-col gap-4 border-t border-neutral-200 bg-[#efefef] px-6 py-3 text-sm text-neutral-800 lg:flex-row lg:items-center lg:justify-between select-none">
+            <p>
+              Showing {inventoryItems.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-
+              {Math.min(currentPage * itemsPerPage, inventoryItems.length)} of {inventoryItems.length} products
+            </p>
             <div className="flex items-center gap-2">
-              <button type="button" className="rounded-md bg-neutral-400 px-2 py-1 text-[11px] font-semibold text-white cursor-pointer hover:bg-neutral-500">◀</button>
-              <button type="button" className="rounded-md bg-[#ef2027] px-3 py-1 text-[11px] font-semibold text-white cursor-pointer">1</button>
-              <button type="button" className="rounded-md bg-neutral-400 px-3 py-1 text-[11px] font-semibold text-white cursor-pointer hover:bg-neutral-500">2</button>
-              <button type="button" className="rounded-md bg-neutral-400 px-3 py-1 text-[11px] font-semibold text-white cursor-pointer hover:bg-neutral-500">3</button>
-              <button type="button" className="rounded-md bg-neutral-400 px-2 py-1 text-[11px] font-semibold text-white cursor-pointer hover:bg-neutral-500">▶</button>
+              <button 
+                type="button" 
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                className={`rounded-md px-2 py-1 text-[11px] font-semibold text-white transition-all duration-200 ${
+                  currentPage === 1 
+                    ? "bg-neutral-300 text-neutral-500 cursor-not-allowed" 
+                    : "bg-[#ef2027] hover:bg-[#d01b21] cursor-pointer"
+                }`}
+              >
+                ◀
+              </button>
+              {getPageNumbers().map((pageNum) => (
+                <button
+                  key={pageNum}
+                  type="button"
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`rounded-md px-3 py-1 text-[11px] font-semibold transition-all duration-200 cursor-pointer ${
+                    currentPage === pageNum
+                      ? "bg-[#ef2027] text-white shadow-sm shadow-red-100"
+                      : "bg-neutral-300 hover:bg-neutral-400 text-neutral-700"
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              ))}
+              <button 
+                type="button" 
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                className={`rounded-md px-2 py-1 text-[11px] font-semibold text-white transition-all duration-200 ${
+                  currentPage === totalPages 
+                    ? "bg-neutral-300 text-neutral-500 cursor-not-allowed" 
+                    : "bg-[#ef2027] hover:bg-[#d01b21] cursor-pointer"
+                }`}
+              >
+                ▶
+              </button>
             </div>
           </div>
         </div>
@@ -614,7 +677,11 @@ export function InventoryManagementPage() {
                   {/* Previews of existing images */}
                   {existingImages.map((img, idx) => (
                     <div key={`exist-${idx}`} className="relative aspect-square rounded-xl border border-neutral-200 overflow-hidden bg-neutral-50 group">
-                      <img src={img.url} alt={img.filename} className="w-full h-full object-cover" />
+                      <img
+                        src={resolveImageUrl(img.url || img.path || img, form.category)}
+                        alt={img.filename || `Image ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                      />
                       <button
                         type="button"
                         onClick={() => removeExistingImage(img, idx)}
