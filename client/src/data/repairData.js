@@ -40,6 +40,10 @@ export const DEVICE_CATEGORIES = [
 // ======================
 
 export const statusMeta = {
+  pending: {
+    label: "Pending",
+    tone: "slate",
+  },
   received: {
     label: "Received",
     tone: "slate",
@@ -53,8 +57,12 @@ export const statusMeta = {
     tone: "amber",
   },
   repairing: {
-    label: "In Repair",
+    label: "Repairing",
     tone: "indigo",
+  },
+  testing: {
+    label: "Testing",
+    tone: "purple",
   },
   ready: {
     label: "Ready for Pickup",
@@ -92,7 +100,7 @@ export const repairs = [
     device: "ASUS Vivobook X157V",
     brand: "ASUS",
     issue: "Battery not charging",
-    status: "ready",
+    status: "testing",
     createdAt: "2026-01-23",
     updatedAt: "2026-01-26",
     estimate: 95,
