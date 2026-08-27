@@ -22,6 +22,7 @@ export function SalesLogPage() {
   const [form, setForm] = useState(defaultForm)
   const [itemToDeleteId, setItemToDeleteId] = useState(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
 
   const fetchItems = async () => {
     try {
@@ -83,6 +84,24 @@ export function SalesLogPage() {
       { label: 'OPEN REPAIRS', value: String(openRepairs) },
     ]
   }, [items, repairs])
+
+  const itemsPerPage = 10
+  const totalPages = Math.ceil(items.length / itemsPerPage) || 1
+
+  const paginatedItems = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage
+    return items.slice(start, start + itemsPerPage)
+  }, [items, currentPage])
+
+  const getPageNumbers = () => {
+    const pages = []
+    const start = Math.max(1, currentPage - 2)
+    const end = Math.min(totalPages, currentPage + 2)
+    for (let i = start; i <= end; i++) {
+      pages.push(i)
+    }
+    return pages
+  }
 
   const openCreate = () => {
     setEditingId(null)
@@ -194,7 +213,7 @@ export function SalesLogPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-200">
-            {items.map((item) => {
+            {paginatedItems.map((item) => {
               const status = SALES_STATUS_META[item.status]
 
               return (
@@ -220,6 +239,53 @@ export function SalesLogPage() {
             })}
           </tbody>
         </table>
+
+        <div className="flex flex-col gap-4 border-t border-neutral-200 bg-[#efefef] px-6 py-3 text-sm text-neutral-800 lg:flex-row lg:items-center lg:justify-between select-none">
+          <p>
+            Showing {items.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-
+            {Math.min(currentPage * itemsPerPage, items.length)} of {items.length} orders
+          </p>
+          <div className="flex items-center gap-2">
+            <button 
+              type="button" 
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              className={`rounded-md px-2 py-1 text-[11px] font-semibold text-white transition-all duration-200 ${
+                currentPage === 1 
+                  ? "bg-neutral-300 text-neutral-500 cursor-not-allowed" 
+                  : "bg-[#ef2027] hover:bg-[#d01b21] cursor-pointer"
+              }`}
+            >
+              ◀
+            </button>
+            {getPageNumbers().map((pageNum) => (
+              <button
+                key={pageNum}
+                type="button"
+                onClick={() => setCurrentPage(pageNum)}
+                className={`rounded-md px-3 py-1 text-[11px] font-semibold transition-all duration-200 cursor-pointer ${
+                  currentPage === pageNum
+                    ? "bg-[#ef2027] text-white shadow-sm shadow-red-100"
+                    : "bg-neutral-300 hover:bg-neutral-400 text-neutral-700"
+                }`}
+              >
+                {pageNum}
+              </button>
+            ))}
+            <button 
+              type="button" 
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              className={`rounded-md px-2 py-1 text-[11px] font-semibold text-white transition-all duration-200 ${
+                currentPage === totalPages 
+                  ? "bg-neutral-300 text-neutral-500 cursor-not-allowed" 
+                  : "bg-[#ef2027] hover:bg-[#d01b21] cursor-pointer"
+              }`}
+            >
+              ▶
+            </button>
+          </div>
+        </div>
       </section>
 
       {modalOpen ? (
