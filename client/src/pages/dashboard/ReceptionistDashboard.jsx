@@ -105,6 +105,7 @@ export function ReceptionistDashboard() {
         customerPhone: r.phone || r.customerPhone || "",
         customerEmail: r.email || r.customerEmail || "",
         customerAddress: r.address || r.customerAddress || "",
+        estimatedCost: Number(r.amount || r.estimate || 0),
       }));
       setRepairs(fetchedRepairs);
       setProducts(productRes.products || []);
@@ -126,14 +127,14 @@ export function ReceptionistDashboard() {
       {
         id: "part-cost",
         name: `${ticket.brand} ${ticket.model} Repair Part`,
-        price: ticket.estimatedCost || 189,
+        price: ticket.estimatedCost || 0,
         quantity: 1,
         isPart: true,
       },
       {
         id: "labor-fee",
         name: "Labor Fee (Level 2)",
-        price: 75,
+        price: 0,
         quantity: 1,
         isLabor: true,
       },
@@ -316,7 +317,11 @@ export function ReceptionistDashboard() {
       if (activeQueueTab === "PENDING") {
         matchesTab = r.status === "pending";
       } else if (activeQueueTab === "IN-PROGRESS") {
-        matchesTab = r.status === "diagnosing" || r.status === "repairing" || r.status === "testing";
+        matchesTab =
+          r.status === "diagnosing" ||
+          r.status === "repairing" ||
+          r.status === "testing" ||
+          r.status === "completed";
       }
 
       return matchesSearch && matchesTab;
@@ -624,12 +629,12 @@ export function ReceptionistDashboard() {
                                 <td className="px-6 py-4">
                                   <span
                                     className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase border ${
-                                      item.status === "testing"
+                                      item.status === "completed"
                                         ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                                         : item.status === "repairing" || item.status === "diagnosing"
                                           ? "bg-blue-50 text-blue-700 border-blue-200"
-                                          : item.status === "completed"
-                                            ? "bg-slate-100 text-slate-600 border-slate-200"
+                                          : item.status === "testing"
+                                            ? "bg-purple-50 text-purple-700 border-purple-200"
                                             : "bg-amber-50 text-amber-700 border-amber-200"
                                     }`}
                                   >
@@ -639,19 +644,19 @@ export function ReceptionistDashboard() {
                                 <td className="px-6 py-4 text-right">
                                   <button
                                     onClick={() => {
-                                      if (item.status === "testing") {
+                                      if (item.status === "completed") {
                                         handleSelectTicket(item);
                                       } else {
                                         handleEditTicket(item);
                                       }
                                     }}
                                     className={`inline-flex items-center gap-1 text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-sm transition-all duration-300 hover:scale-[1.02] active:scale-95 cursor-pointer ${
-                                      item.status === "testing"
+                                      item.status === "completed"
                                         ? "text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-emerald-100"
                                         : "text-slate-700 bg-slate-100 hover:bg-slate-200 shadow-slate-100"
                                     }`}
                                   >
-                                    {item.status === "testing" ? "Invoice" : "Details"}
+                                    {item.status === "completed" ? "Invoice" : "Details"}
                                   </button>
                                 </td>
                               </tr>
@@ -1051,8 +1056,8 @@ export function ReceptionistDashboard() {
                       <option value="pending">Pending</option>
                       <option value="diagnosing">Diagnosing</option>
                       <option value="repairing">Repairing</option>
-                      <option value="testing">Testing (Ready for Invoice)</option>
-                      <option value="completed">Completed</option>
+                      <option value="testing">Testing</option>
+                      <option value="completed">Completed (Ready for Invoice)</option>
                     </select>
                   </label>
 
