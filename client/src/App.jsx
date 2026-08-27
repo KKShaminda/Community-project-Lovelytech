@@ -97,6 +97,7 @@ function App() {
           <Route path="/repair/book" element={<BookRepairPage />} />
           <Route path="/repair/history" element={<RepairHistoryPage />} />
           <Route path="/repair/track" element={<RepairTrackingPage />} />
+          <Route path="/repair/track/:id" element={<RepairTrackingPage />} />
           <Route path="/payment" element={<Payment />} />
           <Route path="/place-order" element={<PlaceOrder />} />
 

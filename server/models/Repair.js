@@ -76,8 +76,9 @@ const repairSchema = new mongoose.Schema(
         "cancelled",
         "pending",
         "in-progress",
+        "testing",
       ],
-      default: "received",
+      default: "pending",
     },
     technician: {
       type: String,

@@ -7,7 +7,7 @@ import {
   deleteOrder,
 } from "../controllers/orderController.js";
 import { validateOrderInput } from "../middleware/validationMiddleware.js";
-import { upload } from "../middlewares/imageUploader.js";
+import { uploadPaymentSlip } from "../middlewares/imageUploader.js";
 
 const router = express.Router();
 
@@ -15,7 +15,7 @@ const router = express.Router();
 router
   .route("/")
   .get(getOrders)
-  .post(upload.single("slip"), validateOrderInput, createOrder);
+  .post(uploadPaymentSlip, validateOrderInput, createOrder);
 
 router
   .route("/:id")

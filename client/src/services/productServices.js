@@ -16,11 +16,17 @@ const parseResponse = async (response) => {
   }
 }
 
+const getAuthHeaders = () => {
+  const token = typeof window !== 'undefined' ? (localStorage.getItem('token') || sessionStorage.getItem('token')) : null;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 const request = async (url, options = {}) => {
   const response = await fetch(url, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      ...getAuthHeaders(),
       ...(options.headers || {}),
     },
     credentials: 'include',
@@ -39,6 +45,9 @@ const request = async (url, options = {}) => {
 const requestFormData = async (url, formData, method) => {
   const response = await fetch(url, {
     method,
+    headers: {
+      ...getAuthHeaders(),
+    },
     body: formData,
     credentials: 'include',
   })

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams, useParams, useLocation } from "react-router-dom";
 import {
     CalendarDays,
     Check,
@@ -7,12 +8,14 @@ import {
     ClipboardCheck,
     Info,
     Search,
+    Loader2,
 } from "lucide-react";
 
 import Layout from "../../components/layout/Layout";
 
 import {
     REPAIR_HISTORY,
+    repairs as mockRepairs,
     TRACKING_STEPS,
     REPAIR_UPDATES,
 } from "../../data/repairData";
@@ -20,8 +23,18 @@ import { getRepairByTrackingId } from "../../services/repairServices";
 
 
 export function RepairTrackingPage() {
+    const [searchParams, setSearchParams] = useSearchParams();
+    const params = useParams();
+    const location = useLocation();
 
-    const [query, setQuery] = useState("PR124596");
+    const initialTrackingId =
+        searchParams.get("id") ||
+        searchParams.get("trackingId") ||
+        params.id ||
+        location.state?.trackingId ||
+        "PR124596";
+
+    const [query, setQuery] = useState(initialTrackingId);
 
     const [repair, setRepair] = useState(
         REPAIR_HISTORY[0]
@@ -33,43 +46,91 @@ export function RepairTrackingPage() {
     const [loading, setLoading] = useState(false);
 
     const fetchRepair = async (searchQuery) => {
-        if (!searchQuery.trim()) return;
+        if (!searchQuery || !searchQuery.trim()) return;
+        const cleanQuery = searchQuery.trim();
         setLoading(true);
         try {
-            const res = await getRepairByTrackingId(searchQuery.trim());
+            const res = await getRepairByTrackingId(cleanQuery);
             const data = res?.data || res;
-            if (data) {
+            if (data && (data._id || data.id || data.trackingId)) {
                 setRepair({
                     id: data._id || data.id,
-                    trackingId: data.trackingId,
-                    deviceName: data.device || data.deviceName || "Device Repair",
-                    brandModel: `${data.brand || ""} ${data.model || ""}`.trim() || data.device,
-                    submitted: data.submitted || "Recently",
-                    estimatedCompletion: data.estimatedCompletion || "Pending",
-                    issue: data.issue,
+                    trackingId: data.trackingId || data._id || cleanQuery,
+                    deviceName: data.device || data.deviceName || `${data.brand || ""} ${data.model || ""}`.trim() || "Device Repair",
+                    brandModel: `${data.brand || ""} ${data.model || ""}`.trim() || data.device || "Electronic Device",
+                    submitted: data.submitted || data.createdAt || "Recently",
+                    estimatedCompletion: data.estimatedCompletion || data.eta || "Pending",
+                    issue: data.issue || "General Diagnosis",
                 });
                 if (data.trackingSteps && data.trackingSteps.length > 0) {
                     setTrackingSteps(data.trackingSteps);
+                } else {
+                    setTrackingSteps(TRACKING_STEPS);
                 }
                 if (data.updates && data.updates.length > 0) {
                     setRepairUpdates(data.updates);
+                } else {
+                    setRepairUpdates(REPAIR_UPDATES);
                 }
                 setError(false);
             } else {
-                setError(true);
+                // Fallback check in local REPAIR_HISTORY / repairs if backend item not found
+                const result =
+                    REPAIR_HISTORY.find(
+                        (item) =>
+                            item.trackingId?.toLowerCase() === cleanQuery.toLowerCase() ||
+                            item.id?.toLowerCase() === cleanQuery.toLowerCase()
+                    ) ||
+                    mockRepairs.find(
+                        (item) =>
+                            item.id?.toLowerCase() === cleanQuery.toLowerCase() ||
+                            item.trackingId?.toLowerCase() === cleanQuery.toLowerCase()
+                    );
+
+                if (result) {
+                    setRepair({
+                        id: result.id,
+                        trackingId: result.trackingId || result.id,
+                        deviceName: result.deviceName || result.device || "Device Repair",
+                        brandModel: result.brandModel || `${result.brand || ""} ${result.device || ""}`.trim() || result.deviceName,
+                        submitted: result.submitted || result.createdAt || "Recently",
+                        estimatedCompletion: result.estimatedCompletion || result.eta || "Pending",
+                        issue: result.issue,
+                    });
+                    setTrackingSteps(result.trackingSteps && result.trackingSteps.length > 0 ? result.trackingSteps : TRACKING_STEPS);
+                    setRepairUpdates(result.updates && result.updates.length > 0 ? result.updates : REPAIR_UPDATES);
+                    setError(false);
+                } else {
+                    setError(true);
+                }
             }
         } catch (err) {
             console.error("Error searching repair:", err);
-            // Fallback check in local REPAIR_HISTORY if backend item not found
-            const result = REPAIR_HISTORY.find(
-                (item) =>
-                    item.trackingId.toLowerCase() ===
-                    searchQuery.trim().toLowerCase()
-            );
+            // Fallback check in local REPAIR_HISTORY / repairs if backend error
+            const result =
+                REPAIR_HISTORY.find(
+                    (item) =>
+                        item.trackingId?.toLowerCase() === cleanQuery.toLowerCase() ||
+                        item.id?.toLowerCase() === cleanQuery.toLowerCase()
+                ) ||
+                mockRepairs.find(
+                    (item) =>
+                        item.id?.toLowerCase() === cleanQuery.toLowerCase() ||
+                        item.trackingId?.toLowerCase() === cleanQuery.toLowerCase()
+                );
+
             if (result) {
-                setRepair(result);
-                setTrackingSteps(TRACKING_STEPS);
-                setRepairUpdates(REPAIR_UPDATES);
+                setRepair({
+                    id: result.id,
+                    trackingId: result.trackingId || result.id,
+                    deviceName: result.deviceName || result.device || "Device Repair",
+                    brandModel: result.brandModel || `${result.brand || ""} ${result.device || ""}`.trim() || result.deviceName,
+                    submitted: result.submitted || result.createdAt || "Recently",
+                    estimatedCompletion: result.estimatedCompletion || result.eta || "Pending",
+                    issue: result.issue,
+                });
+                setTrackingSteps(result.trackingSteps && result.trackingSteps.length > 0 ? result.trackingSteps : TRACKING_STEPS);
+                setRepairUpdates(result.updates && result.updates.length > 0 ? result.updates : REPAIR_UPDATES);
                 setError(false);
             } else {
                 setError(true);
@@ -80,12 +141,23 @@ export function RepairTrackingPage() {
     };
 
     useEffect(() => {
-        fetchRepair("PR124596");
-    }, []);
+        const targetId =
+            searchParams.get("id") ||
+            searchParams.get("trackingId") ||
+            params.id ||
+            location.state?.trackingId ||
+            "PR124596";
+
+        setQuery(targetId);
+        fetchRepair(targetId);
+    }, [searchParams, params.id, location.state]);
 
     const handleTrack = (e) => {
         e.preventDefault();
-        fetchRepair(query);
+        if (query.trim()) {
+            setSearchParams({ id: query.trim() });
+            fetchRepair(query.trim());
+        }
     };
 
 
