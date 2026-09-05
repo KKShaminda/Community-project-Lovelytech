@@ -18,6 +18,11 @@ const repairUpdateSchema = new mongoose.Schema({
 
 const repairSchema = new mongoose.Schema(
   {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      index: true,
+    },
     trackingId: {
       type: String,
       required: true,

@@ -16,6 +16,8 @@ import repairRoutes from "./routes/repairRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import saleRoutes from "./routes/saleRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
+import wishlistRoutes from "./routes/wishlistRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 
 // Load environment variables
 dotenv.config();
@@ -40,6 +42,7 @@ app.use(
   cors({
     origin: process.env.CLIENT_URL || "http://localhost:5173",
     credentials: true,
+    maxAge: 86400,
   })
 );
 
@@ -52,6 +55,8 @@ app.use("/api/repairs", repairRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/sales", saleRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/wishlist", wishlistRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // Health check / welcome route
 app.get("/", (req, res) => {
