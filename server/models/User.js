@@ -63,24 +63,22 @@ const userSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-// Hash password before saving
+// Hash password before saving asynchronously (non-blocking)
 userSchema.pre("save", async function () {
   if (!this.isModified("password")) return;
-  const salt = bcrypt.genSaltSync(10);
-  this.password = bcrypt.hashSync(this.password, salt);
-  //this.confirmPassword = undefined; // Remove confirmPassword field
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
 });
 
-// Compare password
+// Compare password asynchronously (non-blocking)
 userSchema.methods.matchPassword = async function (enteredPassword) {
-  return bcrypt.compareSync(enteredPassword, this.password);
+  return bcrypt.compare(enteredPassword, this.password);
 };
 
 // Hide password
 userSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.password;
-  //delete obj.confirmPassword;
   return obj;
 };
 

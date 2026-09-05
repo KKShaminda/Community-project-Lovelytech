@@ -43,7 +43,7 @@ function RepairCard({ item, onEdit, onDelete }) {
 }
 
 export function RepairOrdersPage() {
-  const [items, setItems] = useState(REPAIR_ORDERS)
+  const [items, setItems] = useState([])
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState(defaultForm)
@@ -54,7 +54,7 @@ export function RepairOrdersPage() {
     try {
       const res = await getRepairs()
       const data = res?.data || res
-      if (Array.isArray(data) && data.length > 0) {
+      if (Array.isArray(data)) {
         const mapped = data.map((item) => ({
           id: item.trackingId || item._id,
           customer: item.customer || item.customerName || "Unknown",
@@ -66,9 +66,12 @@ export function RepairOrdersPage() {
           createdAt: item.createdAt || new Date().toISOString().slice(0, 10),
         }))
         setItems(mapped)
+      } else {
+        setItems([])
       }
     } catch (err) {
       console.error("Error fetching repair orders:", err)
+      setItems([])
     }
   }
 

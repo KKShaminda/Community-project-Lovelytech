@@ -7,18 +7,19 @@ import {
   deleteRepair,
 } from "../controllers/repairController.js";
 import { validateRepairInput } from "../middleware/validationMiddleware.js";
+import { optionalSignIn } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
 // Repair routes
 router
   .route("/")
-  .get(getRepairs)
-  .post(validateRepairInput, createRepair);
+  .get(optionalSignIn, getRepairs)
+  .post(optionalSignIn, validateRepairInput, createRepair);
 
 router
   .route("/book")
-  .post(validateRepairInput, createRepair);
+  .post(optionalSignIn, validateRepairInput, createRepair);
 
 router
   .route("/track/:trackingId")

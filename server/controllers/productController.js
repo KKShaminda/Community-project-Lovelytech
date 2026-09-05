@@ -82,6 +82,26 @@ const buildSort = (sort) => {
   }
 };
 
+// Server-side response cache
+const serverCache = new Map();
+const CACHE_TTL_MS = 60 * 1000; // 1 minute
+
+const getCache = (key) => {
+  const cached = serverCache.get(key);
+  if (cached && Date.now() - cached.time < CACHE_TTL_MS) {
+    return cached.data;
+  }
+  return null;
+};
+
+const setCache = (key, data) => {
+  serverCache.set(key, { time: Date.now(), data });
+};
+
+export const clearServerProductCache = () => {
+  serverCache.clear();
+};
+
 // GET /api/products
 // Supports: category, minPrice, maxPrice, minRating, inStock, search, sort, page, limit
 export const getProducts = async (req, res) => {
@@ -90,17 +110,42 @@ export const getProducts = async (req, res) => {
     const limit = Math.max(1, parseInt(req.query.limit, 10) || 9);
     const skip = (page - 1) * limit;
 
+    const cacheKey = `products_${JSON.stringify(req.query)}`;
+    const cachedData = getCache(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
+    }
+
     const filter = buildFilter(req.query);
     const sort = buildSort(req.query.sort);
 
+    // Project only listing fields and slice images to 1 for fast network response
     const [products, totalItems] = await Promise.all([
-      Product.find(filter).sort(sort).skip(skip).limit(limit).lean(),
+      Product.find(filter, {
+        name: 1,
+        price: 1,
+        originalPrice: 1,
+        category: 1,
+        brand: 1,
+        color: 1,
+        stock: 1,
+        rating: 1,
+        sold: 1,
+        availability: 1,
+        numReviews: 1,
+        isActive: 1,
+        images: { $slice: 1 },
+      })
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .lean(),
       Product.countDocuments(filter),
     ]);
 
     const totalPages = Math.ceil(totalItems / limit) || 1;
 
-    res.json({
+    const result = {
       products,
       pagination: {
         page,
@@ -108,7 +153,10 @@ export const getProducts = async (req, res) => {
         totalItems,
         totalPages,
       },
-    });
+    };
+
+    setCache(cacheKey, result);
+    res.json(result);
   } catch (err) {
     console.error("Error in getProducts:", err.message);
     res.status(500).json({ message: "Failed to fetch products", error: err.message });
@@ -119,52 +167,72 @@ export const getProducts = async (req, res) => {
 // Returns dynamic counts per category and rating, and the current price range min/max
 export const getProductFacets = async (req, res) => {
   try {
-    const baseFilter = { isActive: { $ne: false } };
-
-    // Run category facet counts
-    const categoryCounts = await Promise.all(
-      CATEGORIES.map(async (cat) => {
-        const count = await Product.countDocuments({ ...baseFilter, category: cat });
-        return { category: cat, count };
-      })
-    );
-
-    // Run rating facet counts
-    const ratingCounts = await Promise.all(
-      [5, 4, 3].map(async (r) => {
-        const count = await Product.countDocuments({ ...baseFilter, rating: { $gte: r } });
-        return { rating: r, count };
-      })
-    );
-
-    // Min and Max price in catalog
-    let priceRange = { min: 0, max: 600000 };
-    try {
-      const priceStats = await Product.aggregate([
-        { $match: baseFilter },
-        {
-          $group: {
-            _id: null,
-            min: { $min: "$price" },
-            max: { $max: "$price" },
-          },
-        },
-      ]);
-      if (priceStats && priceStats[0]) {
-        priceRange = {
-          min: priceStats[0].min || 0,
-          max: priceStats[0].max || 600000,
-        };
-      }
-    } catch {
-      // Keep default priceRange
+    const cacheKey = "facets";
+    const cachedFacets = getCache(cacheKey);
+    if (cachedFacets) {
+      return res.json(cachedFacets);
     }
 
-    res.json({
+    const baseFilter = { isActive: { $ne: false } };
+
+    const [facetResult] = await Product.aggregate([
+      { $match: baseFilter },
+      {
+        $facet: {
+          categories: [
+            { $group: { _id: "$category", count: { $sum: 1 } } },
+            { $project: { category: "$_id", count: 1, _id: 0 } },
+          ],
+          ratings: [
+            {
+              $group: {
+                _id: null,
+                r5: { $sum: { $cond: [{ $gte: ["$rating", 5] }, 1, 0] } },
+                r4: { $sum: { $cond: [{ $gte: ["$rating", 4] }, 1, 0] } },
+                r3: { $sum: { $cond: [{ $gte: ["$rating", 3] }, 1, 0] } },
+              },
+            },
+          ],
+          priceRange: [
+            {
+              $group: {
+                _id: null,
+                min: { $min: "$price" },
+                max: { $max: "$price" },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    const catMap = new Map((facetResult?.categories || []).map((c) => [c.category, c.count]));
+    const categoryCounts = CATEGORIES.map((cat) => ({
+      category: cat,
+      count: catMap.get(cat) || 0,
+    }));
+
+    const rObj = facetResult?.ratings?.[0] || {};
+    const ratingCounts = [
+      { rating: 5, count: rObj.r5 || 0 },
+      { rating: 4, count: rObj.r4 || 0 },
+      { rating: 3, count: rObj.r3 || 0 },
+    ];
+
+    const pObj = facetResult?.priceRange?.[0] || {};
+    const priceRange = {
+      min: pObj.min !== undefined ? pObj.min : 0,
+      max: pObj.max !== undefined ? pObj.max : 600000,
+    };
+
+    const result = {
       categories: categoryCounts,
       ratings: ratingCounts,
       priceRange,
-    });
+    };
+
+    setCache(cacheKey, result);
+    res.json(result);
   } catch (err) {
     console.error("Error in getProductFacets:", err.message);
     res.status(500).json({ message: "Failed to fetch facets", error: err.message });
@@ -177,6 +245,12 @@ export const getProductById = async (req, res) => {
     const { id } = req.params;
     if (!id || id === "undefined" || id === "null") {
       return res.status(400).json({ message: "Invalid product ID" });
+    }
+
+    const cacheKey = `product_${id}`;
+    const cachedProduct = getCache(cacheKey);
+    if (cachedProduct) {
+      return res.status(200).json(cachedProduct);
     }
 
     let product = null;
@@ -192,6 +266,7 @@ export const getProductById = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
+    setCache(cacheKey, product);
     res.status(200).json(product);
   } catch (err) {
     console.error("Error in getProductById:", err.message);
@@ -239,6 +314,7 @@ export const createProduct = async (req, res) => {
 
     const product = new Product(productData);
     await product.save();
+    clearServerProductCache();
 
     // Trigger low stock notification
     if (product.stock > 0 && product.stock <= 5) {
@@ -328,6 +404,7 @@ export const updateProduct = async (req, res) => {
     });
 
     await product.save();
+    clearServerProductCache();
     res.json(product);
   } catch (err) {
     console.error("Error in updateProduct:", err.message);
@@ -351,6 +428,7 @@ export const deleteProduct = async (req, res) => {
     }
 
     await Product.findByIdAndDelete(req.params.id);
+    clearServerProductCache();
     res.json({ message: "Product deleted successfully" });
   } catch (err) {
     console.error("Error in deleteProduct:", err.message);

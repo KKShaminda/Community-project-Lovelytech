@@ -8,6 +8,9 @@ import {
   removeWishlistProduct,
   getWishlistIds,
   saveWishlistIds,
+  getCachedWishlistItems,
+  saveCachedWishlistItems,
+  normalizeWishlistItem,
 } from '../../utils/wishlistStorage'
 import { addToCart } from '../../utils/cartStorage'
 import { isAuthenticated } from '../../services/authServices'
@@ -25,10 +28,30 @@ function StarRating({ value = 5 }) {
   )
 }
 
+function WishlistGridSkeleton() {
+  return (
+    <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+      {Array.from({ length: 4 }).map((_, index) => (
+        <div
+          key={index}
+          className="rounded-[18px] border border-[#e7d8d8] bg-white p-2.5 shadow-sm animate-pulse"
+        >
+          <div className="mb-3 h-48 w-full rounded-[16px] bg-gray-200" />
+          <div className="mb-2 h-4 w-3/4 rounded bg-gray-200" />
+          <div className="mb-2 h-3 w-1/2 rounded bg-gray-200" />
+          <div className="mb-3 h-5 w-1/3 rounded bg-gray-200" />
+          <div className="h-9 w-full rounded-xl bg-gray-200" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function WishlistPage() {
   const navigate = useNavigate()
-  const [items, setItems] = useState([])
-  const [loading, setLoading] = useState(true)
+  const cachedItems = getCachedWishlistItems()
+  const [items, setItems] = useState(() => cachedItems)
+  const [loading, setLoading] = useState(() => !cachedItems.length)
   const [error, setError] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All')
@@ -42,30 +65,38 @@ export function WishlistPage() {
       return
     }
 
-    setLoading(true)
+    if (items.length === 0) {
+      setLoading(true)
+    }
     setError('')
 
     try {
       const response = await getWishlist()
       const rawList = response?.wishlist || []
+      const normalized = rawList.map(normalizeWishlistItem).filter(Boolean)
 
-      const normalized = rawList.map((p) => ({
-        ...p,
-        id: p._id || p.id,
-        image: resolveImageUrl(
-          p.images?.[0]?.url || p.images?.[0]?.path || p.images?.[0] || p.image,
-          p.category
-        ),
-      }))
+      // Merge backend items with local cache to preserve newly added items
+      const localCached = getCachedWishlistItems()
+      const map = new Map()
+      normalized.forEach((p) => map.set(String(p.id), p))
+      localCached.forEach((p) => {
+        if (!map.has(String(p.id))) {
+          map.set(String(p.id), p)
+        }
+      })
+      const merged = Array.from(map.values())
 
-      setItems(normalized)
+      setItems(merged)
+      saveCachedWishlistItems(merged)
 
       // Sync IDs in local storage
-      const serverIds = new Set(normalized.map((item) => String(item.id)))
+      const serverIds = new Set(merged.map((item) => String(item.id)))
       saveWishlistIds(serverIds)
     } catch (err) {
       console.error('Failed to load wishlist:', err)
-      setError(err.message || 'Failed to fetch your wishlist from server.')
+      if (items.length === 0) {
+        setError(err.message || 'Failed to fetch your wishlist from server.')
+      }
     } finally {
       setLoading(false)
     }
@@ -75,31 +106,47 @@ export function WishlistPage() {
     fetchWishlistData()
   }, [isLoggedIn])
 
-  // Listen to auth changes
+  // Listen to auth and wishlist cache changes
   useEffect(() => {
     const syncAuth = () => {
       const auth = isAuthenticated()
       setIsLoggedIn(auth)
     }
 
+    const handleWishlistItemsUpdated = (e) => {
+      if (e?.detail && Array.isArray(e.detail)) {
+        setItems(e.detail)
+      } else {
+        setItems(getCachedWishlistItems())
+      }
+    }
+
     window.addEventListener('auth-updated', syncAuth)
     window.addEventListener('storage', syncAuth)
     window.addEventListener('focus', syncAuth)
+    window.addEventListener('wishlist-items-updated', handleWishlistItemsUpdated)
     return () => {
       window.removeEventListener('auth-updated', syncAuth)
       window.removeEventListener('storage', syncAuth)
       window.removeEventListener('focus', syncAuth)
+      window.removeEventListener('wishlist-items-updated', handleWishlistItemsUpdated)
     }
   }, [])
 
-  const handleRemove = async (id, e) => {
+  const handleRemove = (id, e) => {
     e.preventDefault()
     e.stopPropagation()
 
-    // Optimistic UI update
-    setItems((prev) => prev.filter((item) => String(item.id) !== String(id) && String(item._id) !== String(id)))
-    await removeWishlistProduct(id)
+    const idStr = String(id)
+    // Instant UI update (0ms latency)
+    const updated = items.filter(
+      (item) => String(item.id || item._id) !== idStr
+    )
+    setItems(updated)
     toast('Item removed from wishlist', { icon: '🗑️' })
+    removeWishlistProduct(id).catch((err) => {
+      console.error('Failed to remove item from wishlist:', err)
+    })
   }
 
   const handleAddToCart = (id, e) => {
@@ -223,11 +270,8 @@ export function WishlistPage() {
           </div>
 
           {/* Empty State / Loading / Error */}
-          {loading ? (
-            <div className="my-12 py-16 text-center">
-              <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-[#E4342F] border-t-transparent mb-3" />
-              <p className="text-sm font-semibold text-gray-600">Loading your wishlist from server...</p>
-            </div>
+          {loading && items.length === 0 ? (
+            <WishlistGridSkeleton />
           ) : error ? (
             <div className="my-12 rounded-[20px] border border-red-200 bg-red-50 p-8 text-center">
               <AlertCircle className="mx-auto h-10 w-10 text-[#E4342F] mb-2" />

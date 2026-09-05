@@ -15,13 +15,21 @@ const parseResponse = async (response) => {
   }
 };
 
+const getAuthHeaders = () => {
+  const token = typeof window !== 'undefined' ? (localStorage.getItem('token') || sessionStorage.getItem('token')) : null;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 const request = async (url, options = {}) => {
+  const headers = {
+    'Content-Type': 'application/json',
+    ...getAuthHeaders(),
+    ...(options.headers || {}),
+  };
+
   const response = await fetch(url, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-    },
+    headers,
     credentials: 'include',
   });
 
@@ -44,8 +52,16 @@ export const createRepairRequest = async (payload) => {
 
 export const createRepair = createRepairRequest;
 
-export const getRepairs = async () => {
-  return request(API_URL, { method: 'GET' });
+export const getRepairs = async (params = {}) => {
+  const query = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return;
+    query.append(key, String(value));
+  });
+
+  const queryString = query.toString();
+  return request(`${API_URL}${queryString ? `?${queryString}` : ''}`, { method: 'GET' });
 };
 
 export const getRepairByTrackingId = async (trackingId) => {
@@ -62,3 +78,4 @@ export const updateRepair = async (id, payload) => {
 export const deleteRepair = async (id) => {
   return request(`${API_URL}/${encodeURIComponent(id)}`, { method: 'DELETE' });
 };
+

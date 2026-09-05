@@ -141,13 +141,38 @@ export const createOrder = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Get all orders
+// @desc    Get all orders (scoped to authenticated user for buyers, or all for admin/receptionist)
 // @route   GET /api/orders
-// @access  Public
+// @access  Public / Authenticated
 export const getOrders = asyncHandler(async (req, res) => {
-  const { status, query } = req.query;
+  const { status, query, userId, email } = req.query;
 
   let filterObj = {};
+
+  if (req.user) {
+    const role = (req.user.role || '').toLowerCase();
+    // Admin and Receptionist can view all customer orders
+    if (role !== 'admin' && role !== 'receptionist') {
+      const userEmail = (req.user.email || '').toLowerCase().trim();
+      const conditions = [{ userId: req.user._id }];
+      if (userEmail) {
+        conditions.push({ customerEmail: { $regex: new RegExp(`^${userEmail}$`, 'i') } });
+      }
+      filterObj.$or = conditions;
+    }
+  } else if (userId || email) {
+    const conditions = [];
+    if (userId) conditions.push({ userId });
+    if (email) conditions.push({ customerEmail: { $regex: new RegExp(`^${email.trim()}$`, 'i') } });
+    filterObj.$or = conditions;
+  } else {
+    // Unauthenticated request without specific query parameters should return empty array
+    return res.status(200).json({
+      success: true,
+      count: 0,
+      data: [],
+    });
+  }
 
   if (status && status !== 'All') {
     filterObj.status = status;
@@ -159,9 +184,9 @@ export const getOrders = asyncHandler(async (req, res) => {
     const q = query.trim().toLowerCase();
     orders = orders.filter(
       (order) =>
-        order.orderId.toLowerCase().includes(q) ||
-        order.tags.some((t) => t.toLowerCase().includes(q)) ||
-        order.products.some((p) => p.name.toLowerCase().includes(q))
+        order.orderId?.toLowerCase().includes(q) ||
+        (order.tags && order.tags.some((t) => t.toLowerCase().includes(q))) ||
+        (order.products && order.products.some((p) => p.name?.toLowerCase().includes(q)))
     );
   }
 

@@ -1,3 +1,6 @@
+// Real database driven catalog configuration and utility helpers
+// Mock product data has been removed. Products are fetched directly from MongoDB.
+
 export const productsData = []
 
 export const categories = [

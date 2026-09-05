@@ -8,10 +8,20 @@ import { FilterSidebar } from '../../components/products/FilterSidebar'
 import { ProductGrid } from '../../components/products/ProductGrid'
 import { Pagination } from '../../components/products/Pagination'
 import Layout from '../../components/layout/Layout'
-import { getProducts, getProductFacets } from '../../services/productServices'
+import {
+  getProducts,
+  getProductFacets,
+  getCachedProducts,
+  getCachedFacets,
+} from '../../services/productServices'
 import { getWishlistIds, toggleWishlistProduct } from '../../utils/wishlistStorage'
 import { isAuthenticated } from '../../services/authServices'
-import { resolveImageUrl, getCategoryFallbackImage } from '../../data/productsData'
+import {
+  categories as defaultCategories,
+  ratingOptions as defaultRatings,
+  resolveImageUrl,
+  getCategoryFallbackImage,
+} from '../../data/productsData'
 
 const ITEMS_PER_PAGE = 9
 const DEFAULT_PRICE_MAX = 600000
@@ -36,6 +46,25 @@ const normalizeProduct = (product) => {
   }
 }
 
+function ProductGridSkeleton() {
+  return (
+    <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+      {Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
+        <div
+          key={index}
+          className="rounded-xl border-t-4 border-red-200 bg-white p-2.5 shadow-sm animate-pulse"
+        >
+          <div className="mb-2.5 aspect-[4/3.2] overflow-hidden rounded-lg bg-gray-200" />
+          <div className="mb-2 h-4 w-3/4 rounded bg-gray-200" />
+          <div className="mb-2 h-3 w-1/2 rounded bg-gray-200" />
+          <div className="mb-3 h-5 w-1/3 rounded bg-gray-200" />
+          <div className="h-9 w-full rounded-lg bg-gray-200" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function Products() {
   const navigate = useNavigate()
   const [searchTerm, setSearchTerm] = useState('')
@@ -43,21 +72,38 @@ export function Products() {
   const [selectedCategories, setSelectedCategories] = useState([])
   const [selectedRatings, setSelectedRatings] = useState([])
   const [availability, setAvailability] = useState({ inStock: true, outOfStock: true })
-  const [priceRange, setPriceRange] = useState(DEFAULT_PRICE_MAX)
+  const [userPriceRange, setUserPriceRange] = useState(null)
   const [maxPriceLimit, setMaxPriceLimit] = useState(DEFAULT_PRICE_MAX)
   const [wishlistIds, setWishlistIds] = useState(() => getWishlistIds())
   const [isLoggedIn, setIsLoggedIn] = useState(() => isAuthenticated())
   const [page, setPage] = useState(1)
 
-  const [products, setProducts] = useState([])
-  const [totalPages, setTotalPages] = useState(1)
-  const [totalItems, setTotalItems] = useState(0)
-  const [facets, setFacets] = useState({
-    categories: [],
-    ratings: [],
-    priceRange: { min: 0, max: DEFAULT_PRICE_MAX },
+  // Real database products only (from cache or empty initial state)
+  const initialCache = getCachedProducts({ page: 1, limit: ITEMS_PER_PAGE, minPrice: 0 })
+
+  const [products, setProducts] = useState(() => {
+    if (initialCache?.products?.length) {
+      return initialCache.products.map(normalizeProduct)
+    }
+    return []
   })
-  const [loading, setLoading] = useState(true)
+
+  const [totalPages, setTotalPages] = useState(() => initialCache?.pagination?.totalPages || 1)
+  const [totalItems, setTotalItems] = useState(() => initialCache?.pagination?.totalItems || 0)
+
+  const [facets, setFacets] = useState(() => {
+    const cached = getCachedFacets()
+    if (cached && (cached.categories?.length || cached.ratings?.length)) {
+      return cached
+    }
+    return {
+      categories: (defaultCategories || []).map((c) => ({ category: c.label, count: c.count || 0 })),
+      ratings: (defaultRatings || []).map((r) => ({ rating: r.value, count: r.count || 0 })),
+      priceRange: { min: 0, max: DEFAULT_PRICE_MAX },
+    }
+  })
+
+  const [loading, setLoading] = useState(() => !initialCache?.products?.length)
   const [error, setError] = useState('')
 
   // Sync auth and wishlist events
@@ -79,21 +125,20 @@ export function Products() {
     }
   }, [])
 
-  // Load facets from backend API
+  // Load facets from backend API once on mount in background
   const loadFacets = async () => {
     try {
       const response = await getProductFacets()
       const serverMax = response?.priceRange?.max || DEFAULT_PRICE_MAX
 
       setFacets({
-        categories: response?.categories || [],
-        ratings: response?.ratings || [],
+        categories: response?.categories?.length ? response.categories : facets.categories,
+        ratings: response?.ratings?.length ? response.ratings : facets.ratings,
         priceRange: response?.priceRange || { min: 0, max: DEFAULT_PRICE_MAX },
       })
       setMaxPriceLimit(serverMax)
-      setPriceRange((prev) => (prev === DEFAULT_PRICE_MAX ? serverMax : Math.min(prev, serverMax)))
     } catch (err) {
-      console.error('Failed to load facets:', err)
+      console.warn('Using fallback facets:', err)
     }
   }
 
@@ -101,45 +146,62 @@ export function Products() {
     loadFacets()
   }, [])
 
-  // Fetch products from backend whenever filters, search, sort or page changes
+  // Fetch products from backend whenever user filters, search, sort or page changes
   useEffect(() => {
     let isCurrent = true
 
     const fetchProducts = async () => {
-      setLoading(true)
-      setError('')
+      const params = {
+        page,
+        limit: ITEMS_PER_PAGE,
+        search: searchTerm.trim() || undefined,
+        category: selectedCategories.length > 0 ? selectedCategories.join(',') : undefined,
+        minPrice: 0,
+        maxPrice: userPriceRange !== null ? userPriceRange : undefined,
+        minRating: selectedRatings.length > 0 ? Math.min(...selectedRatings) : undefined,
+        inStock:
+          availability.inStock && availability.outOfStock
+            ? undefined
+            : availability.inStock
+              ? 'true'
+              : 'false',
+        sort: sortBy !== 'none' ? sortBy : undefined,
+      }
+
+      // Check cache first for immediate display
+      const cached = getCachedProducts(params)
+      if (cached?.products?.length) {
+        setProducts(cached.products.map(normalizeProduct))
+        setTotalPages(cached.pagination?.totalPages || 1)
+        setTotalItems(cached.pagination?.totalItems || cached.products.length)
+        setError('')
+        setLoading(false)
+      } else {
+        setLoading(true)
+      }
 
       try {
-        const params = {
-          page,
-          limit: ITEMS_PER_PAGE,
-          search: searchTerm.trim() || undefined,
-          category: selectedCategories.length > 0 ? selectedCategories.join(',') : undefined,
-          minPrice: 0,
-          maxPrice: priceRange < maxPriceLimit ? priceRange : undefined,
-          minRating: selectedRatings.length > 0 ? Math.min(...selectedRatings) : undefined,
-          inStock:
-            availability.inStock && availability.outOfStock
-              ? undefined
-              : availability.inStock
-                ? 'true'
-                : 'false',
-          sort: sortBy !== 'none' ? sortBy : undefined,
-        }
-
         const data = await getProducts(params)
 
-        if (isCurrent) {
+        if (isCurrent && data) {
           const rawList = data?.products || []
-          setProducts(rawList.map(normalizeProduct))
-          setTotalPages(data?.pagination?.totalPages || 1)
-          setTotalItems(data?.pagination?.totalItems || rawList.length)
+          if (rawList.length > 0 || !searchTerm) {
+            setProducts(rawList.map(normalizeProduct))
+            setTotalPages(data?.pagination?.totalPages || 1)
+            setTotalItems(data?.pagination?.totalItems || rawList.length)
+            setError('')
+          } else if (rawList.length === 0 && searchTerm) {
+            setProducts([])
+            setTotalPages(1)
+            setTotalItems(0)
+          }
         }
       } catch (err) {
         if (isCurrent) {
-          console.error('Error loading products:', err)
-          setError(err.message || 'Failed to connect to the backend server. Please make sure the server is running.')
-          setProducts([])
+          console.warn('Error loading products:', err)
+          if (products.length === 0) {
+            setError(err.message || 'Failed to connect to the backend server.')
+          }
         }
       } finally {
         if (isCurrent) {
@@ -159,8 +221,7 @@ export function Products() {
     selectedCategories,
     selectedRatings,
     availability,
-    priceRange,
-    maxPriceLimit,
+    userPriceRange,
     sortBy,
   ])
 
@@ -190,26 +251,32 @@ export function Products() {
       setAvailability((prev) => ({ ...prev, [key]: !prev[key] })),
     )
 
-  const toggleWishlist = async (productId) => {
+  const toggleWishlist = (productId, product) => {
     if (!isAuthenticated()) {
       toast.error('Please sign in to save items to your wishlist')
       navigate('/login', { state: { from: '/products' } })
       return
     }
-    const isAdded = await toggleWishlistProduct(productId)
-    setWishlistIds(getWishlistIds())
-    if (isAdded) {
+
+    const idStr = String(productId || product?.id || product?._id || '')
+    const isCurrentlyWishlisted = wishlistIds.has(idStr)
+
+    if (!isCurrentlyWishlisted) {
       toast.success('Added to wishlist!')
     } else {
       toast('Removed from wishlist', { icon: '🗑️' })
     }
+
+    toggleWishlistProduct(productId, product).catch((err) => {
+      console.error('Failed to toggle wishlist:', err)
+    })
   }
 
   const clearAll = () => {
     setSelectedCategories([])
     setSelectedRatings([])
     setAvailability({ inStock: true, outOfStock: true })
-    setPriceRange(maxPriceLimit)
+    setUserPriceRange(null)
     setSearchTerm('')
     setSortBy('none')
     setPage(1)
@@ -224,6 +291,8 @@ export function Products() {
     value: rating,
     count: count || 0,
   }))
+
+  const currentPriceRangeValue = userPriceRange !== null ? userPriceRange : maxPriceLimit
 
   return (
     <Layout>
@@ -258,9 +327,9 @@ export function Products() {
             <FilterSidebar
               selectedCategories={selectedCategories}
               onToggleCategory={toggleCategory}
-              priceRange={priceRange}
+              priceRange={currentPriceRangeValue}
               maxPrice={maxPriceLimit}
-              onPriceRangeChange={(value) => updateFilterAndResetPage(() => setPriceRange(value))}
+              onPriceRangeChange={(value) => updateFilterAndResetPage(() => setUserPriceRange(value))}
               selectedRatings={selectedRatings}
               onToggleRating={toggleRating}
               availability={availability}
@@ -273,11 +342,7 @@ export function Products() {
             {/* Products Grid Content Area */}
             <div className="flex-1">
               {loading ? (
-                <div className="flex min-h-[400px] flex-col items-center justify-center rounded-2xl border border-gray-200 bg-gray-50 p-12 text-center">
-                  <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#E4342F] border-t-transparent mb-3" />
-                  <p className="text-base font-semibold text-gray-700">Loading products from server...</p>
-                  <p className="mt-1 text-sm text-gray-500">Connecting to LovelyTech API</p>
-                </div>
+                <ProductGridSkeleton />
               ) : error ? (
                 <div className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
                   <AlertCircle className="mx-auto h-10 w-10 text-[#E4342F] mb-2" />
@@ -315,7 +380,7 @@ export function Products() {
                     products={products}
                     wishlistIds={wishlistIds}
                     onToggleWishlist={toggleWishlist}
-                    showWishlist={isLoggedIn}
+                    showWishlist={true}
                   />
                   <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
                 </>
