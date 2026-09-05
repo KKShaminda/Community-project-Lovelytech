@@ -48,7 +48,7 @@ export function AdminDashboard() {
 
   const statsKPIs = useMemo(() => {
     const totalSalesLKR = formatLKR(sales.reduce((sum, s) => sum + (s.total || 0), 0));
-    const totalOrdersLKR = orders.reduce((sum, o) => sum + (o.totalAmount || o.products.reduce((acc, p) => acc + p.price * p.qty, 0)), 0);
+    const totalOrdersLKR = orders.reduce((sum, o) => sum + (Number(o.totalAmount) || (o.products || []).reduce((acc, p) => acc + (Number(p.price) || 0) * (Number(p.qty) || 1), 0)), 0);
     const revenueSum = sales.reduce((sum, s) => sum + (s.total || 0), 0) + totalOrdersLKR;
 
     const lowStockCount = products.filter(p => p.stock <= 5).length;

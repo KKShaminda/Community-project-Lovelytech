@@ -14,7 +14,7 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useLocation } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import Layout from '../../components/layout/Layout'
 import {
@@ -23,7 +23,7 @@ import {
   getCategoryFallbackImage,
 } from '../../data/productsData'
 
-import { getProductById, getProducts } from '../../services/productServices'
+import { getProductById, getProducts, getCachedProductById } from '../../services/productServices'
 import { isProductWishlisted, toggleWishlistProduct } from '../../utils/wishlistStorage'
 import { addToCart } from '../../utils/cartStorage'
 import { isAuthenticated } from '../../services/authServices'
@@ -49,15 +49,76 @@ function ZapIcon() {
   )
 }
 
+const normalizeDetailProduct = (rawData) => {
+  if (!rawData) return null
+  const category = rawData.category || 'Speakers & Audios'
+  const defaultImg = getCategoryFallbackImage(category)
+
+  const rawImages = Array.isArray(rawData.images) && rawData.images.length > 0
+    ? rawData.images.map((img) => (typeof img === 'string' ? img : img.url || img.path))
+    : [rawData.image || defaultImg]
+
+  const resolvedImages = rawImages.map((img) => resolveImageUrl(img, category))
+
+  return {
+    ...rawData,
+    id: rawData._id || rawData.id,
+    image: resolvedImages[0] || defaultImg,
+    images: resolvedImages.length > 0 ? resolvedImages : [defaultImg],
+    availability:
+      rawData.stock > 0
+        ? 'In Stock'
+        : rawData.availability || (rawData.stock === 0 ? 'Out of Stock' : 'In Stock'),
+  }
+}
+
+function ProductDetailsSkeleton() {
+  return (
+    <Layout>
+      <main className="min-h-screen bg-[#f4f1ef] px-4 py-6 lg:px-10 lg:py-8">
+        <div className="mx-auto max-w-[1280px] rounded-[18px] bg-[#f9f7f6] p-4 sm:p-6 lg:p-8 animate-pulse">
+          <div className="mb-6 h-5 w-48 rounded bg-gray-200" />
+          <div className="grid gap-8 lg:grid-cols-[1.1fr_1fr]">
+            <div className="space-y-4">
+              <div className="aspect-4/3 w-full rounded-[20px] bg-gray-200" />
+              <div className="flex gap-3">
+                <div className="h-16 w-16 rounded-xl bg-gray-200" />
+                <div className="h-16 w-16 rounded-xl bg-gray-200" />
+                <div className="h-16 w-16 rounded-xl bg-gray-200" />
+              </div>
+            </div>
+            <div className="flex flex-col justify-between space-y-6">
+              <div className="space-y-4">
+                <div className="h-8 w-3/4 rounded bg-gray-200" />
+                <div className="h-4 w-1/3 rounded bg-gray-200" />
+                <div className="h-10 w-1/2 rounded bg-gray-200" />
+                <div className="h-20 w-full rounded bg-gray-200" />
+              </div>
+              <div className="space-y-3">
+                <div className="h-12 w-full rounded-xl bg-gray-200" />
+                <div className="h-12 w-full rounded-xl bg-gray-200" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </Layout>
+  )
+}
+
 export function ProductDetailsPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
 
-  const [product, setProduct] = useState(null)
+  const initialRaw = location.state?.product || getCachedProductById(id)
+  const initialProduct = initialRaw ? normalizeDetailProduct(initialRaw) : null
+
+  const [product, setProduct] = useState(initialProduct)
   const [similarProducts, setSimilarProducts] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!initialProduct)
   const [error, setError] = useState('')
-  const [selectedImage, setSelectedImage] = useState('')
+  const [selectedImage, setSelectedImage] = useState(() => initialProduct?.images?.[0] || initialProduct?.image || '')
   const [quantity, setQuantity] = useState(1)
   const [liked, setLiked] = useState(() => isProductWishlisted(id))
   const [addedToCart, setAddedToCart] = useState(false)
@@ -78,9 +139,16 @@ export function ProductDetailsPage() {
     }
   }, [])
 
-  // Sync liked state when ID changes
+  // Sync liked state when ID changes or wishlist is updated
   useEffect(() => {
-    setLiked(isProductWishlisted(id))
+    const syncWishlist = () => {
+      setLiked(isProductWishlisted(id))
+    }
+    syncWishlist()
+    window.addEventListener('wishlist-updated', syncWishlist)
+    return () => {
+      window.removeEventListener('wishlist-updated', syncWishlist)
+    }
   }, [id])
 
   // Scroll to top whenever ID changes
@@ -92,64 +160,50 @@ export function ProductDetailsPage() {
     let isMounted = true
 
     const loadProductData = async () => {
-      setLoading(true)
+      if (!product) {
+        setLoading(true)
+      }
       setError('')
 
       try {
         const rawData = await getProductById(id)
         if (!isMounted) return
 
-        if (!rawData) {
+        if (!rawData && !product) {
           setError('Product not found')
           setProduct(null)
           return
         }
 
-        const category = rawData.category || 'Speakers & Audios'
-        const defaultImg = getCategoryFallbackImage(category)
+        if (rawData) {
+          const normalized = normalizeDetailProduct(rawData)
+          setProduct(normalized)
+          if (!selectedImage) {
+            setSelectedImage(normalized.image)
+          }
 
-        const rawImages = Array.isArray(rawData.images) && rawData.images.length > 0
-          ? rawData.images.map((img) => (typeof img === 'string' ? img : img.url || img.path))
-          : [rawData.image || defaultImg]
-
-        const resolvedImages = rawImages.map((img) => resolveImageUrl(img, category))
-
-        const normalizedProduct = {
-          ...rawData,
-          id: rawData._id || rawData.id,
-          image: resolvedImages[0] || defaultImg,
-          images: resolvedImages.length > 0 ? resolvedImages : [defaultImg],
-          availability:
-            rawData.stock > 0
-              ? 'In Stock'
-              : rawData.availability || (rawData.stock === 0 ? 'Out of Stock' : 'In Stock'),
+          // Fetch similar products in the same category asynchronously
+          getProducts({ category: normalized.category, limit: 5 })
+            .then((res) => {
+              if (isMounted) {
+                const list = (res?.products || [])
+                  .filter((p) => String(p._id || p.id) !== String(normalized.id))
+                  .slice(0, 4)
+                  .map((p) => ({
+                    ...p,
+                    id: p._id || p.id,
+                    image: resolveImageUrl(
+                      p.images?.[0]?.url || p.images?.[0]?.path || p.images?.[0] || p.image,
+                      p.category
+                    ),
+                  }))
+                setSimilarProducts(list)
+              }
+            })
+            .catch(() => {})
         }
-
-        setProduct(normalizedProduct)
-        setSelectedImage(resolvedImages[0] || defaultImg)
-        setQuantity(1)
-
-        // Fetch similar products in the same category asynchronously
-        getProducts({ category: normalizedProduct.category, limit: 5 })
-          .then((res) => {
-            if (isMounted) {
-              const list = (res?.products || [])
-                .filter((p) => String(p._id || p.id) !== String(normalizedProduct.id))
-                .slice(0, 4)
-                .map((p) => ({
-                  ...p,
-                  id: p._id || p.id,
-                  image: resolveImageUrl(
-                    p.images?.[0]?.url || p.images?.[0]?.path || p.images?.[0] || p.image,
-                    p.category
-                  ),
-                }))
-              setSimilarProducts(list)
-            }
-          })
-          .catch(() => {})
       } catch (err) {
-        if (isMounted) {
+        if (isMounted && !product) {
           console.error('Failed to load product details:', err)
           setError(err.message || 'Product not found')
           setProduct(null)
@@ -196,23 +250,29 @@ export function ProductDetailsPage() {
     navigate('/payment')
   }
 
-  const handleToggleWishlist = async () => {
+  const handleToggleWishlist = () => {
     if (!product) return
+
+    const targetId = product.id || product._id || id
 
     if (!isAuthenticated()) {
       toast.error('Please sign in to save items to your wishlist')
-      navigate('/login', { state: { from: `/products/${product.id}` } })
+      navigate('/login', { state: { from: `/products/${targetId}` } })
       return
     }
 
     const nextState = !liked
     setLiked(nextState)
-    await toggleWishlistProduct(product.id)
     if (nextState) {
       toast.success('Added to wishlist!')
     } else {
       toast('Removed from wishlist', { icon: '🗑️' })
     }
+
+    toggleWishlistProduct(targetId, product).catch((err) => {
+      console.error('Failed to toggle wishlist:', err)
+      setLiked(!nextState)
+    })
   }
 
   const handleAddSimilarToCart = (item) => {
@@ -232,17 +292,8 @@ export function ProductDetailsPage() {
     return [getCategoryFallbackImage(product.category)]
   }, [product])
 
-  if (loading) {
-    return (
-      <Layout>
-        <main className="flex min-h-[60vh] items-center justify-center bg-[#f4f1ef] px-4 py-12">
-          <div className="flex flex-col items-center gap-3">
-            <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#E4342F] border-t-transparent"></div>
-            <p className="text-sm font-medium text-gray-600">Loading product details...</p>
-          </div>
-        </main>
-      </Layout>
-    )
+  if (loading && !product) {
+    return <ProductDetailsSkeleton />
   }
 
   if (error || !product) {

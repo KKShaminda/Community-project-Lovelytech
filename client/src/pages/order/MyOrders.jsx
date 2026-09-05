@@ -252,13 +252,16 @@ export function MyOrders() {
 
   // Load orders from server if authenticated
   useEffect(() => {
-    if (!isAuthenticated()) return
+    if (!isAuthenticated()) {
+      setOrders([])
+      return
+    }
 
     const loadServerOrders = async () => {
       try {
         const res = await getOrders()
         const data = res?.data || res
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           const mapped = data.map((item) => ({
             id: item.orderId || item.id || item._id,
             placedAt: item.placedAt || 'Recently',
@@ -272,9 +275,11 @@ export function MyOrders() {
             })),
           }))
           setOrders(mapped)
+        } else {
+          setOrders([])
         }
       } catch {
-        // Handle error silently
+        setOrders([])
       }
     }
 

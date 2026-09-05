@@ -81,53 +81,28 @@ function PlaceOrder() {
 		return { done: false, active: false }
 	}
 
-	// Fallback mock items
-	const fallbackItems = [
-		{
-			name: 'Premium Wireless Bluetooth Headphones',
-			color: 'Black',
-			size: 'Standard',
-			qty: 1,
-			price: 2400,
-			image: '',
-		},
-		{
-			name: 'RGB Mechanical Gaming Keyboard',
-			color: 'Metallic',
-			size: 'Standard',
-			qty: 1,
-			price: 6650,
-			image: '',
-		},
-		{
-			name: '20,000mAh Portable Power Bank - Fast Charger',
-			color: 'Metallic',
-			size: 'Standard',
-			qty: 2,
-			price: 24800,
-			image: '',
-		},
-	]
+	useEffect(() => {
+		if (!orderDetails) {
+			navigate('/orders')
+		}
+	}, [orderDetails, navigate])
 
-	const items = orderDetails ? orderDetails.products : fallbackItems
-	const subTotal = orderDetails
-		? items.reduce((acc, item) => acc + (item.price || 0) * (item.qty || item.quantity || 1), 0)
-		: 33850
-	const shipping = orderDetails ? (orderDetails.shipping || 0) : 0
-	const total = orderDetails ? (orderDetails.totalAmount || (subTotal + shipping)) : 30465
-	const discount = Math.max(0, subTotal + shipping - total)
-
-	const deliveryAddress = orderDetails?.deliveryAddress || {
-		firstName: "Pasindu",
-		lastName: "Perera",
-		streetAddress: "124/B, Nallurawa",
-		city: "Panadura",
-		postalCode: "12500",
-		country: "Sri Lanka",
+	if (!orderDetails) {
+		return null
 	}
 
-	const paymentMethod = orderDetails?.paymentMethod || "debit"
-	const cardLastFour = orderDetails?.cardNumberLastFour || "889"
+	const items = orderDetails.products || []
+	const subTotal = items.reduce(
+		(acc, item) => acc + (Number(item.price) || 0) * (Number(item.qty || item.quantity) || 1),
+		0
+	)
+	const shipping = Number(orderDetails.shipping || 0)
+	const total = Number(orderDetails.totalAmount || (subTotal + shipping))
+	const discount = Math.max(0, subTotal + shipping - total)
+
+	const deliveryAddress = orderDetails.deliveryAddress || {}
+	const paymentMethod = orderDetails.paymentMethod || "Card"
+	const cardLastFour = orderDetails.cardNumberLastFour || "••••"
 
 	return (
 		<Layout>

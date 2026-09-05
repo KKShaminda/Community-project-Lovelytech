@@ -7,10 +7,12 @@ import {
   Clock3,
   Wrench,
   DollarSign,
+  Loader2,
+  Plus,
 } from "lucide-react";
 
 import Layout from "../../components/layout/Layout";
-import { repairs as mockRepairs, statusMeta, currency } from "../../data/repairData";
+import { statusMeta, currency } from "../../data/repairData";
 import { getRepairs } from "../../services/repairServices";
 
 const badgeStyles = {
@@ -42,8 +44,8 @@ const getInitials = (device = "Repair") =>
     .toUpperCase();
 
 export function RepairHistoryPage() {
-  const [repairList, setRepairList] = useState(mockRepairs);
-  const [loading, setLoading] = useState(false);
+  const [repairList, setRepairList] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -51,7 +53,7 @@ export function RepairHistoryPage() {
         setLoading(true);
         const res = await getRepairs();
         const data = res?.data || res;
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           const mapped = data.map((item) => ({
             id: item.trackingId || item._id,
             trackingId: item.trackingId || item._id,
@@ -66,9 +68,12 @@ export function RepairHistoryPage() {
             eta: item.estimatedCompletion || item.eta || "Pending",
           }));
           setRepairList(mapped);
+        } else {
+          setRepairList([]);
         }
       } catch (err) {
         console.error("Error loading repair history:", err);
+        setRepairList([]);
       } finally {
         setLoading(false);
       }
@@ -79,9 +84,8 @@ export function RepairHistoryPage() {
 
   return (
     <Layout>
-      <main className="mx-auto max-w-[1320px] px-6 py-12 sm:px-10 lg:px-14">
+      <main className="mx-auto max-w-[1320px] px-6 py-12 sm:px-10 lg:px-14 min-h-[60vh]">
         {/* Header */}
-
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="flex flex-wrap items-center gap-6">
             <div>
@@ -95,7 +99,7 @@ export function RepairHistoryPage() {
             </div>
 
             <span className="rounded-xl bg-[#EC1C24] px-4 py-2 text-sm font-semibold text-white">
-              {repairList.length} Repairs
+              {repairList.length} {repairList.length === 1 ? "Repair" : "Repairs"}
             </span>
           </div>
 
@@ -110,81 +114,100 @@ export function RepairHistoryPage() {
           </div>
         </div>
 
-        {/* Cards */}
+        {/* Content Body */}
+        {loading ? (
+          <div className="mt-16 flex flex-col items-center justify-center py-16">
+            <Loader2 className="h-10 w-10 animate-spin text-[#EC1C24]" />
+            <p className="mt-4 text-base font-semibold text-neutral-600">Loading your repair history...</p>
+          </div>
+        ) : repairList.length === 0 ? (
+          <div className="mt-12 rounded-3xl border border-neutral-200 bg-neutral-50/50 p-12 text-center">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-red-100 text-[#EC1C24]">
+              <Wrench className="h-10 w-10" />
+            </div>
+            <h2 className="mt-6 text-2xl font-bold text-neutral-900">No Repair Requests Yet</h2>
+            <p className="mx-auto mt-2 max-w-md text-base text-neutral-500">
+              You haven't submitted any repair requests. Need a screen replacement, battery fix, or diagnostic?
+            </p>
+            <Link
+              to="/repair/book"
+              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#EC1C24] px-7 py-3.5 font-bold text-white shadow-md transition hover:bg-[#cf1414] hover:shadow-lg"
+            >
+              <Plus className="h-5 w-5" />
+              <span>Book a Repair Now</span>
+            </Link>
+          </div>
+        ) : (
+          <div className="mt-10 space-y-7">
+            {repairList.map((repair) => {
+              const meta = statusMeta[repair.status] || { label: repair.status || "Received", tone: "blue" };
+              const trackingId = repair.trackingId || repair.id;
 
-        <div className="mt-10 space-y-7">
-          {repairList.map((repair) => {
-            const meta = statusMeta[repair.status] || { label: repair.status || "Received", tone: "blue" };
-            const trackingId = repair.trackingId || repair.id;
-
-            return (
-              <Link
-                key={repair.id}
-                to={`/repair/track?id=${encodeURIComponent(trackingId)}`}
-                state={{ trackingId }}
-                className="group flex flex-col gap-6 rounded-2xl border-t-4 border-[#EC1C24] bg-white p-7 shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl md:flex-row md:items-center"
-              >
-                {/* Avatar */}
-
-                <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-black text-xl font-bold text-white">
-                  {getInitials(repair.device)}
-                </div>
-
-                {/* Details */}
-
-                <div className="flex-1">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h2 className="text-xl font-bold text-[#444]">
-                      {repair.device}
-                    </h2>
-
-                    <span className="rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-[#EC1C24]">
-                      {trackingId}
-                    </span>
-
-                    <span
-                      className={`rounded-full px-3 py-1 text-sm font-medium ${badgeStyles[meta.tone]}`}
-                    >
-                      {meta.label}
-                    </span>
+              return (
+                <Link
+                  key={repair.id}
+                  to={`/repair/track?id=${encodeURIComponent(trackingId)}`}
+                  state={{ trackingId }}
+                  className="group flex flex-col gap-6 rounded-2xl border-t-4 border-[#EC1C24] bg-white p-7 shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl md:flex-row md:items-center"
+                >
+                  {/* Avatar */}
+                  <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-black text-xl font-bold text-white">
+                    {getInitials(repair.device)}
                   </div>
 
-                  <div className="mt-5 grid gap-3 text-[15px] text-[#777b93] md:grid-cols-2">
-                    <div className="flex items-center gap-3">
-                      <CalendarDays className="h-5 w-5 text-[#6e7788]" />
-                      Created : {formatDate(repair.createdAt)}
+                  {/* Details */}
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h2 className="text-xl font-bold text-[#444]">
+                        {repair.device}
+                      </h2>
+
+                      <span className="rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-[#EC1C24]">
+                        {trackingId}
+                      </span>
+
+                      <span
+                        className={`rounded-full px-3 py-1 text-sm font-medium ${badgeStyles[meta.tone]}`}
+                      >
+                        {meta.label}
+                      </span>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      <Clock3 className="h-5 w-5 text-[#6e7788]" />
-                      ETA : {formatDate(repair.eta)}
-                    </div>
+                    <div className="mt-5 grid gap-3 text-[15px] text-[#777b93] md:grid-cols-2">
+                      <div className="flex items-center gap-3">
+                        <CalendarDays className="h-5 w-5 text-[#6e7788]" />
+                        Created : {formatDate(repair.createdAt)}
+                      </div>
 
-                    <div className="flex items-center gap-3">
-                      <Wrench className="h-5 w-5 text-[#6e7788]" />
-                      Issue : {repair.issue}
-                    </div>
+                      <div className="flex items-center gap-3">
+                        <Clock3 className="h-5 w-5 text-[#6e7788]" />
+                        ETA : {formatDate(repair.eta)}
+                      </div>
 
-                    <div className="flex items-center gap-3">
-                      <Wrench className="h-5 w-5 text-[#6e7788]" />
-                      Brand : {repair.brand}
+                      <div className="flex items-center gap-3">
+                        <Wrench className="h-5 w-5 text-[#6e7788]" />
+                        Issue : {repair.issue}
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <Wrench className="h-5 w-5 text-[#6e7788]" />
+                        Brand : {repair.brand}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Action CTA & Arrow */}
-
-                <div className="flex items-center gap-2 text-sm font-semibold text-[#EC1C24] transition group-hover:translate-x-1">
-                  <span className="hidden md:inline">Track Progress</span>
-                  <ChevronRight className="h-6 w-6 text-[#EC1C24]" />
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+                  {/* Action CTA & Arrow */}
+                  <div className="flex items-center gap-2 text-sm font-semibold text-[#EC1C24] transition group-hover:translate-x-1">
+                    <span className="hidden md:inline">Track Progress</span>
+                    <ChevronRight className="h-6 w-6 text-[#EC1C24]" />
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
 
         {/* CTA */}
-
         <div className="mt-14 rounded-3xl bg-[#3E0F0F] p-10 text-center">
           <h2 className="text-3xl font-bold text-white">
             Need Another Repair?
@@ -204,4 +227,4 @@ export function RepairHistoryPage() {
       </main>
     </Layout>
   );
-}
+}

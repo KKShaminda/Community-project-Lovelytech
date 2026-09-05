@@ -86,4 +86,11 @@ productSchema.set("toObject", { virtuals: true });
 // Text index for the search bar ("Search Products...")
 productSchema.index({ name: "text", description: "text", brand: "text" });
 
+// High-speed compound indexes for fast filtering, pagination, and sorting
+productSchema.index({ isActive: 1, createdAt: -1 });
+productSchema.index({ isActive: 1, category: 1, price: 1 });
+productSchema.index({ isActive: 1, price: 1 });
+productSchema.index({ isActive: 1, rating: -1 });
+productSchema.index({ isActive: 1, sold: -1 });
+
 export default mongoose.model("Product", productSchema);

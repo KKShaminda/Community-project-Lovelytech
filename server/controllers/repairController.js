@@ -1,6 +1,7 @@
 import Repair from "../models/Repair.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import {
+  createNotificationForUser,
   createNotificationForEmail,
   createNotificationsForRole,
 } from "./notificationController.js";
@@ -47,6 +48,7 @@ const getDefaultTrackingSteps = (status = 'pending') => {
 // @access  Public
 export const createRepair = asyncHandler(async (req, res) => {
   const {
+    userId,
     deviceCategory,
     brand,
     model,
@@ -68,10 +70,11 @@ export const createRepair = asyncHandler(async (req, res) => {
     status,
   } = req.body;
 
-  const customerName = customer || name || bodyCustomerName;
-  const effectivePhone = phone || customerPhone;
-  const effectiveEmail = email || customerEmail;
-  const effectiveAddress = address || customerAddress;
+  const effectiveUserId = req.user?._id || userId || null;
+  const customerName = customer || name || bodyCustomerName || req.user?.fullname || "Customer";
+  const effectivePhone = phone || customerPhone || req.user?.phone || "";
+  const effectiveEmail = email || customerEmail || req.user?.email || "";
+  const effectiveAddress = address || customerAddress || "";
   const effectiveEstimate = Number(estimate || amount || estimatedCost || 0);
   const effectiveAmount = Number(amount || estimate || estimatedCost || 0);
 
@@ -98,6 +101,7 @@ export const createRepair = asyncHandler(async (req, res) => {
   const repairStatus = status || "pending";
 
   const newRepair = await Repair.create({
+    userId: effectiveUserId,
     trackingId,
     deviceCategory: deviceCategory || "smart-phone",
     device: fullDeviceName,
@@ -146,22 +150,71 @@ export const createRepair = asyncHandler(async (req, res) => {
   });
 
   // 2. Notify Customer
-  if (newRepair.email) {
-    createNotificationForEmail(newRepair.email, {
-      type: "repair",
-      title: "Repair Request Received",
-      message: `Your repair request for ${newRepair.device} (Tracking ID: ${newRepair.trackingId}) was submitted successfully.`,
-      referenceId: newRepair.trackingId,
-      referenceType: "Repair",
-    });
+  const customerNotif = {
+    type: "repair",
+    title: "Repair Request Received",
+    message: `Your repair request for ${newRepair.device} (Tracking ID: ${newRepair.trackingId}) was submitted successfully.`,
+    referenceId: newRepair.trackingId,
+    referenceType: "Repair",
+  };
+
+  if (effectiveUserId) {
+    createNotificationForUser(effectiveUserId, customerNotif);
+  } else if (newRepair.email) {
+    createNotificationForEmail(newRepair.email, customerNotif);
   }
 });
 
-// @desc    Get all repair requests
+// @desc    Get all repair requests (scoped to user if customer, all if admin/receptionist)
 // @route   GET /api/repairs
-// @access  Public
+// @access  Public / Authenticated
 export const getRepairs = asyncHandler(async (req, res) => {
-  const repairs = await Repair.find({}).sort({ createdAt: -1 });
+  const { status, query, userId, email } = req.query;
+
+  let filterObj = {};
+
+  if (req.user) {
+    const role = (req.user.role || '').toLowerCase();
+    // Admin and Receptionist can view all customer repair requests
+    if (role !== 'admin' && role !== 'receptionist') {
+      const userEmail = (req.user.email || '').toLowerCase().trim();
+      const conditions = [{ userId: req.user._id }];
+      if (userEmail) {
+        conditions.push({ email: { $regex: new RegExp(`^${userEmail}$`, 'i') } });
+      }
+      filterObj.$or = conditions;
+    }
+  } else if (userId || email) {
+    const conditions = [];
+    if (userId) conditions.push({ userId });
+    if (email) conditions.push({ email: { $regex: new RegExp(`^${email.trim()}$`, 'i') } });
+    filterObj.$or = conditions;
+  } else {
+    // Unauthenticated request without specific query parameters should return empty array
+    return res.status(200).json({
+      success: true,
+      count: 0,
+      data: [],
+    });
+  }
+
+  if (status && status !== 'All') {
+    filterObj.status = status;
+  }
+
+  let repairs = await Repair.find(filterObj).sort({ createdAt: -1 });
+
+  if (query && query.trim()) {
+    const q = query.trim().toLowerCase();
+    repairs = repairs.filter(
+      (repair) =>
+        repair.trackingId?.toLowerCase().includes(q) ||
+        repair.device?.toLowerCase().includes(q) ||
+        repair.brand?.toLowerCase().includes(q) ||
+        repair.model?.toLowerCase().includes(q) ||
+        repair.issue?.toLowerCase().includes(q)
+    );
+  }
 
   res.status(200).json({
     success: true,
@@ -274,7 +327,7 @@ export const updateRepair = asyncHandler(async (req, res) => {
   });
 
   // Notify customer if status changed
-  if (statusChanged && updatedRepair.email) {
+  if (statusChanged && (updatedRepair.userId || updatedRepair.email)) {
     const statusTextMap = {
       pending: "is currently pending diagnostic check",
       diagnosing: "is currently being diagnosed by our technicians",
@@ -287,14 +340,19 @@ export const updateRepair = asyncHandler(async (req, res) => {
     };
 
     const statusDetail = statusTextMap[status] || `status has been updated to '${status}'`;
-
-    createNotificationForEmail(updatedRepair.email, {
+    const notif = {
       type: "repair",
       title: `Repair Status: ${status}`,
       message: `Your device ${updatedRepair.device} (${updatedRepair.trackingId}) ${statusDetail}.`,
       referenceId: updatedRepair.trackingId,
       referenceType: "Repair",
-    });
+    };
+
+    if (updatedRepair.userId) {
+      createNotificationForUser(updatedRepair.userId, notif);
+    } else if (updatedRepair.email) {
+      createNotificationForEmail(updatedRepair.email, notif);
+    }
   }
 });
 
