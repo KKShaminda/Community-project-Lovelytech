@@ -6,38 +6,7 @@ export const REPAIR_STATUS_META = {
   completed: { label: 'Completed', className: 'bg-emerald-100 text-emerald-700' },
 }
 
-export const REPAIR_ORDERS = [
-  {
-    id: '#LT-7829',
-    customer: 'Marcus Thorne',
-    device: 'MacBook Pro M2 - Logic Board',
-    issue: 'Liquid damage detected. Device powers on but display is unstable.',
-    status: 'pending',
-    technician: 'Unassigned',
-    amount: 185000,
-    createdAt: '2026-07-18',
-  },
-  {
-    id: '#LT-7821',
-    customer: 'Elena Rodriguez',
-    device: 'iPhone 15 Ultra - Camera Array',
-    issue: 'OIS failure in primary lens. Replacement module ordered.',
-    status: 'repairing',
-    technician: 'David K.',
-    amount: 95000,
-    createdAt: '2026-07-17',
-  },
-  {
-    id: '#LT-7815',
-    customer: 'Julian Vane',
-    device: 'PS5 Pro - Thermal Management',
-    issue: 'Heatsink cleaning completed. Stress test passed.',
-    status: 'testing',
-    technician: 'Sarah J.',
-    amount: 65000,
-    createdAt: '2026-07-16',
-  },
-]
+export const REPAIR_ORDERS = []
 
 export const SALES_STATUS_META = {
   complete: { label: 'Complete', className: 'bg-green-100 text-green-700' },

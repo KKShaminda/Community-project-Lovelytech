@@ -10,7 +10,7 @@ import {
 import { addToCart } from '../../utils/cartStorage'
 import { isAuthenticated } from '../../services/authServices'
 
-export function ProductCard({ product, isWishlisted, onToggleWishlist, showWishlist = false }) {
+export function ProductCard({ product, isWishlisted, onToggleWishlist, showWishlist = true }) {
   const navigate = useNavigate()
   const [justAdded, setJustAdded] = useState(false)
   const outOfStock = product.availability === 'Out of Stock'
@@ -50,7 +50,7 @@ export function ProductCard({ product, isWishlisted, onToggleWishlist, showWishl
   return (
     <article className="group rounded-xl border-t-4 border-red-600 bg-white p-2.5 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
       <div className="relative mb-2.5 aspect-[4/3.2] overflow-hidden rounded-lg bg-gray-50">
-        <Link to={`/products/${productId}`} className="block h-full w-full">
+        <Link to={`/products/${productId}`} state={{ product }} className="block h-full w-full">
           <img
             src={imageUrl}
             alt={product.name}
@@ -81,7 +81,7 @@ export function ProductCard({ product, isWishlisted, onToggleWishlist, showWishl
       </div>
 
       <h3 className="mb-1 line-clamp-2 min-h-[2.4rem] text-xs font-semibold text-gray-900 transition-colors group-hover:text-[#E4342F]">
-        <Link to={`/products/${productId}`}>{product.name}</Link>
+        <Link to={`/products/${productId}`} state={{ product }}>{product.name}</Link>
       </h3>
 
       <div className="mb-2 flex items-center gap-2">

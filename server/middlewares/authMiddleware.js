@@ -45,6 +45,29 @@ export const requiredSignIn = async (req, res, next) => {
   }
 };
 
+// Optional sign-in middleware: attaches req.user if token is present and valid, otherwise proceeds
+export const optionalSignIn = async (req, res, next) => {
+  try {
+    const token =
+      req.cookies?.access_token ||
+      req.headers.authorization?.split(" ")[1];
+
+    if (!token) {
+      return next();
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).select("-password");
+
+    if (user && !user.isSuspended) {
+      req.user = user;
+    }
+  } catch {
+    // If token verification fails or expired, proceed unauthenticated without crashing
+  }
+  next();
+};
+
 // Admin check
 export const isAdmin = (req, res, next) => {
   if (req.user.role !== "admin") {
